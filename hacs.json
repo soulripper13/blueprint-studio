@@ -1,11 +1,5 @@
 {
   "name": "Blueprint Studio",
-  "content_in_root": false,
-  "filename": "blueprint_studio",
   "render_readme": true,
-  "homeassistant": "2024.1.0",
-  "domains": ["blueprint_studio"],
-  "iot_class": "local_push",
-  "zip_release": false,
-  "hide_default_branch": false
+  "homeassistant": "2024.1.0"
 }
