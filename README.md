@@ -77,12 +77,6 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 
 </div>
 
-> **📝 Note:** To add screenshots, simply place PNG images in the `images/` folder with these names:
-> - `screenshot.png` - Main editor interface
-> - `screenshot-file-tree.png` - File tree explorer
-> - `screenshot-yaml-validation.png` - YAML validation
-> - `screenshot-multi-tab.png` - Multi-tab editing (optional)
-
 <div align="center">
   <img src="https://dummyimage.com/600x100/0d1117/58a6ff&text=VS+Code-Like+Editing+in+HA" alt="Editor Preview">
 </div>
@@ -391,22 +385,6 @@ Contributions are welcome! Here's how you can help: 🌍
 - Use type hints where appropriate 💡
 - Add comments for complex logic 📝
 - Test all file operations thoroughly 🧪
-
----
-
-## 🗺️ Roadmap
-Planned features for future releases: 🚀
-
-- [ ] Light theme option ☀️
-- [ ] Configurable editor settings (font size, tab size, etc.) ⚙️
-- [ ] File diff viewer 🔄
-- [ ] Git integration for version control 📊
-- [ ] Search across all files 🔍
-- [ ] Code snippets and templates 💡
-- [ ] Multiple theme options 🎨
-- [ ] Backup/restore functionality 💾
-- [ ] File history/versioning 📜
-- [ ] Collaborative editing support 👥
 
 ---
 
