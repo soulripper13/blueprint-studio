@@ -17,19 +17,20 @@
 ---
 
 ## 📖 Table of Contents
-- [Why Blueprint Studio?](#why-blueprint-studio)
-- [✨ Features](#features)
-- [🔧 Installation](#installation)
-- [⚙️ Configuration](#configuration)
-- [🚀 Usage](#usage)
-- [📄 Supported File Types](#supported-file-types)
-- [🔒 Security](#security)
-- [🛠️ Troubleshooting](#troubleshooting)
-- [❓ FAQ](#faq)
-- [🔍 Technical Details](#technical-details)
-- [🤝 Contributing](#contributing)
-- [🗺️ Roadmap](#roadmap)
-- [📞 Support](#support)
+- [Why Blueprint Studio? 🌟](#why-blueprint-studio-)
+- [Screenshots 📸](#screenshots-)
+- [✨ Features](#-features)
+- [🔧 Installation](#-installation)
+- [⚙️ Configuration](#️-configuration)
+- [🚀 Usage](#-usage)
+- [📄 Supported File Types](#-supported-file-types)
+- [🔒 Security](#-security)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [❓ FAQ](#-faq)
+- [🔍 Technical Details](#-technical-details)
+- [🤝 Contributing](#-contributing)
+- [🗺️ Roadmap](#️-roadmap)
+- [📞 Support](#-support)
 
 ---
 
@@ -41,6 +42,46 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 - **Safe & Secure** - Built-in protection against path traversal and unauthorized access 🛡️
 - **Multi-File Editing** - Work with multiple files simultaneously using tabs 📁
 - **File Management** - Create, delete, rename, copy, upload, and download files and folders 📂
+
+---
+
+## Screenshots 📸
+
+<div align="center">
+
+### Main Editor Interface
+*Edit your Home Assistant configuration files with syntax highlighting and professional tools*
+
+![Blueprint Studio Main Interface](images/screenshot.png)
+
+---
+
+### File Tree & Multi-Tab Support
+*Navigate your config directory and work with multiple files simultaneously*
+
+![File Tree Explorer](images/screenshot-file-tree.png)
+
+---
+
+### Real-Time YAML Validation
+*Catch errors before saving with built-in YAML linting*
+
+![YAML Validation](images/screenshot-yaml-validation.png)
+
+---
+
+### Multi-Tab Editing in Action
+*Work efficiently with multiple files open at once*
+
+![Multi-Tab Editing](images/screenshot-multi-tab.png)
+
+</div>
+
+> **📝 Note:** To add screenshots, simply place PNG images in the `images/` folder with these names:
+> - `screenshot.png` - Main editor interface
+> - `screenshot-file-tree.png` - File tree explorer
+> - `screenshot-yaml-validation.png` - YAML validation
+> - `screenshot-multi-tab.png` - Multi-tab editing (optional)
 
 <div align="center">
   <img src="https://dummyimage.com/600x100/0d1117/58a6ff&text=VS+Code-Like+Editing+in+HA" alt="Editor Preview">
@@ -404,16 +445,6 @@ Special thanks to all contributors and users who help make Blueprint Studio bett
 | **Security** | Built-in Restrictions | Basic | Full Access | Full Access | None |
 | **File Management** | Full (Upload/Download/ZIP) | Basic | Full | Full | Limited |
 | **Maintenance** | Active | Official | Community | N/A | Deprecated |
-
----
-
-## 📸 Screenshots
-*Screenshots coming soon! Add your own by editing configuration files and sharing them via a Pull Request.* 📷  
-*(Placeholder: Imagine a sleek dark-themed editor with YAML syntax highlighting and a file tree on the side.)*
-
-<div align="center">
-  <img src="https://dummyimage.com/800x400/0d1117/ffffff&text=Screenshot+Preview+-+Coming+Soon!" alt="Screenshots Preview">
-</div>
 
 ---
 
