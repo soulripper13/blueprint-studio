@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="color-scheme" content="light dark">
+  <title>Blueprint Studio</title>
+
+  <!-- CodeMirror -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/lint.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+
+  <!-- Themes -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <!-- Note: "default" theme is built into codemirror.min.css, no separate file needed -->
+
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/lint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/jump-to-line.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/indent-fold.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+
+  <style>
+    /* Dark theme (default) */
+    :root, [data-theme="dark"] {
+      --bg-primary: #1e1e1e;
+      --bg-secondary: #252526;
+      --bg-tertiary: #2d2d30;
+      --bg-hover: #3c3c3c;
+      --bg-active: #094771;
+      --text-primary: #cccccc;
+      --text-secondary: #858585;
+      --text-muted: #6e6e6e;
+      --border-color: #3c3c3c;
+      --accent-color: #0e639c;
+      --accent-hover: #1177bb;
+      --success-color: #4ec9b0;
+      --warning-color: #dcdcaa;
+      --error-color: #f14c4c;
+      --icon-folder: #dcb67a;
+      --icon-yaml: #cb4b16;
+      --icon-json: #cbcb41;
+      --icon-python: #3572a5;
+      --icon-js: #f1e05a;
+      --icon-default: #858585;
+      --modal-bg: #2d2d30;
+      --input-bg: #3c3c3c;
+      --shadow-color: rgba(0, 0, 0, 0.5);
+      --cm-theme: material-darker;
+      --safe-area-top: env(safe-area-inset-top, 0px);
+      --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f3f3;
+      --bg-tertiary: #e8e8e8;
+      --bg-hover: #e0e0e0;
+      --bg-active: #0060c0;
+      --text-primary: #1e1e1e;
+      --text-secondary: #616161;
+      --text-muted: #9e9e9e;
+      --border-color: #d4d4d4;
+      --accent-color: #0066b8;
+      --accent-hover: #0078d4;
+      --success-color: #16825d;
+      --warning-color: #bf8803;
+      --error-color: #e51400;
+      --icon-folder: #c09553;
+      --icon-yaml: #a83232;
+      --icon-json: #b89500;
+      --icon-python: #2b5b84;
+      --icon-js: #b8a000;
+      --icon-default: #616161;
+      --modal-bg: #ffffff;
+      --input-bg: #ffffff;
+      --shadow-color: rgba(0, 0, 0, 0.2);
+      --cm-theme: default;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--safe-area-top);
+      padding-bottom: var(--safe-area-bottom);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      padding: 4px 8px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      gap: 2px;
+      flex-shrink: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .toolbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 4px;
+      border-right: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .toolbar-group:last-child {
+      border-right: none;
+    }
+
+    .toolbar-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
+      padding: 0 8px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background 0.15s;
+      -webkit-touch-callout: none;
+    }
+
+    .toolbar-btn:hover, .toolbar-btn:active {
+      background: var(--bg-hover);
+    }
+
+    .toolbar-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .toolbar-btn .material-icons {
+      font-size: 20px;
+    }
+
+    .toolbar-btn.primary {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .toolbar-btn.primary:hover, .toolbar-btn.primary:active {
+      background: var(--accent-hover);
+    }
+
+    .toolbar-btn.danger:hover {
+      background: var(--error-color);
+      color: white;
+    }
+
+    .toolbar-spacer {
+      flex: 1;
+      min-width: 8px;
+    }
+
+    .file-path-display {
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 0 8px;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex-shrink: 1;
+    }
+
+    /* Main container */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      min-width: 200px;
+      max-width: 80vw;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 100;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar.hidden {
+      transform: translateX(-100%);
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 99;
+    }
+
+    .sidebar-overlay.visible {
+      display: block;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-header-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .sidebar-header-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .sidebar-header-btn:hover, .sidebar-header-btn:active {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .sidebar-header-btn .material-icons {
+      font-size: 18px;
+    }
+
+    .search-container {
+      padding: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-color);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .file-tree {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 4px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 8px;
+      padding-left: calc(8px + var(--depth, 0) * 16px);
+      cursor: pointer;
+      user-select: none;
+      font-size: 14px;
+      transition: background 0.1s;
+      min-height: 40px;
+      position: relative;
+    }
+
+    .tree-item:hover, .tree-item:active {
+      background: var(--bg-hover);
+    }
+
+    .tree-item.active {
+      background: var(--bg-active);
+      color: white;
+    }
+
+    .tree-item.modified::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--warning-color);
+      border-radius: 50%;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .tree-item-actions {
+      display: none;
+      margin-left: auto;
+      gap: 2px;
+    }
+
+    .tree-item:hover .tree-item-actions {
+      display: flex;
+    }
+
+    .tree-item.modified .tree-item-actions {
+      display: none;
+    }
+
+    .tree-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .tree-action-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .tree-action-btn .material-icons {
+      font-size: 16px;
+    }
+
+    .tree-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .tree-icon .material-icons {
+      font-size: 20px;
+    }
+
+    .tree-icon.folder { color: var(--icon-folder); }
+    .tree-icon.yaml { color: var(--icon-yaml); }
+    .tree-icon.json { color: var(--icon-json); }
+    .tree-icon.python { color: var(--icon-python); }
+    .tree-icon.js { color: var(--icon-js); }
+    .tree-icon.default { color: var(--icon-default); }
+
+    .tree-chevron {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 4px;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+
+    .tree-chevron .material-icons {
+      font-size: 18px;
+      color: var(--text-secondary);
+    }
+
+    .tree-chevron.expanded {
+      transform: rotate(90deg);
+    }
+
+    .tree-chevron.hidden {
+      visibility: hidden;
+    }
+
+    .tree-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    /* Editor area */
+    .editor-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* Tabs */
+    .tabs-container {
+      display: flex;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      overflow-x: auto;
+      flex-shrink: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs-container::-webkit-scrollbar {
+      height: 2px;
+    }
+
+    .tabs-container::-webkit-scrollbar-thumb {
+      background: var(--bg-hover);
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-right: 1px solid var(--border-color);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      min-width: 100px;
+      max-width: 180px;
+      flex-shrink: 0;
+      transition: background 0.1s;
+    }
+
+    .tab:hover, .tab:active {
+      background: var(--bg-hover);
+    }
+
+    .tab.active {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--accent-color);
+    }
+
+    .tab-icon {
+      margin-right: 6px;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .tab-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .tab-modified {
+      width: 8px;
+      height: 8px;
+      background: var(--warning-color);
+      border-radius: 50%;
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+
+    .tab-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      margin-left: 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .tab-close:hover, .tab-close:active {
+      background: var(--bg-hover);
+    }
+
+    .tab-close .material-icons {
+      font-size: 16px;
+    }
+
+    /* Editor */
+    .editor-container {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .CodeMirror {
+      height: 100% !important;
+      width: 100% !important;
+      font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .CodeMirror-gutters {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+    }
+
+    .CodeMirror-linenumber {
+      color: var(--text-muted);
+      padding: 0 8px;
+    }
+
+    .CodeMirror-activeline-background {
+      background: rgba(128, 128, 128, 0.1);
+    }
+
+    /* Welcome screen */
+    .welcome-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 20px;
+    }
+
+    .welcome-screen .material-icons {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .welcome-screen h2 {
+      font-weight: 400;
+      font-size: 20px;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+
+    .welcome-screen p {
+      font-size: 14px;
+    }
+
+    .welcome-shortcuts {
+      margin-top: 24px;
+      text-align: left;
+    }
+
+    .welcome-shortcuts h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      color: var(--text-secondary);
+    }
+
+    .shortcut-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .shortcut-key {
+      background: var(--bg-tertiary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin-right: 12px;
+      min-width: 70px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      padding: 4px 12px;
+      background: var(--accent-color);
+      color: white;
+      font-size: 12px;
+      flex-shrink: 0;
+      min-height: 28px;
+    }
+
+    .status-item {
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .status-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .status-item .material-icons {
+      font-size: 14px;
+    }
+
+    .status-spacer {
+      flex: 1;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--modal-bg);
+      border-radius: 8px;
+      box-shadow: 0 8px 32px var(--shadow-color);
+      width: 100%;
+      max-width: 400px;
+      animation: modalIn 0.2s ease;
+    }
+
+    @keyframes modalIn {
+      from {
+        transform: scale(0.95);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .modal-input:focus {
+      border-color: var(--accent-color);
+    }
+
+    .modal-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .modal-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .modal-btn.secondary {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .modal-btn.secondary:hover {
+      background: var(--border-color);
+    }
+
+    .modal-btn.primary {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .modal-btn.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .modal-btn.danger {
+      background: var(--error-color);
+      color: white;
+    }
+
+    .modal-btn.danger:hover {
+      background: #d32f2f;
+    }
+
+    /* Context Menu */
+    .context-menu {
+      display: none;
+      position: fixed;
+      background: var(--modal-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px var(--shadow-color);
+      z-index: 1001;
+      min-width: 160px;
+      padding: 4px 0;
+    }
+
+    .context-menu.visible {
+      display: block;
+    }
+
+    .context-menu-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .context-menu-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .context-menu-item.danger {
+      color: var(--error-color);
+    }
+
+    .context-menu-item .material-icons {
+      font-size: 18px;
+      margin-right: 10px;
+      color: var(--text-secondary);
+    }
+
+    .context-menu-item.danger .material-icons {
+      color: var(--error-color);
+    }
+
+    .context-menu-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 0;
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      bottom: calc(40px + var(--safe-area-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-top: 8px;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      animation: slideUp 0.3s ease;
+    }
+
+    .toast.success { border-left: 4px solid var(--success-color); }
+    .toast.error { border-left: 4px solid var(--error-color); }
+    .toast.warning { border-left: 4px solid var(--warning-color); }
+
+    .toast .material-icons {
+      margin-right: 12px;
+      font-size: 20px;
+    }
+
+    .toast.success .material-icons { color: var(--success-color); }
+    .toast.error .material-icons { color: var(--error-color); }
+    .toast.warning .material-icons { color: var(--warning-color); }
+
+    .toast-message {
+      flex: 1;
+      font-size: 14px;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* Theme dropdown */
+    .theme-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .theme-menu {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      background: var(--modal-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px var(--shadow-color);
+      min-width: 120px;
+      margin-bottom: 4px;
+      padding: 4px 0;
+    }
+
+    .theme-menu.visible {
+      display: block;
+    }
+
+    .theme-menu-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .theme-menu-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .theme-menu-item.active {
+      color: var(--accent-color);
+    }
+
+    .theme-menu-item .material-icons {
+      font-size: 18px;
+      margin-right: 8px;
+    }
+
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+      .toolbar {
+        padding: 4px;
+      }
+
+      .toolbar-group {
+        padding: 0 2px;
+      }
+
+      .toolbar-btn {
+        min-width: 40px;
+        height: 40px;
+      }
+
+      .file-path-display {
+        display: none;
+      }
+
+      .sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 85vw;
+        max-width: 320px;
+        transform: translateX(-100%);
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .sidebar.visible {
+        transform: translateX(0);
+      }
+
+      .tab {
+        min-width: 80px;
+        padding: 8px 8px;
+      }
+
+      .tab-close {
+        display: flex;
+        width: 28px;
+        height: 28px;
+        margin-left: 2px;
+      }
+
+      .tab-close .material-icons {
+        font-size: 18px;
+      }
+
+      .welcome-shortcuts {
+        display: none;
+      }
+
+      .CodeMirror {
+        font-size: 13px;
+      }
+
+      .tree-item-actions {
+        display: flex;
+      }
+    }
+
+    /* iOS safe areas */
+    @supports (padding: env(safe-area-inset-top)) {
+      .toolbar {
+        padding-top: calc(4px + env(safe-area-inset-top));
+      }
+      .status-bar {
+        padding-bottom: calc(4px + env(safe-area-inset-bottom));
+      }
+    }
+
+    /* Resize handle - hidden on mobile */
+    .resize-handle {
+      width: 4px;
+      cursor: col-resize;
+      background: transparent;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .resize-handle:hover,
+    .resize-handle.active {
+      background: var(--accent-color);
+    }
+
+    @media (max-width: 768px) {
+      .resize-handle {
+        display: none;
+      }
+    }
+
+    /* Loading indicator */
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--text-secondary);
+    }
+
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-menu" title="Toggle Files">
+        <span class="material-icons">menu</span>
+      </button>
+    </div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn primary" id="btn-save" title="Save (Ctrl+S)" disabled>
+        <span class="material-icons">save</span>
+      </button>
+      <button class="toolbar-btn" id="btn-save-all" title="Save All (Ctrl+Shift+S)" disabled>
+        <span class="material-icons">save_alt</span>
+      </button>
+    </div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>
+        <span class="material-icons">undo</span>
+      </button>
+      <button class="toolbar-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>
+        <span class="material-icons">redo</span>
+      </button>
+    </div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-search" title="Search (Ctrl+F)">
+        <span class="material-icons">search</span>
+      </button>
+    </div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-new-file" title="New File">
+        <span class="material-icons">note_add</span>
+      </button>
+      <button class="toolbar-btn" id="btn-new-folder" title="New Folder">
+        <span class="material-icons">create_new_folder</span>
+      </button>
+    </div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-upload" title="Upload File">
+        <span class="material-icons">upload_file</span>
+      </button>
+      <button class="toolbar-btn" id="btn-download" title="Download File" disabled>
+        <span class="material-icons">download</span>
+      </button>
+      <button class="toolbar-btn" id="btn-upload-folder" title="Upload Folder (ZIP)">
+        <span class="material-icons">drive_folder_upload</span>
+      </button>
+      <button class="toolbar-btn" id="btn-download-folder" title="Download Folder (ZIP)">
+        <span class="material-icons">folder_zip</span>
+      </button>
+    </div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-validate" title="Validate YAML">
+        <span class="material-icons">check_circle</span>
+      </button>
+    </div>
+
+    <div class="file-path-display" id="file-path"></div>
+
+    <div class="toolbar-spacer"></div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-refresh" title="Refresh">
+        <span class="material-icons">refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden file input for upload -->
+  <input type="file" id="file-upload-input" style="display: none" multiple accept=".yaml,.yml,.json,.py,.js,.css,.html,.txt,.md,.conf,.cfg,.ini,.sh,.log">
+  <!-- Hidden file input for folder (ZIP) upload -->
+  <input type="file" id="folder-upload-input" style="display: none" accept=".zip">
+
+  <!-- Main container -->
+  <div class="main-container">
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span>Explorer</span>
+        <div class="sidebar-header-actions">
+          <button class="sidebar-header-btn" id="btn-new-file-sidebar" title="New File">
+            <span class="material-icons">note_add</span>
+          </button>
+          <button class="sidebar-header-btn" id="btn-new-folder-sidebar" title="New Folder">
+            <span class="material-icons">create_new_folder</span>
+          </button>
+          <button class="sidebar-header-btn" id="btn-collapse-all" title="Collapse All">
+            <span class="material-icons">unfold_less</span>
+          </button>
+          <button class="sidebar-header-btn" id="btn-expand-all" title="Expand All">
+            <span class="material-icons">unfold_more</span>
+          </button>
+          <button class="sidebar-header-btn" id="btn-close-sidebar" title="Close">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+      <div class="search-container">
+        <input type="text" class="search-input" id="file-search" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="file-tree" id="file-tree"></div>
+    </div>
+
+    <!-- Resize handle -->
+    <div class="resize-handle" id="resize-handle"></div>
+
+    <!-- Editor area -->
+    <div class="editor-area">
+      <div class="tabs-container" id="tabs-container"></div>
+      <div class="editor-container" id="editor-container">
+        <div class="welcome-screen" id="welcome-screen">
+          <span class="material-icons">edit_note</span>
+          <h2>Blueprint Studio</h2>
+          <p>Select a file from the explorer to start editing</p>
+          <div class="welcome-shortcuts">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl+S</span>
+              <span>Save file</span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl+F</span>
+              <span>Search</span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl+G</span>
+              <span>Go to line</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-item" id="status-connection">
+      <span class="material-icons">cloud_done</span>
+      <span>Connected</span>
+    </div>
+    <div class="status-spacer"></div>
+    <div class="status-item" id="status-position">
+      <span>Ln 1, Col 1</span>
+    </div>
+    <div class="status-item" id="status-language">
+      <span>-</span>
+    </div>
+    <div class="status-item theme-dropdown" id="theme-toggle">
+      <span class="material-icons" id="theme-icon">dark_mode</span>
+      <span id="theme-label">Dark</span>
+      <div class="theme-menu" id="theme-menu">
+        <div class="theme-menu-item" data-theme="light">
+          <span class="material-icons">light_mode</span>
+          Light
+        </div>
+        <div class="theme-menu-item" data-theme="dark">
+          <span class="material-icons">dark_mode</span>
+          Dark
+        </div>
+        <div class="theme-menu-item" data-theme="auto">
+          <span class="material-icons">brightness_auto</span>
+          Auto
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Modal overlay -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="modal-title">Modal Title</span>
+        <button class="modal-close" id="modal-close">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <input type="text" class="modal-input" id="modal-input" placeholder="">
+        <div class="modal-hint" id="modal-hint"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn secondary" id="modal-cancel">Cancel</button>
+        <button class="modal-btn primary" id="modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="context-menu">
+    <div class="context-menu-item" data-action="rename">
+      <span class="material-icons">edit</span>
+      Rename
+    </div>
+    <div class="context-menu-item" data-action="copy">
+      <span class="material-icons">content_copy</span>
+      Copy
+    </div>
+    <div class="context-menu-item" data-action="download">
+      <span class="material-icons">download</span>
+      Download
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item danger" data-action="delete">
+      <span class="material-icons">delete</span>
+      Delete
+    </div>
+  </div>
+
+  <script src="/local/blueprint_studio/www/blueprint_studio.js"></script>
+</body>
+</html>

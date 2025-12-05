@@ -1,0 +1,13 @@
+{
+  "domain": "blueprint_studio",
+  "name": "Blueprint Studio",
+  "documentation": "https://github.com/soulripper13/blueprint-studio",
+  "issue_tracker": "https://github.com/soulripper13/blueprint-studio/issues",
+  "dependencies": ["http", "frontend"],
+  "codeowners": ["@soulripper13"],
+  "requirements": [],
+  "version": "1.0.0",
+  "config_flow": true,
+  "iot_class": "local_push",
+  "integration_type": "service"
+}
