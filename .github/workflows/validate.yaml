@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     name: HACS Validation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: HACS Validation
         uses: hacs/action@main
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Hassfest Validation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Hassfest Validation
         uses: home-assistant/actions/hassfest@master
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     name: JSON Validation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate hacs.json
         run: |
