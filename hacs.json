@@ -1,5 +1,5 @@
 {
   "name": "Blueprint Studio",
-  "content_in_root": false,
+  "content_in_root": true,
   "render_readme": true
 }
