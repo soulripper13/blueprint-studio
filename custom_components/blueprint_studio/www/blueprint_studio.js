@@ -15,6 +15,495 @@
   const STORAGE_KEY = "blueprint_studio_settings";
 
   // ============================================
+  // Home Assistant Autocomplete Schema
+  // ============================================
+  const HA_SCHEMA = {
+    // Core configuration keys
+    configuration: [
+      { text: "homeassistant:", type: "domain", description: "Core Home Assistant configuration" },
+      { text: "automation:", type: "domain", description: "Automation configuration" },
+      { text: "script:", type: "domain", description: "Script configuration" },
+      { text: "scene:", type: "domain", description: "Scene configuration" },
+      { text: "sensor:", type: "domain", description: "Sensor configuration" },
+      { text: "binary_sensor:", type: "domain", description: "Binary sensor configuration" },
+      { text: "template:", type: "domain", description: "Template entities" },
+      { text: "input_boolean:", type: "domain", description: "Input boolean helper" },
+      { text: "input_number:", type: "domain", description: "Input number helper" },
+      { text: "input_text:", type: "domain", description: "Input text helper" },
+      { text: "input_select:", type: "domain", description: "Input select helper" },
+      { text: "input_datetime:", type: "domain", description: "Input datetime helper" },
+      { text: "input_button:", type: "domain", description: "Input button helper" },
+      { text: "counter:", type: "domain", description: "Counter helper" },
+      { text: "timer:", type: "domain", description: "Timer helper" },
+      { text: "group:", type: "domain", description: "Group configuration" },
+      { text: "person:", type: "domain", description: "Person configuration" },
+      { text: "zone:", type: "domain", description: "Zone configuration" },
+      { text: "light:", type: "domain", description: "Light configuration" },
+      { text: "switch:", type: "domain", description: "Switch configuration" },
+      { text: "cover:", type: "domain", description: "Cover configuration" },
+      { text: "climate:", type: "domain", description: "Climate configuration" },
+      { text: "fan:", type: "domain", description: "Fan configuration" },
+      { text: "lock:", type: "domain", description: "Lock configuration" },
+      { text: "camera:", type: "domain", description: "Camera configuration" },
+      { text: "media_player:", type: "domain", description: "Media player configuration" },
+      { text: "notify:", type: "domain", description: "Notification configuration" },
+      { text: "tts:", type: "domain", description: "Text-to-speech configuration" },
+      { text: "mqtt:", type: "domain", description: "MQTT configuration" },
+      { text: "http:", type: "domain", description: "HTTP configuration" },
+      { text: "logger:", type: "domain", description: "Logger configuration" },
+      { text: "recorder:", type: "domain", description: "Recorder configuration" },
+      { text: "history:", type: "domain", description: "History configuration" },
+      { text: "logbook:", type: "domain", description: "Logbook configuration" },
+      { text: "frontend:", type: "domain", description: "Frontend configuration" },
+      { text: "config:", type: "domain", description: "Configuration UI" },
+      { text: "api:", type: "domain", description: "API configuration" },
+      { text: "websocket_api:", type: "domain", description: "WebSocket API" },
+      { text: "mobile_app:", type: "domain", description: "Mobile app integration" },
+      { text: "shopping_list:", type: "domain", description: "Shopping list" },
+      { text: "conversation:", type: "domain", description: "Conversation integration" },
+      { text: "default_config:", type: "domain", description: "Default configuration" },
+      { text: "system_health:", type: "domain", description: "System health monitoring" },
+    ],
+
+    // Common keys for automations
+    automation: [
+      { text: "alias:", type: "key", description: "Automation friendly name" },
+      { text: "description:", type: "key", description: "Automation description" },
+      { text: "id:", type: "key", description: "Unique automation ID" },
+      { text: "mode:", type: "key", description: "Automation execution mode" },
+      { text: "max:", type: "key", description: "Maximum concurrent runs" },
+      { text: "max_exceeded:", type: "key", description: "Behavior when max exceeded" },
+      { text: "trigger:", type: "key", description: "Automation triggers" },
+      { text: "condition:", type: "key", description: "Automation conditions" },
+      { text: "action:", type: "key", description: "Automation actions" },
+    ],
+
+    // Automation modes
+    automation_modes: [
+      { text: "single", type: "value", description: "Only one run at a time" },
+      { text: "restart", type: "value", description: "Restart automation on new trigger" },
+      { text: "queued", type: "value", description: "Queue runs" },
+      { text: "parallel", type: "value", description: "Run in parallel" },
+    ],
+
+    // Trigger types
+    triggers: [
+      { text: "platform: state", type: "trigger", description: "State change trigger" },
+      { text: "platform: numeric_state", type: "trigger", description: "Numeric state trigger" },
+      { text: "platform: event", type: "trigger", description: "Event trigger" },
+      { text: "platform: time", type: "trigger", description: "Time trigger" },
+      { text: "platform: time_pattern", type: "trigger", description: "Time pattern trigger" },
+      { text: "platform: mqtt", type: "trigger", description: "MQTT trigger" },
+      { text: "platform: webhook", type: "trigger", description: "Webhook trigger" },
+      { text: "platform: zone", type: "trigger", description: "Zone trigger" },
+      { text: "platform: geo_location", type: "trigger", description: "Geo location trigger" },
+      { text: "platform: homeassistant", type: "trigger", description: "Home Assistant event trigger" },
+      { text: "platform: sun", type: "trigger", description: "Sun event trigger" },
+      { text: "platform: tag", type: "trigger", description: "NFC tag trigger" },
+      { text: "platform: template", type: "trigger", description: "Template trigger" },
+      { text: "platform: calendar", type: "trigger", description: "Calendar trigger" },
+      { text: "platform: conversation", type: "trigger", description: "Conversation trigger" },
+    ],
+
+    // Condition types
+    conditions: [
+      { text: "condition: state", type: "condition", description: "State condition" },
+      { text: "condition: numeric_state", type: "condition", description: "Numeric state condition" },
+      { text: "condition: template", type: "condition", description: "Template condition" },
+      { text: "condition: time", type: "condition", description: "Time condition" },
+      { text: "condition: zone", type: "condition", description: "Zone condition" },
+      { text: "condition: sun", type: "condition", description: "Sun condition" },
+      { text: "condition: and", type: "condition", description: "AND condition" },
+      { text: "condition: or", type: "condition", description: "OR condition" },
+      { text: "condition: not", type: "condition", description: "NOT condition" },
+      { text: "condition: device", type: "condition", description: "Device condition" },
+    ],
+
+    // Common services
+    services: [
+      { text: "service: homeassistant.turn_on", type: "service", description: "Turn on entity" },
+      { text: "service: homeassistant.turn_off", type: "service", description: "Turn off entity" },
+      { text: "service: homeassistant.toggle", type: "service", description: "Toggle entity" },
+      { text: "service: homeassistant.reload_config_entry", type: "service", description: "Reload config entry" },
+      { text: "service: homeassistant.restart", type: "service", description: "Restart Home Assistant" },
+      { text: "service: homeassistant.stop", type: "service", description: "Stop Home Assistant" },
+      { text: "service: homeassistant.update_entity", type: "service", description: "Update entity" },
+      { text: "service: light.turn_on", type: "service", description: "Turn on light" },
+      { text: "service: light.turn_off", type: "service", description: "Turn off light" },
+      { text: "service: light.toggle", type: "service", description: "Toggle light" },
+      { text: "service: switch.turn_on", type: "service", description: "Turn on switch" },
+      { text: "service: switch.turn_off", type: "service", description: "Turn off switch" },
+      { text: "service: switch.toggle", type: "service", description: "Toggle switch" },
+      { text: "service: cover.open_cover", type: "service", description: "Open cover" },
+      { text: "service: cover.close_cover", type: "service", description: "Close cover" },
+      { text: "service: cover.stop_cover", type: "service", description: "Stop cover" },
+      { text: "service: climate.set_temperature", type: "service", description: "Set climate temperature" },
+      { text: "service: climate.set_hvac_mode", type: "service", description: "Set HVAC mode" },
+      { text: "service: notify.notify", type: "service", description: "Send notification" },
+      { text: "service: script.turn_on", type: "service", description: "Run script" },
+      { text: "service: automation.turn_on", type: "service", description: "Enable automation" },
+      { text: "service: automation.turn_off", type: "service", description: "Disable automation" },
+      { text: "service: automation.trigger", type: "service", description: "Trigger automation" },
+      { text: "service: automation.reload", type: "service", description: "Reload automations" },
+      { text: "service: scene.turn_on", type: "service", description: "Activate scene" },
+      { text: "service: input_boolean.turn_on", type: "service", description: "Turn on input boolean" },
+      { text: "service: input_boolean.turn_off", type: "service", description: "Turn off input boolean" },
+      { text: "service: input_boolean.toggle", type: "service", description: "Toggle input boolean" },
+      { text: "service: input_number.set_value", type: "service", description: "Set input number value" },
+      { text: "service: input_text.set_value", type: "service", description: "Set input text value" },
+      { text: "service: input_select.select_option", type: "service", description: "Select input option" },
+      { text: "service: input_datetime.set_datetime", type: "service", description: "Set datetime" },
+      { text: "service: input_button.press", type: "service", description: "Press input button" },
+      { text: "service: counter.increment", type: "service", description: "Increment counter" },
+      { text: "service: counter.decrement", type: "service", description: "Decrement counter" },
+      { text: "service: counter.reset", type: "service", description: "Reset counter" },
+      { text: "service: timer.start", type: "service", description: "Start timer" },
+      { text: "service: timer.pause", type: "service", description: "Pause timer" },
+      { text: "service: timer.cancel", type: "service", description: "Cancel timer" },
+      { text: "service: persistent_notification.create", type: "service", description: "Create notification" },
+      { text: "service: persistent_notification.dismiss", type: "service", description: "Dismiss notification" },
+      { text: "service: tts.speak", type: "service", description: "Speak text" },
+      { text: "service: media_player.media_play", type: "service", description: "Play media" },
+      { text: "service: media_player.media_pause", type: "service", description: "Pause media" },
+      { text: "service: media_player.media_stop", type: "service", description: "Stop media" },
+      { text: "service: media_player.volume_up", type: "service", description: "Increase volume" },
+      { text: "service: media_player.volume_down", type: "service", description: "Decrease volume" },
+      { text: "service: media_player.volume_set", type: "service", description: "Set volume" },
+    ],
+
+    // Common action keys
+    actionKeys: [
+      { text: "entity_id:", type: "key", description: "Target entity ID" },
+      { text: "device_id:", type: "key", description: "Target device ID" },
+      { text: "area_id:", type: "key", description: "Target area ID" },
+      { text: "data:", type: "key", description: "Service data" },
+      { text: "target:", type: "key", description: "Service target" },
+      { text: "delay:", type: "key", description: "Delay action" },
+      { text: "wait_template:", type: "key", description: "Wait for template" },
+      { text: "wait_for_trigger:", type: "key", description: "Wait for trigger" },
+      { text: "choose:", type: "key", description: "Choose action based on condition" },
+      { text: "repeat:", type: "key", description: "Repeat action" },
+      { text: "if:", type: "key", description: "Conditional action" },
+      { text: "then:", type: "key", description: "If condition is true" },
+      { text: "else:", type: "key", description: "If condition is false" },
+      { text: "parallel:", type: "key", description: "Run actions in parallel" },
+      { text: "sequence:", type: "key", description: "Sequence of actions" },
+    ],
+
+    // Common config keys
+    commonKeys: [
+      { text: "name:", type: "key", description: "Entity name" },
+      { text: "unique_id:", type: "key", description: "Unique entity ID" },
+      { text: "icon:", type: "key", description: "Entity icon (mdi:icon-name)" },
+      { text: "device_class:", type: "key", description: "Device class" },
+      { text: "unit_of_measurement:", type: "key", description: "Unit of measurement" },
+      { text: "state:", type: "key", description: "Entity state" },
+      { text: "state_topic:", type: "key", description: "MQTT state topic" },
+      { text: "command_topic:", type: "key", description: "MQTT command topic" },
+      { text: "availability_topic:", type: "key", description: "MQTT availability topic" },
+      { text: "payload_on:", type: "key", description: "Payload for ON state" },
+      { text: "payload_off:", type: "key", description: "Payload for OFF state" },
+      { text: "payload_available:", type: "key", description: "Payload for available" },
+      { text: "payload_not_available:", type: "key", description: "Payload for not available" },
+      { text: "value_template:", type: "key", description: "Template for value" },
+      { text: "availability_template:", type: "key", description: "Template for availability" },
+      { text: "attributes:", type: "key", description: "Entity attributes" },
+      { text: "friendly_name:", type: "key", description: "Friendly entity name" },
+    ],
+
+    // YAML tags
+    yamlTags: [
+      { text: "!include ", type: "tag", description: "Include another YAML file (no space after !)" },
+      { text: "!include_dir_list ", type: "tag", description: "Include directory as list (no space after !)" },
+      { text: "!include_dir_named ", type: "tag", description: "Include directory as named entries (no space after !)" },
+      { text: "!include_dir_merge_list ", type: "tag", description: "Include and merge directory as list (no space after !)" },
+      { text: "!include_dir_merge_named ", type: "tag", description: "Include and merge directory as named (no space after !)" },
+      { text: "!secret ", type: "tag", description: "Reference secret from secrets.yaml (no space after !)" },
+      { text: "!env_var ", type: "tag", description: "Use environment variable (no space after !)" },
+      { text: "!input ", type: "tag", description: "Blueprint input (no space after !)" },
+    ],
+
+    // Sensor platforms
+    sensorPlatforms: [
+      { text: "platform: template", type: "platform", description: "Template sensor" },
+      { text: "platform: mqtt", type: "platform", description: "MQTT sensor" },
+      { text: "platform: statistics", type: "platform", description: "Statistics sensor" },
+      { text: "platform: time_date", type: "platform", description: "Time and date sensor" },
+      { text: "platform: rest", type: "platform", description: "REST sensor" },
+      { text: "platform: command_line", type: "platform", description: "Command line sensor" },
+      { text: "platform: sql", type: "platform", description: "SQL sensor" },
+      { text: "platform: file", type: "platform", description: "File sensor" },
+      { text: "platform: folder", type: "platform", description: "Folder sensor" },
+      { text: "platform: history_stats", type: "platform", description: "History statistics sensor" },
+      { text: "platform: trend", type: "platform", description: "Trend sensor" },
+      { text: "platform: min_max", type: "platform", description: "Min/Max sensor" },
+      { text: "platform: filter", type: "platform", description: "Filter sensor" },
+    ],
+  };
+
+  // ============================================
+  // Home Assistant Autocomplete Function
+  // ============================================
+
+  function homeAssistantHint(editor, options) {
+    const cursor = editor.getCursor();
+    const currentLine = editor.getLine(cursor.line);
+    const token = editor.getTokenAt(cursor);
+    const start = token.start;
+    const end = cursor.ch;
+    const currentWord = currentLine.slice(start, end);
+
+    // Determine context from previous lines and indentation
+    const context = getYamlContext(editor, cursor.line);
+
+    let suggestions = [];
+
+    // Check if we're at the beginning of a line (after indentation)
+    const trimmedLine = currentLine.trimStart();
+    const isLineStart = currentLine.substring(0, cursor.ch).trim() === currentWord.trim();
+
+    // Check for YAML tags (!include, !secret, etc.)
+    if (currentWord.startsWith('!') || (isLineStart && currentWord === '!')) {
+      suggestions = HA_SCHEMA.yamlTags.map(item => ({
+        text: item.text,
+        displayText: item.text,
+        className: 'ha-hint-tag',
+        render: (elem, self, data) => {
+          elem.innerHTML = `
+            <span>${data.text}</span>
+            <span class="ha-hint-type">${data.type}</span>
+          `;
+        },
+        hint: (cm, self, data) => {
+          cm.replaceRange(data.text, { line: cursor.line, ch: start }, { line: cursor.line, ch: end });
+        },
+        ...item
+      }));
+    }
+    // Top-level configuration keys
+    else if (context.indent === 0 && isLineStart) {
+      suggestions = HA_SCHEMA.configuration.map(item => ({
+        text: item.text,
+        displayText: item.text,
+        className: 'ha-hint-domain',
+        render: (elem, self, data) => {
+          elem.innerHTML = `
+            <span>${data.text}</span>
+            <span class="ha-hint-description">${data.description}</span>
+          `;
+        },
+        hint: (cm, self, data) => {
+          cm.replaceRange(data.text, { line: cursor.line, ch: start }, { line: cursor.line, ch: end });
+        },
+        ...item
+      }));
+    }
+    // Inside automation section
+    else if (context.section === 'automation') {
+      if (context.inTrigger) {
+        suggestions = HA_SCHEMA.triggers;
+      } else if (context.inCondition) {
+        suggestions = HA_SCHEMA.conditions;
+      } else if (context.inAction) {
+        suggestions = [
+          ...HA_SCHEMA.services,
+          ...HA_SCHEMA.actionKeys,
+        ];
+      } else {
+        suggestions = HA_SCHEMA.automation;
+      }
+
+      suggestions = suggestions.map(item => ({
+        text: item.text,
+        displayText: item.text,
+        className: `ha-hint-${item.type}`,
+        render: (elem, self, data) => {
+          elem.innerHTML = `
+            <span>${data.text}</span>
+            <span class="ha-hint-type">${data.type}</span>
+            ${data.description ? `<span class="ha-hint-description">${data.description}</span>` : ''}
+          `;
+        },
+        hint: (cm, self, data) => {
+          cm.replaceRange(data.text, { line: cursor.line, ch: start }, { line: cursor.line, ch: end });
+        },
+        ...item
+      }));
+    }
+    // Inside sensor or binary_sensor section
+    else if (context.section === 'sensor' || context.section === 'binary_sensor') {
+      if (context.inPlatform) {
+        suggestions = HA_SCHEMA.sensorPlatforms;
+      } else {
+        suggestions = HA_SCHEMA.commonKeys;
+      }
+
+      suggestions = suggestions.map(item => ({
+        text: item.text,
+        displayText: item.text,
+        className: `ha-hint-${item.type}`,
+        render: (elem, self, data) => {
+          elem.innerHTML = `
+            <span>${data.text}</span>
+            ${data.description ? `<span class="ha-hint-description">${data.description}</span>` : ''}
+          `;
+        },
+        hint: (cm, self, data) => {
+          cm.replaceRange(data.text, { line: cursor.line, ch: start }, { line: cursor.line, ch: end });
+        },
+        ...item
+      }));
+    }
+    // Generic keys for other sections
+    else {
+      suggestions = [
+        ...HA_SCHEMA.commonKeys,
+        ...HA_SCHEMA.configuration,
+      ].map(item => ({
+        text: item.text,
+        displayText: item.text,
+        className: `ha-hint-${item.type}`,
+        render: (elem, self, data) => {
+          elem.innerHTML = `
+            <span>${data.text}</span>
+            ${data.description ? `<span class="ha-hint-description">${data.description}</span>` : ''}
+          `;
+        },
+        hint: (cm, self, data) => {
+          cm.replaceRange(data.text, { line: cursor.line, ch: start }, { line: cursor.line, ch: end });
+        },
+        ...item
+      }));
+    }
+
+    // Filter suggestions based on current word
+    suggestions = suggestions.filter(item =>
+      item.text.toLowerCase().includes(currentWord.toLowerCase())
+    );
+
+    // Sort suggestions by relevance
+    suggestions.sort((a, b) => {
+      const aStarts = a.text.toLowerCase().startsWith(currentWord.toLowerCase());
+      const bStarts = b.text.toLowerCase().startsWith(currentWord.toLowerCase());
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return a.text.localeCompare(b.text);
+    });
+
+    return {
+      list: suggestions.slice(0, 20), // Limit to 20 suggestions
+      from: { line: cursor.line, ch: start },
+      to: { line: cursor.line, ch: end }
+    };
+  }
+
+  function getYamlContext(editor, lineNumber) {
+    let context = {
+      indent: 0,
+      section: null,
+      inTrigger: false,
+      inCondition: false,
+      inAction: false,
+      inPlatform: false,
+    };
+
+    const currentLine = editor.getLine(lineNumber);
+    const match = currentLine.match(/^(\s*)/);
+    context.indent = match ? match[1].length : 0;
+
+    // Look back to find context
+    for (let i = lineNumber - 1; i >= 0; i--) {
+      const line = editor.getLine(i);
+      if (!line.trim()) continue;
+
+      const lineIndent = line.match(/^(\s*)/)[1].length;
+
+      // Only consider lines with less or equal indentation
+      if (lineIndent < context.indent) {
+        // Check for section markers
+        if (line.includes('automation:')) {
+          context.section = 'automation';
+        } else if (line.includes('sensor:')) {
+          context.section = 'sensor';
+        } else if (line.includes('binary_sensor:')) {
+          context.section = 'binary_sensor';
+        } else if (line.includes('script:')) {
+          context.section = 'script';
+        }
+
+        // Check for subsections
+        if (line.includes('trigger:')) {
+          context.inTrigger = true;
+        } else if (line.includes('condition:')) {
+          context.inCondition = true;
+        } else if (line.includes('action:')) {
+          context.inAction = true;
+        } else if (line.includes('platform:')) {
+          context.inPlatform = true;
+        }
+
+        // Stop at a much lower indentation level (likely a new section)
+        if (lineIndent === 0 && context.indent > 0) {
+          break;
+        }
+      }
+    }
+
+    return context;
+  }
+
+  // ============================================
+  // Enhanced YAML Mode for Home Assistant
+  // ============================================
+
+  function defineHAYamlMode() {
+    try {
+      CodeMirror.defineMode("ha-yaml", function(config) {
+        const yamlMode = CodeMirror.getMode(config, "yaml");
+
+        return CodeMirror.overlayMode(yamlMode, {
+          token: function(stream, state) {
+            // Highlight Home Assistant YAML tags
+            if (stream.match(/!include(_dir_(list|named|merge_list|merge_named))?/)) {
+              return "tag ha-include-tag";
+            }
+            if (stream.match(/!secret/)) {
+              return "tag ha-secret-tag";
+            }
+            if (stream.match(/!env_var/)) {
+              return "tag ha-env-tag";
+            }
+            if (stream.match(/!input/)) {
+              return "tag ha-input-tag";
+            }
+
+            // Highlight common HA domain keywords at start of line
+            if (stream.sol()) {
+              if (stream.match(/\s*(automation|script|sensor|binary_sensor|template|input_boolean|input_number|input_select|input_text|input_datetime|light|switch|climate|cover|scene|group|zone|person):/)) {
+                return "keyword ha-domain";
+              }
+            }
+
+            // Highlight trigger/condition/action keywords
+            if (stream.match(/\s*(trigger|condition|action|service|entity_id|platform|device_id|area_id):/)) {
+              return "keyword ha-key";
+            }
+
+            stream.next();
+            return null;
+          }
+        });
+      });
+      console.log("HA YAML mode defined successfully");
+    } catch (error) {
+      console.error("Error defining HA YAML mode:", error);
+    }
+  }
+
+  // Define the HA YAML mode on load
+  defineHAYamlMode();
+
+  // ============================================
   // State Management
   // ============================================
   const state = {
@@ -27,6 +516,7 @@
     isMobile: window.innerWidth <= MOBILE_BREAKPOINT,
     sidebarVisible: window.innerWidth > MOBILE_BREAKPOINT,
     theme: "dark",
+    showHidden: false,  // Show hidden files/folders
     contextMenuTarget: null,
     currentFolderPath: "",
     editor: null,  // Single shared editor instance
@@ -62,6 +552,7 @@
     elements.btnCollapseAll = document.getElementById("btn-collapse-all");
     elements.btnExpandAll = document.getElementById("btn-expand-all");
     elements.btnCloseSidebar = document.getElementById("btn-close-sidebar");
+    elements.btnShowHidden = document.getElementById("btn-show-hidden");
     elements.btnNewFile = document.getElementById("btn-new-file");
     elements.btnNewFolder = document.getElementById("btn-new-folder");
     elements.btnNewFileSidebar = document.getElementById("btn-new-file-sidebar");
@@ -118,9 +609,14 @@
 
   function getEditorMode(filename) {
     const ext = filename.split(".").pop().toLowerCase();
+
+    // Toggle for custom HA YAML mode - set to false if experiencing issues
+    const USE_CUSTOM_HA_YAML = true;  // Set to true to enable custom HA YAML mode with enhanced syntax
+    const yamlMode = USE_CUSTOM_HA_YAML ? "ha-yaml" : "yaml";
+
     const modeMap = {
-      yaml: "yaml",
-      yml: "yaml",
+      yaml: yamlMode,
+      yml: yamlMode,
       json: { name: "javascript", json: true },
       py: "python",
       js: "javascript",
@@ -130,8 +626,8 @@
       sh: "shell",
       txt: null,
       log: null,
-      conf: "yaml",
-      cfg: "yaml",
+      conf: yamlMode,
+      cfg: yamlMode,
       ini: "yaml",
     };
     return modeMap[ext] || null;
@@ -223,6 +719,7 @@
       if (stored) {
         const settings = JSON.parse(stored);
         state.theme = settings.theme || "dark";
+        state.showHidden = settings.showHidden || false;
       }
     } catch (e) {
       console.log("Could not load settings:", e);
@@ -232,7 +729,8 @@
   function saveSettings() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        theme: state.theme
+        theme: state.theme,
+        showHidden: state.showHidden
       }));
     } catch (e) {
       console.log("Could not save settings:", e);
@@ -277,6 +775,21 @@
     state.theme = theme;
     applyTheme();
     saveSettings();
+  }
+
+  function updateShowHiddenButton() {
+    if (elements.btnShowHidden) {
+      const icon = elements.btnShowHidden.querySelector('.material-icons');
+      if (state.showHidden) {
+        icon.textContent = 'visibility';
+        elements.btnShowHidden.title = 'Hide hidden folders';
+        elements.btnShowHidden.classList.add('active');
+      } else {
+        icon.textContent = 'visibility_off';
+        elements.btnShowHidden.title = 'Show hidden folders';
+        elements.btnShowHidden.classList.remove('active');
+      }
+    }
   }
 
   // ============================================
@@ -430,7 +943,7 @@
   async function loadFiles() {
     try {
       setConnectionStatus(true);
-      const files = await fetchWithAuth(`${API_BASE}?action=list_files`);
+      const files = await fetchWithAuth(`${API_BASE}?action=list_files&show_hidden=${state.showHidden}`);
       state.files = files;
       state.fileTree = buildFileTree(files);
       renderFileTree();
@@ -1131,8 +1644,20 @@
 
     // Update editor content and settings
     const mode = getEditorMode(tab.path);
-    state.editor.setOption("mode", mode);
-    state.editor.setOption("lint", mode === "yaml" ? { getAnnotations: yamlLinter, async: true } : false);
+
+    // Try to set the mode, fall back to yaml if ha-yaml fails
+    try {
+      state.editor.setOption("mode", mode);
+    } catch (error) {
+      console.error("Error setting editor mode:", error);
+      // Fallback to regular yaml if ha-yaml fails
+      if (mode === "ha-yaml") {
+        console.log("Falling back to regular yaml mode");
+        state.editor.setOption("mode", "yaml");
+      }
+    }
+
+    state.editor.setOption("lint", (mode === "ha-yaml" || mode === "yaml") ? { getAnnotations: yamlLinter, async: true } : false);
 
     // Set content without triggering change event
     state.editor.off("change", handleEditorChange);
@@ -1204,6 +1729,13 @@
       tabSize: 2,
       indentWithTabs: false,
       gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter", "CodeMirror-lint-markers"],
+      hintOptions: {
+        hint: homeAssistantHint,
+        completeSingle: false,
+        closeOnUnfocus: true,
+        alignWithWord: true,
+        closeCharacters: /[\s()\[\]{};:>,]/
+      },
       extraKeys: {
         "Ctrl-S": () => saveCurrentFile(),
         "Cmd-S": () => saveCurrentFile(),
@@ -1215,7 +1747,10 @@
         "Cmd-G": () => state.editor.execCommand("jumpToLine"),
         "Ctrl-/": () => state.editor.execCommand("toggleComment"),
         "Cmd-/": () => state.editor.execCommand("toggleComment"),
-        Tab: (cm) => {
+        "Ctrl-Space": (cm) => {
+          cm.showHint({ hint: homeAssistantHint });
+        },
+        "Tab": (cm) => {
           if (cm.somethingSelected()) {
             cm.indentSelection("add");
           } else {
@@ -1232,6 +1767,38 @@
     // Track cursor position
     state.editor.on("cursorActivity", () => {
       updateStatusBar();
+    });
+
+    // Auto-trigger autocomplete for YAML files
+    state.editor.on("inputRead", (cm, changeObj) => {
+      // Only auto-complete in YAML mode
+      const mode = cm.getOption("mode");
+      if (mode !== "ha-yaml" && mode !== "yaml") return;
+
+      // Don't autocomplete if we're in the middle of completing
+      if (cm.state.completionActive) return;
+
+      // Get the character that was just typed
+      const text = changeObj.text[0];
+
+      // Auto-trigger on certain characters
+      const autoTriggerChars = [':', ' ', '-', '!'];
+      const lastChar = text[text.length - 1];
+
+      // Auto-trigger after typing certain characters or when starting a new word
+      if (autoTriggerChars.includes(lastChar) ||
+          (text.match(/^[a-zA-Z]$/) && changeObj.origin === "+input")) {
+
+        // Small delay to make it feel more natural
+        setTimeout(() => {
+          if (!cm.state.completionActive) {
+            cm.showHint({
+              hint: homeAssistantHint,
+              completeSingle: false
+            });
+          }
+        }, 100);
+      }
     });
 
     // Initial refresh
@@ -1590,6 +2157,16 @@
       });
     }
 
+    // Show/Hide hidden folders toggle
+    if (elements.btnShowHidden) {
+      elements.btnShowHidden.addEventListener("click", () => {
+        state.showHidden = !state.showHidden;
+        saveSettings();
+        updateShowHiddenButton();
+        loadFiles();
+      });
+    }
+
     // File search
     if (elements.fileSearch) {
       elements.fileSearch.addEventListener("input", (e) => {
@@ -1786,6 +2363,7 @@
     initElements();
     loadSettings();
     applyTheme();
+    updateShowHiddenButton();
     initEventListeners();
     initResizeHandle();
 
@@ -1798,12 +2376,7 @@
     // Load files
     await loadFiles();
 
-    // Auto-expand first level folders
-    for (const key of Object.keys(state.fileTree)) {
-      if (!key.startsWith("_") && state.fileTree[key]._path) {
-        state.expandedFolders.add(state.fileTree[key]._path);
-      }
-    }
+    // Don't auto-expand folders - let users expand what they need
     renderFileTree();
 
     updateToolbarState();

@@ -136,11 +136,13 @@ class BlueprintStudioApiView(HomeAssistantView):
         hass = request.app["hass"]
 
         if action == "list_files":
-            files = await hass.async_add_executor_job(self._list_files)
+            show_hidden = params.get("show_hidden", "false").lower() == "true"
+            files = await hass.async_add_executor_job(self._list_files, show_hidden)
             return self.json(files)
 
         if action == "list_all":
-            items = await hass.async_add_executor_job(self._list_all)
+            show_hidden = params.get("show_hidden", "false").lower() == "true"
+            items = await hass.async_add_executor_job(self._list_all, show_hidden)
             return self.json(items)
 
         if action == "read_file":
@@ -234,15 +236,22 @@ class BlueprintStudioApiView(HomeAssistantView):
 
         return self.json_message("Unknown action", status_code=400)
 
-    def _list_files(self) -> list[dict[str, Any]]:
+    def _list_files(self, show_hidden: bool = False) -> list[dict[str, Any]]:
         """List files recursively."""
         result: list[dict[str, Any]] = []
 
         for root, dirs, files in os.walk(self.config_dir):
-            dirs[:] = [
-                d for d in dirs
-                if d not in self.EXCLUDED_PATTERNS and not d.startswith(".")
-            ]
+            # Filter directories
+            if show_hidden:
+                dirs[:] = [
+                    d for d in dirs
+                    if d not in self.EXCLUDED_PATTERNS
+                ]
+            else:
+                dirs[:] = [
+                    d for d in dirs
+                    if d not in self.EXCLUDED_PATTERNS and not d.startswith(".")
+                ]
 
             rel_root = Path(root).relative_to(self.config_dir)
 
@@ -250,7 +259,8 @@ class BlueprintStudioApiView(HomeAssistantView):
                 file_path = Path(root) / name
                 rel_path = rel_root / name if str(rel_root) != "." else Path(name)
 
-                if name.startswith("."):
+                # Filter hidden files unless show_hidden is True
+                if not show_hidden and name.startswith("."):
                     continue
                 if file_path.suffix.lower() not in self.ALLOWED_EXTENSIONS:
                     continue
@@ -263,15 +273,22 @@ class BlueprintStudioApiView(HomeAssistantView):
 
         return sorted(result, key=lambda x: x["path"])
 
-    def _list_all(self) -> list[dict[str, Any]]:
+    def _list_all(self, show_hidden: bool = False) -> list[dict[str, Any]]:
         """List all files and folders recursively."""
         result: list[dict[str, Any]] = []
 
         for root, dirs, files in os.walk(self.config_dir):
-            dirs[:] = [
-                d for d in dirs
-                if d not in self.EXCLUDED_PATTERNS and not d.startswith(".")
-            ]
+            # Filter directories
+            if show_hidden:
+                dirs[:] = [
+                    d for d in dirs
+                    if d not in self.EXCLUDED_PATTERNS
+                ]
+            else:
+                dirs[:] = [
+                    d for d in dirs
+                    if d not in self.EXCLUDED_PATTERNS and not d.startswith(".")
+                ]
 
             rel_root = Path(root).relative_to(self.config_dir)
 
@@ -289,7 +306,8 @@ class BlueprintStudioApiView(HomeAssistantView):
                 file_path = Path(root) / name
                 rel_path = rel_root / name if str(rel_root) != "." else Path(name)
 
-                if name.startswith("."):
+                # Filter hidden files unless show_hidden is True
+                if not show_hidden and name.startswith("."):
                     continue
                 if file_path.suffix.lower() not in self.ALLOWED_EXTENSIONS:
                     continue
@@ -472,12 +490,38 @@ class BlueprintStudioApiView(HomeAssistantView):
             return self.json_message("Error renaming", status_code=500)
 
     def _check_yaml(self, content: str) -> web.Response:
-        """Check for YAML syntax errors."""
+        """Check for YAML syntax errors (Home Assistant-aware)."""
         try:
-            yaml.safe_load(content)
+            # Simple approach: just allow HA tags without trying to load them
+            import yaml
+
+            # Create a simple loader that accepts HA tags
+            class HAYamlLoader(yaml.SafeLoader):
+                pass
+
+            # Add constructors for HA tags that just return the tag as-is for validation
+            def ha_constructor(loader, node):
+                """Constructor that returns the scalar value without processing."""
+                return loader.construct_scalar(node)
+
+            # Register all Home Assistant custom tags
+            HAYamlLoader.add_constructor('!include', ha_constructor)
+            HAYamlLoader.add_constructor('!include_dir_list', ha_constructor)
+            HAYamlLoader.add_constructor('!include_dir_named', ha_constructor)
+            HAYamlLoader.add_constructor('!include_dir_merge_list', ha_constructor)
+            HAYamlLoader.add_constructor('!include_dir_merge_named', ha_constructor)
+            HAYamlLoader.add_constructor('!secret', ha_constructor)
+            HAYamlLoader.add_constructor('!env_var', ha_constructor)
+            HAYamlLoader.add_constructor('!input', ha_constructor)
+
+            # Try to parse the YAML
+            yaml.load(content, Loader=HAYamlLoader)
             return self.json({"valid": True})
         except yaml.YAMLError as err:
             return self.json({"valid": False, "error": str(err)})
+        except Exception as err:
+            # Fallback for any other errors
+            return self.json({"valid": False, "error": f"Validation error: {str(err)}"})
 
     async def _upload_file(
         self, hass: HomeAssistant, path: str, content: str, overwrite: bool

@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/lint.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 
   <!-- Themes -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
@@ -43,6 +44,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/overlay.min.js"></script>
 
   <style>
     /* Dark theme (default) */
@@ -294,6 +298,11 @@
     .sidebar-header-btn:hover, .sidebar-header-btn:active {
       background: var(--bg-hover);
       color: var(--text-primary);
+    }
+
+    .sidebar-header-btn.active {
+      background: var(--accent-color);
+      color: white;
     }
 
     .sidebar-header-btn .material-icons {
@@ -572,6 +581,81 @@
 
     .CodeMirror-activeline-background {
       background: rgba(128, 128, 128, 0.1);
+    }
+
+    /* Autocomplete hints styling */
+    .CodeMirror-hints {
+      background: var(--modal-bg) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 16px var(--shadow-color) !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
+      font-size: 13px !important;
+      max-height: 300px !important;
+      overflow-y: auto !important;
+    }
+
+    .CodeMirror-hint {
+      color: var(--text-primary) !important;
+      padding: 6px 12px !important;
+      border-radius: 4px !important;
+      margin: 2px 4px !important;
+    }
+
+    .CodeMirror-hint-active {
+      background: var(--accent-color) !important;
+      color: white !important;
+    }
+
+    .CodeMirror-hint:hover {
+      background: var(--bg-hover) !important;
+    }
+
+    .ha-hint-type {
+      opacity: 0.6;
+      font-size: 11px;
+      margin-left: 8px;
+      font-style: italic;
+    }
+
+    .ha-hint-description {
+      opacity: 0.7;
+      font-size: 11px;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* Home Assistant YAML syntax highlighting */
+    .cm-ha-include-tag,
+    .cm-ha-secret-tag,
+    .cm-ha-env-tag,
+    .cm-ha-input-tag {
+      font-weight: bold;
+      color: #c792ea;
+    }
+
+    [data-theme="light"] .cm-ha-include-tag,
+    [data-theme="light"] .cm-ha-secret-tag,
+    [data-theme="light"] .cm-ha-env-tag,
+    [data-theme="light"] .cm-ha-input-tag {
+      color: #7c4dff;
+    }
+
+    .cm-ha-domain {
+      font-weight: 600;
+      color: #82aaff;
+    }
+
+    [data-theme="light"] .cm-ha-domain {
+      color: #0066b8;
+    }
+
+    .cm-ha-key {
+      color: #c3e88d;
+    }
+
+    [data-theme="light"] .cm-ha-key {
+      color: #2e7d32;
     }
 
     /* Welcome screen */
@@ -1168,6 +1252,9 @@
           </button>
           <button class="sidebar-header-btn" id="btn-new-folder-sidebar" title="New Folder">
             <span class="material-icons">create_new_folder</span>
+          </button>
+          <button class="sidebar-header-btn" id="btn-show-hidden" title="Show hidden folders">
+            <span class="material-icons">visibility_off</span>
           </button>
           <button class="sidebar-header-btn" id="btn-collapse-all" title="Collapse All">
             <span class="material-icons">unfold_less</span>
