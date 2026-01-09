@@ -7,6 +7,7 @@
 ![Maintenance](https://img.shields.io/maintenance/yes/2025.svg)
 [![GitHub Stars](https://img.shields.io/github/stars/soulripper13/blueprint-studio?style=social)](https://github.com/soulripper13/blueprint-studio)
 [![GitHub Issues](https://img.shields.io/github/issues/soulripper13/blueprint-studio?style=flat-square)](https://github.com/soulripper13/blueprint-studio/issues)
+[![Support Development](https://img.shields.io/badge/Support-Development-FFDD00?style=for-the-badge&logo=paypal&logoColor=black)](#support-the-project)
 
 <div align="center">
   <img src="https://dummyimage.com/800x60/0d1117/ffffff&text=Blueprint+Studio+-+Edit+Your+HA+Configs+Like+a+Pro" alt="Hero Banner">
@@ -425,6 +426,34 @@ Special thanks to all contributors and users who help make Blueprint Studio bett
 | **Security** | Built-in Restrictions | Basic | Full Access | Full Access | None |
 | **File Management** | Full (Upload/Download/ZIP) | Basic | Full | Full | Limited |
 | **Maintenance** | Active | Official | Community | N/A | Deprecated |
+
+---
+## Support the Project
+
+This integration is developed and maintained in spare time and is provided free to the Home Assistant community.
+
+If you find it useful and would like to support ongoing development, maintenance, and improvements, any contribution is appreciated — but never required ❤️
+
+### Ways to Support
+
+* **PayPal**
+  [https://paypal.me/SKatoaroo](https://paypal.me/SKatoaroo)
+
+* **Bitcoin (BTC)**
+  `bc1qvu8a9gdy3dcxa94jge7d3rd7claapsydjsjxn0`
+
+* **Solana (SOL)**
+  `4jvCR2YFQLqguoyz9qAMPzVbaEcDsG5nzRHFG8SeaeBK`
+
+You can also help by:
+
+* Reporting bugs
+* Submitting pull requests
+* Suggesting features
+* Helping other users
+* Starring the repository ⭐
+
+Thank you for being part of the Home Assistant community.
 
 ---
 
