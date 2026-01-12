@@ -1433,11 +1433,55 @@
       const isExpanded = state.expandedFolders.has(folderPath);
       const item = createTreeItem(folderName, depth, true, isExpanded, folderPath);
 
+      // Gesture detection for mobile
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchStartTime = 0;
+      let isTouchMove = false;
+
+      item.addEventListener("touchstart", (e) => {
+        if (e.target.closest(".tree-action-btn")) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        isTouchMove = false;
+      });
+
+      item.addEventListener("touchmove", (e) => {
+        if (e.target.closest(".tree-action-btn")) return;
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+        const deltaX = Math.abs(touchX - touchStartX);
+        const deltaY = Math.abs(touchY - touchStartY);
+
+        // If moved more than 10px, consider it scrolling
+        if (deltaX > 10 || deltaY > 10) {
+          isTouchMove = true;
+        }
+      });
+
+      item.addEventListener("touchend", (e) => {
+        if (e.target.closest(".tree-action-btn")) return;
+
+        const touchDuration = Date.now() - touchStartTime;
+
+        // Only trigger if it was a quick tap (not a long press) and not a scroll
+        if (!isTouchMove && touchDuration < 300) {
+          e.preventDefault();
+          e.stopPropagation();
+          state.currentFolderPath = folderPath;
+          toggleFolder(folderPath);
+        }
+      });
+
       item.addEventListener("click", (e) => {
         if (e.target.closest(".tree-action-btn")) return;
-        e.stopPropagation();
-        state.currentFolderPath = folderPath;
-        toggleFolder(folderPath);
+        // Only handle click on desktop (when not a touch device)
+        if (!('ontouchstart' in window)) {
+          e.stopPropagation();
+          state.currentFolderPath = folderPath;
+          toggleFolder(folderPath);
+        }
       });
 
       // Context menu
@@ -1445,14 +1489,6 @@
         e.preventDefault();
         e.stopPropagation();
         showContextMenu(e.clientX, e.clientY, { path: folderPath, isFolder: true });
-      });
-
-      // Touch support
-      item.addEventListener("touchend", (e) => {
-        if (e.target.closest(".tree-action-btn")) return;
-        e.preventDefault();
-        state.currentFolderPath = folderPath;
-        toggleFolder(folderPath);
       });
 
       container.appendChild(item);
@@ -1470,10 +1506,54 @@
 
       const item = createTreeItem(file.name, depth, false, false, file.path);
 
+      // Gesture detection for mobile
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchStartTime = 0;
+      let isTouchMove = false;
+
+      item.addEventListener("touchstart", (e) => {
+        if (e.target.closest(".tree-action-btn")) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        isTouchMove = false;
+      });
+
+      item.addEventListener("touchmove", (e) => {
+        if (e.target.closest(".tree-action-btn")) return;
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+        const deltaX = Math.abs(touchX - touchStartX);
+        const deltaY = Math.abs(touchY - touchStartY);
+
+        // If moved more than 10px, consider it scrolling
+        if (deltaX > 10 || deltaY > 10) {
+          isTouchMove = true;
+        }
+      });
+
+      item.addEventListener("touchend", (e) => {
+        if (e.target.closest(".tree-action-btn")) return;
+
+        const touchDuration = Date.now() - touchStartTime;
+
+        // Only trigger if it was a quick tap (not a long press) and not a scroll
+        if (!isTouchMove && touchDuration < 300) {
+          e.preventDefault();
+          e.stopPropagation();
+          openFile(file.path);
+          if (isMobile()) hideSidebar();
+        }
+      });
+
       item.addEventListener("click", (e) => {
         if (e.target.closest(".tree-action-btn")) return;
-        openFile(file.path);
-        if (isMobile()) hideSidebar();
+        // Only handle click on desktop (when not a touch device)
+        if (!('ontouchstart' in window)) {
+          openFile(file.path);
+          if (isMobile()) hideSidebar();
+        }
       });
 
       // Context menu
@@ -1481,14 +1561,6 @@
         e.preventDefault();
         e.stopPropagation();
         showContextMenu(e.clientX, e.clientY, { path: file.path, isFolder: false });
-      });
-
-      // Touch support
-      item.addEventListener("touchend", (e) => {
-        if (e.target.closest(".tree-action-btn")) return;
-        e.preventDefault();
-        openFile(file.path);
-        if (isMobile()) hideSidebar();
       });
 
       if (state.activeTab && state.activeTab.path === file.path) {
@@ -1524,6 +1596,8 @@
     const item = document.createElement("div");
     item.className = "tree-item";
     item.style.setProperty("--depth", depth);
+    // Optimize touch behavior on mobile devices
+    item.style.touchAction = "manipulation";
 
     const chevron = document.createElement("div");
     chevron.className = `tree-chevron ${isFolder ? (isExpanded ? "expanded" : "") : "hidden"}`;
