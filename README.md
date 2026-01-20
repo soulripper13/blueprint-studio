@@ -274,7 +274,7 @@ Blueprint Studio requires **no configuration**! After installation:
 **Sync your Home Assistant configuration with GitHub!**
 
 <div align="center">
-  <img src="images/screenshot-git-settings.png" alt="Git Settings Modal" width="800">
+  <img src="images/screenshot-git-settings-1.png" alt="Git Settings Modal" width="800">
   <p><em>Git Settings - One-click OAuth login or Personal Access Token</em></p>
 </div>
 
