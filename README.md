@@ -93,7 +93,6 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 *One-click OAuth login or Personal Access Token authentication*
 
 ![Git Settings Modal](images/screenshot-git-settings-1.png)
-![Git Settings Modal](images/screenshot-git-settings-2.png)
 
 ---
 
