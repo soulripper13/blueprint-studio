@@ -297,6 +297,8 @@ Blueprint Studio requires **no configuration**! After installation:
 2. Enter username and token in Git Settings
 3. Click "Save Credentials"
 
+#### ⚠️ **If Github Device flow not working use PAT token"
+
 #### Creating a New Repository 🚀
 **NEW! Create GitHub repositories without leaving Blueprint Studio:**
 
