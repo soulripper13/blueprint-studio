@@ -84,14 +84,16 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 ### GitHub Integration 🔗 **NEW!**
 *Complete Git workflow - stage, commit, and push directly from Blueprint Studio*
 
-![Git Changes Panel](images/screenshot-git-changes.png)
+![Git Changes Panel](images/screenshot-git-changes-1.png)
+![Git Changes Panel](images/screenshot-git-changes-2.png)
 
 ---
 
 ### Git Settings & Authentication
 *One-click OAuth login or Personal Access Token authentication*
 
-![Git Settings Modal](images/screenshot-git-settings.png)
+![Git Settings Modal](images/screenshot-git-settings-1.png)
+![Git Settings Modal](images/screenshot-git-settings-2.png)
 
 ---
 
