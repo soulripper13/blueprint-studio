@@ -22,6 +22,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
+  <!-- GitHub Octicons (for Git features) -->
+  <link href="https://unpkg.com/@primer/octicons@19.8.0/dist/octicons.css" rel="stylesheet">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
@@ -189,6 +192,33 @@
       font-size: 20px;
     }
 
+    /* GitHub Octicons support */
+    .octicon {
+      display: inline-block;
+      vertical-align: text-bottom;
+      fill: currentColor;
+    }
+
+    .toolbar-btn .octicon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .git-file-group-icon.octicon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .git-file-icon.octicon {
+      width: 16px;
+      height: 16px;
+    }
+
+    .git-panel-btn .octicon {
+      width: 18px;
+      height: 18px;
+    }
+
     .toolbar-btn.primary {
       background: var(--accent-color);
       color: white;
@@ -206,6 +236,93 @@
     .toolbar-spacer {
       flex: 1;
       min-width: 8px;
+    }
+
+    /* Hide Git elements when Git integration is disabled */
+    body.git-disabled .git-toolbar-group,
+    body.git-disabled #git-panel {
+      display: none !important;
+    }
+
+    /* Breadcrumb Navigation */
+    .breadcrumb-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px;
+      max-width: 400px;
+      flex-shrink: 1;
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .breadcrumb-item {
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .breadcrumb-item:last-child {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .breadcrumb-link {
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .breadcrumb-link:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .breadcrumb-separator {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 0 2px;
+      user-select: none;
+    }
+
+    .breadcrumb-copy-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .breadcrumb-copy-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .breadcrumb-copy-btn .material-icons {
+      font-size: 16px;
+    }
+
+    .breadcrumb-copy-btn.copied {
+      color: var(--success-color);
     }
 
     .file-path-display {
@@ -229,7 +346,7 @@
 
     /* Sidebar */
     .sidebar {
-      width: 280px;
+      width: 320px;
       min-width: 200px;
       max-width: 80vw;
       background: var(--bg-secondary);
@@ -340,6 +457,44 @@
       padding: 4px 0;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
+    }
+
+    /* Favorites panel */
+    .favorites-panel {
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    .favorites-header {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      padding: 8px 12px 4px 12px;
+    }
+
+    /* Recent Files panel */
+    .recent-files-panel {
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    .recent-files-header {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      padding: 8px 12px 4px 12px;
+    }
+
+    .favorite-item {
+      background: var(--bg-tertiary);
+    }
+
+    .favorite-item .tree-item-actions {
+      display: flex;
     }
 
     .tree-item {
@@ -689,6 +844,40 @@
       font-size: 14px;
     }
 
+    .welcome-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+    }
+    .welcome-actions .btn-primary,
+    .welcome-actions .btn-secondary {
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .welcome-actions .btn-primary {
+      background: var(--accent-color);
+      color: white;
+    }
+    .welcome-actions .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+    .welcome-actions .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    .welcome-actions .btn-secondary:hover {
+      background: var(--bg-hover);
+    }
+
     .welcome-shortcuts {
       margin-top: 24px;
       text-align: left;
@@ -779,6 +968,9 @@
       box-shadow: 0 8px 32px var(--shadow-color);
       width: 100%;
       max-width: 400px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
       animation: modalIn 0.2s ease;
     }
 
@@ -799,6 +991,7 @@
       justify-content: space-between;
       padding: 16px 20px;
       border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
     }
 
     .modal-title {
@@ -826,6 +1019,28 @@
 
     .modal-body {
       padding: 20px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex: 1;
+      min-height: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .modal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .modal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
     }
 
     .modal-input {
@@ -855,6 +1070,7 @@
       gap: 8px;
       padding: 16px 20px;
       border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
     }
 
     .modal-btn {
@@ -1059,6 +1275,10 @@
         display: none;
       }
 
+      .breadcrumb-container {
+        display: none;
+      }
+
       .sidebar {
         position: absolute;
         left: 0;
@@ -1100,6 +1320,105 @@
 
       .tree-item-actions {
         display: flex;
+      }
+
+      /* Git panel mobile styles */
+      .git-panel {
+        max-height: 50vh;
+      }
+
+      .git-panel-header {
+        padding: 12px;
+        min-height: 48px;
+      }
+
+      .git-panel-btn {
+        min-width: 40px;
+        min-height: 40px;
+      }
+
+      .git-file-group-header {
+        padding: 12px;
+        min-height: 48px;
+        touch-action: manipulation;
+      }
+
+      .git-file-item {
+        padding: 12px 12px 12px 32px;
+        min-height: 48px;
+        touch-action: manipulation;
+      }
+
+      .git-file-checkbox {
+        width: 20px;
+        height: 20px;
+        margin-right: 12px;
+      }
+
+      .git-panel-footer {
+        padding: 12px;
+        gap: 12px;
+      }
+
+      .git-panel-footer button {
+        padding: 12px 16px;
+        font-size: 14px;
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+
+      /* Git settings modal on mobile */
+      .git-settings-input {
+        padding: 12px 16px;
+        font-size: 16px; /* Prevents iOS zoom */
+        min-height: 44px;
+      }
+
+      .git-settings-buttons button {
+        padding: 12px 16px;
+        font-size: 14px;
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+
+      .git-settings-info {
+        padding: 12px;
+        font-size: 13px;
+      }
+
+      .git-remote-item {
+        padding: 12px;
+        font-size: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+
+      .git-remote-url {
+        word-break: break-all;
+      }
+
+      /* Modal mobile optimization */
+      .modal {
+        max-width: 95vw;
+        max-height: 85vh;
+        margin: 0 10px;
+      }
+
+      .modal-body {
+        padding: 16px;
+      }
+
+      .modal-header {
+        padding: 12px 16px;
+      }
+
+      .modal-footer {
+        padding: 12px 16px;
+      }
+
+      .modal-overlay {
+        padding: 10px;
       }
     }
 
@@ -1157,6 +1476,770 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Loading States */
+    .toolbar-btn.loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+
+    .toolbar-btn.loading::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 2px solid var(--text-secondary);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .toolbar-btn.loading .material-icons {
+      opacity: 0;
+    }
+
+    /* Global Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .loading-overlay.visible {
+      display: flex;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--bg-tertiary);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-content {
+      background: var(--bg-secondary);
+      padding: 24px 32px;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px var(--shadow-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .loading-text {
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* File Tree Loading State */
+    .file-tree.loading {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Keyboard Shortcuts Overlay */
+    .shortcuts-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .shortcuts-overlay.visible {
+      display: flex;
+    }
+
+    .shortcuts-modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      box-shadow: 0 12px 48px var(--shadow-color);
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      animation: slideInUp 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .shortcuts-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .shortcuts-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .shortcuts-close {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .shortcuts-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .shortcuts-close .material-icons {
+      font-size: 20px;
+    }
+
+    .shortcuts-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .shortcuts-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .shortcuts-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .shortcuts-body::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    .shortcuts-body::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .shortcuts-section {
+      margin-bottom: 28px;
+    }
+
+    .shortcuts-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .shortcuts-section h3 {
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    .shortcut-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      transition: background 0.15s;
+    }
+
+    .shortcut-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .shortcut-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .shortcut-keys {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .shortcut-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: right;
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 4px 8px;
+      font-family: ui-monospace, 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      min-width: 24px;
+      text-align: center;
+    }
+
+    .shortcuts-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .shortcuts-hint {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .shortcuts-hint .material-icons {
+      font-size: 16px;
+      color: var(--accent-color);
+    }
+
+    /* Mobile shortcuts overlay */
+    @media (max-width: 768px) {
+      .shortcuts-modal {
+        width: 95%;
+        max-height: 90vh;
+      }
+
+      .shortcuts-header {
+        padding: 16px 20px;
+      }
+
+      .shortcuts-header h2 {
+        font-size: 18px;
+      }
+
+      .shortcuts-body {
+        padding: 20px;
+      }
+
+      .shortcut-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .shortcut-desc {
+        text-align: left;
+      }
+    }
+
+    /* Git Changes Panel */
+    .git-panel {
+      display: none;
+      flex-direction: column;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      max-height: 40vh;
+    }
+
+    .git-panel.visible {
+      display: flex;
+    }
+
+    .git-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .git-panel-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .git-panel-badge {
+      background: var(--warning-color);
+      color: var(--bg-primary);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .git-panel-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .git-panel-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .git-panel-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .git-panel-btn:active {
+      background: var(--border-color);
+    }
+
+    .git-panel-btn .material-icons {
+      font-size: 18px;
+    }
+
+    .git-files-container {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .git-file-group {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .git-file-group:last-child {
+      border-bottom: none;
+    }
+
+    .git-file-group-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .git-file-group-header:hover {
+      background: var(--bg-hover);
+    }
+
+    .git-file-group-header:active {
+      background: var(--border-color);
+    }
+
+    .git-file-group-icon {
+      margin-right: 6px;
+      font-size: 16px;
+    }
+
+    .git-file-group-count {
+      margin-left: 6px;
+      opacity: 0.7;
+    }
+
+    .git-file-group-chevron {
+      margin-left: auto;
+      font-size: 18px;
+      transition: transform 0.15s;
+    }
+
+    .git-file-group.collapsed .git-file-group-chevron {
+      transform: rotate(-90deg);
+    }
+
+    .git-file-group.collapsed .git-file-list {
+      display: none;
+    }
+
+    .git-file-list {
+      padding: 4px 0;
+    }
+
+    .git-file-item {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px 6px 32px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.1s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .git-file-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .git-file-item:active {
+      background: var(--border-color);
+    }
+
+    .git-file-item.selected {
+      background: var(--bg-active);
+      color: white;
+    }
+
+    .git-file-checkbox {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      cursor: pointer;
+      accent-color: var(--accent-color);
+    }
+
+    .git-file-icon {
+      margin-right: 8px;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .git-file-icon.modified { color: var(--warning-color); }
+    .git-file-icon.added { color: var(--success-color); }
+    .git-file-icon.deleted { color: var(--error-color); }
+    .git-file-icon.untracked { color: var(--text-muted); }
+
+    .git-file-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .git-file-status {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-left: 8px;
+      text-transform: uppercase;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .git-file-status.staged {
+      background: var(--success-color);
+      color: var(--bg-primary);
+    }
+
+    .git-file-status.unstaged {
+      background: var(--warning-color);
+      color: var(--bg-primary);
+    }
+
+    .git-panel-footer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+    }
+
+    .git-panel-footer button {
+      flex: 1;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .git-panel-footer .btn-stage-all {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .git-panel-footer .btn-stage-all:hover {
+      background: #3ea589;
+    }
+
+    .git-panel-footer .btn-unstage-all {
+      background: var(--warning-color);
+      color: var(--bg-primary);
+    }
+
+    .git-panel-footer .btn-unstage-all:hover {
+      background: #c5c17a;
+    }
+
+    .git-panel-footer .btn-commit {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .git-panel-footer .btn-commit:hover {
+      background: var(--accent-hover);
+    }
+
+    .git-panel-footer .btn-commit:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .git-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .git-empty-state .material-icons {
+      font-size: 48px;
+      opacity: 0.3;
+      margin-bottom: 12px;
+    }
+
+    .git-empty-state p {
+      font-size: 13px;
+    }
+
+    /* Git Settings Modal */
+    .git-settings-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .git-settings-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .git-settings-section:not(:last-child) {
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .git-settings-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+      cursor: pointer;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--divider-color);
+      border-radius: 26px;
+      transition: background-color 0.2s;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: var(--accent-color);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+    }
+
+    .git-settings-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: monospace;
+    }
+
+    .git-settings-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .git-settings-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .git-settings-buttons button {
+      flex: 1;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .git-settings-buttons .btn-primary {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .git-settings-buttons .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .git-settings-buttons .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .git-settings-buttons .btn-secondary:hover {
+      background: var(--bg-hover);
+    }
+
+    .git-settings-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .git-settings-info .material-icons {
+      font-size: 16px;
+      color: var(--accent-color);
+    }
+
+    .git-remote-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: monospace;
+    }
+
+    .git-remote-name {
+      font-weight: 600;
+      color: var(--accent-color);
+      margin-right: 8px;
+    }
+
+    .git-remote-url {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-secondary);
+    }
+
+    /* GitHub Sign Out Button */
+    #btn-github-signout:hover {
+      background: #d32f2f !important;
+    }
+
+    #btn-github-signout:active {
+      background: #b71c1c !important;
     }
   </style>
 </head>
@@ -1223,11 +2306,42 @@
       </button>
     </div>
 
-    <div class="file-path-display" id="file-path"></div>
+    <div class="toolbar-group git-toolbar-group" id="git-toolbar-group">
+      <button class="toolbar-btn" id="btn-git-pull" title="Git Pull">
+        <svg class="octicon" viewBox="0 0 16 16" width="20" height="20">
+          <path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 2.122a2.25 2.25 0 1 0-1.5 0v.878A2.25 2.25 0 0 0 5.75 8.5h1.5v2.128a2.251 2.251 0 1 0 1.5 0V8.5h1.5a2.25 2.25 0 0 0 2.25-2.25v-.878a2.25 2.25 0 1 0-1.5 0v.878a.75.75 0 0 1-.75.75h-4.5A.75.75 0 0 1 5 6.25v-.878zm3.75 7.378a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm3-8.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-git-push" title="Git Push">
+        <svg class="octicon" viewBox="0 0 16 16" width="20" height="20">
+          <path d="M1 2.5A2.5 2.5 0 0 1 3.5 0h8.75a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0V1.5h-8a1 1 0 0 0-1 1v6.708A2.492 2.492 0 0 1 3.5 9h3.25a.75.75 0 0 1 0 1.5H3.5a1 1 0 0 0 0 2h5.75a.75.75 0 0 1 0 1.5H3.5A2.5 2.5 0 0 1 1 11.5v-9zm13.23 7.79h-.001l-1.224-1.224v6.184a.75.75 0 0 1-1.5 0V9.066L10.28 10.29a.75.75 0 0 1-1.06-1.061l2.505-2.504a.75.75 0 0 1 1.06 0L15.29 9.23a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018z"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-git-status" title="Git Status">
+        <svg class="octicon" viewBox="0 0 16 16" width="20" height="20">
+          <path d="M8.75 1a.75.75 0 0 0-1.5 0v.5h-.984c-.305 0-.604.08-.869.23l-1.288.737A.25.25 0 0 0 4 2.75v1.5a.25.25 0 0 0 .109.207l1.288.738c.265.15.564.229.869.229h.984v2.759a.75.75 0 0 1-.182.485l-2.006 2.34a.25.25 0 0 0-.061.159v1.583a.25.25 0 0 0 .369.221l2.006-1.032a.75.75 0 0 1 .682 0l2.006 1.032a.25.25 0 0 0 .369-.221v-1.583a.25.25 0 0 0-.061-.159l-2.006-2.34a.75.75 0 0 1-.182-.485V5.5h.984c.305 0 .604-.08.869-.23l1.289-.737A.25.25 0 0 0 12 4.25v-1.5a.25.25 0 0 0-.109-.207l-1.289-.738a1.75 1.75 0 0 0-.869-.229H8.75V1z"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-git-settings" title="Git Settings">
+        <svg class="octicon" viewBox="0 0 16 16" width="20" height="20">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="breadcrumb-container" id="breadcrumb-container">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <button class="breadcrumb-copy-btn" id="breadcrumb-copy" title="Copy full path">
+        <span class="material-icons">content_copy</span>
+      </button>
+    </div>
 
     <div class="toolbar-spacer"></div>
 
     <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-app-settings" title="Settings">
+        <span class="material-icons">settings</span>
+      </button>
       <button class="toolbar-btn" id="btn-refresh" title="Refresh">
         <span class="material-icons">refresh</span>
       </button>
@@ -1258,10 +2372,7 @@
           <button class="sidebar-header-btn" id="btn-show-hidden" title="Show hidden folders">
             <span class="material-icons">visibility_off</span>
           </button>
-          <button class="sidebar-header-btn" id="btn-collapse-all" title="Collapse All">
-            <span class="material-icons">unfold_less</span>
-          </button>
-          <button class="sidebar-header-btn" id="btn-expand-all" title="Expand All">
+          <button class="sidebar-header-btn" id="btn-toggle-all" title="Expand All">
             <span class="material-icons">unfold_more</span>
           </button>
           <button class="sidebar-header-btn" id="btn-close-sidebar" title="Close">
@@ -1272,6 +2383,45 @@
       <div class="search-container">
         <input type="text" class="search-input" id="file-search" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       </div>
+
+      <!-- Git Changes Panel -->
+      <div class="git-panel" id="git-panel">
+        <div class="git-panel-header">
+          <div class="git-panel-title">
+            <span>Git Changes</span>
+            <span class="git-panel-badge" id="git-changes-count">0</span>
+          </div>
+          <div class="git-panel-actions">
+            <button class="git-panel-btn" id="btn-git-refresh" title="Refresh Git Status">
+              <svg class="octicon" viewBox="0 0 16 16" width="18" height="18">
+                <path d="M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z"></path>
+              </svg>
+            </button>
+            <button class="git-panel-btn" id="btn-git-collapse" title="Collapse Git Panel">
+              <svg class="octicon" viewBox="0 0 16 16" width="18" height="18">
+                <path d="M7.47 1.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1-1.06 1.06L8 2.81 5.28 5.53a.75.75 0 0 1-1.06-1.06l3.25-3.25ZM5.28 10.47a.75.75 0 0 1 1.06 0L8 12.19l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0l-3.25-3.25a.75.75 0 0 1 0-1.06Z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="git-files-container" id="git-files-container">
+          <div class="git-empty-state">
+            <svg class="octicon" viewBox="0 0 16 16" width="48" height="48" style="fill: var(--success-color);">
+              <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+            </svg>
+            <p>No changes detected</p>
+          </div>
+        </div>
+        <div class="git-panel-footer">
+          <button class="btn-stage-all" id="btn-stage-selected">Stage</button>
+          <button class="btn-stage-all" id="btn-stage-all">Stage All</button>
+          <button class="btn-unstage-all" id="btn-unstage-all">Unstage</button>
+          <button class="btn-commit" id="btn-commit-staged" disabled>Commit</button>
+        </div>
+      </div>
+
+      <div id="recent-files-panel" class="recent-files-panel"></div>
+      <div class="favorites-panel" id="favorites-panel"></div>
       <div class="file-tree" id="file-tree"></div>
     </div>
 
@@ -1285,8 +2435,19 @@
         <div class="welcome-screen" id="welcome-screen">
           <span class="material-icons">edit_note</span>
           <h2>Blueprint Studio</h2>
-          <p>Select a file from the explorer to start editing</p>
-          <div class="welcome-shortcuts">
+                <p>Get started by opening an existing file, or:</p>
+                <div class="welcome-actions">
+                    <button class="btn-primary" id="btn-welcome-new-file">
+                        <span class="material-icons">add_circle_outline</span>
+                        Create New File
+                    </button>
+                    <button class="btn-secondary" id="btn-welcome-upload-file">
+                        <span class="material-icons">upload_file</span>
+                        Upload File
+                    </button>
+                </div>
+                <!-- Existing shortcuts section -->
+                <div class="welcome-shortcuts">
             <h3>Keyboard Shortcuts</h3>
             <div class="shortcut-item">
               <span class="shortcut-key">Ctrl+S</span>
@@ -1380,6 +2541,81 @@
     <div class="context-menu-item danger" data-action="delete">
       <span class="material-icons">delete</span>
       Delete
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loading-text">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Overlay -->
+  <div class="shortcuts-overlay" id="shortcuts-overlay">
+    <div class="shortcuts-modal">
+      <div class="shortcuts-header">
+        <h2>Keyboard Shortcuts</h2>
+        <button class="shortcuts-close" id="shortcuts-close">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="shortcuts-body">
+        <div class="shortcuts-section">
+          <h3>File Operations</h3>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>S</kbd></span>
+            <span class="shortcut-desc">Save current file</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd></span>
+            <span class="shortcut-desc">Save all files</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>W</kbd></span>
+            <span class="shortcut-desc">Close current tab</span>
+          </div>
+        </div>
+
+        <div class="shortcuts-section">
+          <h3>Editor</h3>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Z</kbd></span>
+            <span class="shortcut-desc">Undo</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Y</kbd></span>
+            <span class="shortcut-desc">Redo</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>F</kbd></span>
+            <span class="shortcut-desc">Search in file</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>H</kbd></span>
+            <span class="shortcut-desc">Find and replace</span>
+          </div>
+        </div>
+
+        <div class="shortcuts-section">
+          <h3>Navigation</h3>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Esc</kbd></span>
+            <span class="shortcut-desc">Close modal/menu or hide sidebar (mobile)</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>?</kbd></span>
+            <span class="shortcut-desc">Show this keyboard shortcuts help</span>
+          </div>
+        </div>
+      </div>
+      <div class="shortcuts-footer">
+        <div class="shortcuts-hint">
+          <span class="material-icons">info</span>
+          On Mac, use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>
+        </div>
+      </div>
     </div>
   </div>
 

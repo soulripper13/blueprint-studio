@@ -13,6 +13,7 @@
   const API_BASE = "/api/blueprint_studio";
   const MOBILE_BREAKPOINT = 768;
   const STORAGE_KEY = "blueprint_studio_settings";
+  const MAX_RECENT_FILES = 10;
 
   // ============================================
   // Home Assistant Autocomplete Schema
@@ -512,6 +513,8 @@
     openTabs: [],
     activeTab: null,
     expandedFolders: new Set(),
+    favoriteFiles: [],  // Array of favorite file paths
+    recentFiles: [],    // Array of recently opened file paths
     searchQuery: "",
     isMobile: window.innerWidth <= MOBILE_BREAKPOINT,
     sidebarVisible: window.innerWidth > MOBILE_BREAKPOINT,
@@ -520,6 +523,7 @@
     contextMenuTarget: null,
     currentFolderPath: "",
     editor: null,  // Single shared editor instance
+    gitConfig: null,  // Git configuration
   };
 
   // ============================================
@@ -533,6 +537,8 @@
     elements.editorContainer = document.getElementById("editor-container");
     elements.welcomeScreen = document.getElementById("welcome-screen");
     elements.filePath = document.getElementById("file-path");
+    elements.breadcrumb = document.getElementById("breadcrumb");
+    elements.breadcrumbCopy = document.getElementById("breadcrumb-copy");
     elements.fileSearch = document.getElementById("file-search");
     elements.toastContainer = document.getElementById("toast-container");
     elements.sidebar = document.getElementById("sidebar");
@@ -548,9 +554,9 @@
     elements.btnMenu = document.getElementById("btn-menu");
     elements.btnSearch = document.getElementById("btn-search");
     elements.btnRefresh = document.getElementById("btn-refresh");
+    elements.btnAppSettings = document.getElementById("btn-app-settings");
     elements.btnValidate = document.getElementById("btn-validate");
-    elements.btnCollapseAll = document.getElementById("btn-collapse-all");
-    elements.btnExpandAll = document.getElementById("btn-expand-all");
+    elements.btnToggleAll = document.getElementById("btn-toggle-all");
     elements.btnCloseSidebar = document.getElementById("btn-close-sidebar");
     elements.btnShowHidden = document.getElementById("btn-show-hidden");
     elements.btnNewFile = document.getElementById("btn-new-file");
@@ -576,6 +582,22 @@
     elements.btnDownloadFolder = document.getElementById("btn-download-folder");
     elements.fileUploadInput = document.getElementById("file-upload-input");
     elements.folderUploadInput = document.getElementById("folder-upload-input");
+    elements.btnGitPull = document.getElementById("btn-git-pull");
+    elements.btnGitPush = document.getElementById("btn-git-push");
+    elements.btnGitStatus = document.getElementById("btn-git-status");
+    elements.btnGitSettings = document.getElementById("btn-git-settings");
+    elements.btnGitRefresh = document.getElementById("btn-git-refresh");
+    elements.btnGitCollapse = document.getElementById("btn-git-collapse");
+    elements.btnStageSelected = document.getElementById("btn-stage-selected");
+    elements.btnStageAll = document.getElementById("btn-stage-all");
+    elements.btnUnstageAll = document.getElementById("btn-unstage-all");
+    elements.btnCommitStaged = document.getElementById("btn-commit-staged");
+    elements.loadingOverlay = document.getElementById("loading-overlay");
+    elements.loadingText = document.getElementById("loading-text");
+    elements.shortcutsOverlay = document.getElementById("shortcuts-overlay");
+    elements.shortcutsClose = document.getElementById("shortcuts-close");
+    elements.btnWelcomeNewFile = document.getElementById("btn-welcome-new-file");
+    elements.btnWelcomeUploadFile = document.getElementById("btn-welcome-upload-file");
   }
 
   // ============================================
@@ -654,18 +676,27 @@
     return nameMap[ext] || "Plain Text";
   }
 
-  function buildFileTree(files) {
+  function buildFileTree(items) {
     const tree = {};
 
-    files.forEach((file) => {
-      const parts = file.path.split("/");
+    items.forEach((item) => {
+      const parts = item.path.split("/");
       let current = tree;
 
       parts.forEach((part, index) => {
         if (index === parts.length - 1) {
-          if (!current._files) current._files = [];
-          current._files.push({ name: part, path: file.path });
+          // Last part - either a file or folder
+          if (item.type === "file") {
+            if (!current._files) current._files = [];
+            current._files.push({ name: part, path: item.path });
+          } else if (item.type === "folder") {
+            // Create folder entry if it doesn't exist
+            if (!current[part]) {
+              current[part] = { _path: item.path };
+            }
+          }
         } else {
+          // Intermediate folders in the path
           if (!current[part]) {
             current[part] = { _path: parts.slice(0, index + 1).join("/") };
           }
@@ -677,7 +708,7 @@
     return tree;
   }
 
-  function showToast(message, type = "success") {
+  function showToast(message, type = "success", duration = 3000, action = null) {
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
 
@@ -685,20 +716,47 @@
       success: "check_circle",
       error: "error",
       warning: "warning",
+      info: "info"
     };
 
+    let actionButtonHtml = '';
+    if (action && action.text && action.callback) {
+      actionButtonHtml = `<button class="toast-action-btn">${action.text}</button>`;
+    }
+
     toast.innerHTML = `
-      <span class="material-icons">${iconMap[type]}</span>
+      <span class="material-icons">${iconMap[type] || 'info'}</span>
       <span class="toast-message">${message}</span>
+      ${actionButtonHtml}
     `;
 
     elements.toastContainer.appendChild(toast);
 
-    setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(100%)";
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    if (action && action.callback) {
+      const actionBtn = toast.querySelector('.toast-action-btn');
+      if (actionBtn) {
+        actionBtn.addEventListener('click', () => {
+          action.callback();
+          toast.remove(); // Remove toast after action
+        });
+      }
+      // If action is present, toast won't auto-remove; user must click action or close button
+    } else {
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(100%)";
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // Add a close button to all toasts
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close-btn';
+    closeBtn.innerHTML = '<span class="material-icons">close</span>';
+    closeBtn.addEventListener('click', () => {
+      toast.remove();
+    });
+    toast.appendChild(closeBtn);
   }
 
   function setConnectionStatus(connected) {
@@ -707,6 +765,15 @@
         ? '<span class="material-icons">cloud_done</span><span>Connected</span>'
         : '<span class="material-icons">cloud_off</span><span>Disconnected</span>';
     }
+  }
+
+  function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
 
   // ============================================
@@ -720,6 +787,12 @@
         const settings = JSON.parse(stored);
         state.theme = settings.theme || "dark";
         state.showHidden = settings.showHidden || false;
+        state.favoriteFiles = settings.favoriteFiles || [];
+        state.recentFiles = settings.recentFiles || []; // Load recent files
+        state.gitConfig = settings.gitConfig || null;
+        // Store open tabs info for later restoration (after files are loaded)
+        state._savedOpenTabs = settings.openTabs || [];
+        state._savedActiveTabPath = settings.activeTabPath || null;
       }
     } catch (e) {
       console.log("Could not load settings:", e);
@@ -728,9 +801,21 @@
 
   function saveSettings() {
     try {
+      // Save open tabs state
+      const openTabsState = state.openTabs.map(tab => ({
+        path: tab.path,
+        modified: tab.modified
+      }));
+      const activeTabPath = state.activeTab ? state.activeTab.path : null;
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         theme: state.theme,
-        showHidden: state.showHidden
+        showHidden: state.showHidden,
+        favoriteFiles: state.favoriteFiles, // Corrected to use state.favoriteFiles
+        recentFiles: state.recentFiles,     // Save recent files
+        openTabs: openTabsState,
+        activeTabPath: activeTabPath,
+        gitConfig: state.gitConfig
       }));
     } catch (e) {
       console.log("Could not save settings:", e);
@@ -793,13 +878,197 @@
   }
 
   // ============================================
+  // Favorites Management
+  // ============================================
+
+  function isFavorite(path) {
+    return state.favoriteFiles.includes(path);
+  }
+
+  function toggleFavorite(path) {
+    if (isFavorite(path)) {
+      state.favoriteFiles = state.favoriteFiles.filter(p => p !== path);
+      showToast(`Removed ${path.split("/").pop()} from favorites`, "success");
+    } else {
+      state.favoriteFiles.push(path);
+      showToast(`Added ${path.split("/").pop()} to favorites`, "success");
+    }
+    saveSettings();
+    renderFileTree();
+  }
+
+  function renderFavoritesPanel() {
+    const favoritesContainer = document.getElementById("favorites-panel");
+    if (!favoritesContainer) return;
+
+    if (state.favoriteFiles.length === 0) {
+      favoritesContainer.style.display = "none";
+      return;
+    }
+
+    favoritesContainer.style.display = "block";
+    favoritesContainer.innerHTML = '<div class="favorites-header">Favorites</div>';
+
+    state.favoriteFiles.forEach((filePath) => {
+      // Check if file still exists
+      const fileExists = state.files.some(f => f.path === filePath);
+      if (!fileExists) return;
+
+      const fileName = filePath.split("/").pop();
+      const item = document.createElement("div");
+      item.className = "tree-item favorite-item";
+      item.style.setProperty("--depth", 0);
+
+      const fileIcon = getFileIcon(fileName);
+      const isActive = state.activeTab && state.activeTab.path === filePath;
+
+      item.innerHTML = `
+        <div class="tree-icon ${fileIcon.class}">
+          <span class="material-icons">${fileIcon.icon}</span>
+        </div>
+        <span class="tree-name">${fileName}</span>
+        <div class="tree-item-actions">
+          <button class="tree-action-btn" title="Unpin">
+            <span class="material-icons">push_pin</span>
+          </button>
+        </div>
+      `;
+
+      if (isActive) {
+        item.classList.add("active");
+      }
+
+      const tab = state.openTabs.find((t) => t.path === filePath);
+      if (tab && tab.modified) {
+        item.classList.add("modified");
+      }
+
+      item.addEventListener("click", (e) => {
+        if (e.target.closest(".tree-action-btn")) {
+          toggleFavorite(filePath);
+        } else {
+          openFile(filePath);
+          if (isMobile()) hideSidebar();
+        }
+      });
+
+      favoritesContainer.appendChild(item);
+    });
+  }
+
+  // ============================================
+  // Recent Files Management
+  // ============================================
+
+  function renderRecentFilesPanel() {
+    const recentFilesContainer = document.getElementById("recent-files-panel");
+    if (!recentFilesContainer) return;
+
+    if (state.recentFiles.length === 0) {
+      recentFilesContainer.style.display = "none";
+      return;
+    }
+
+    recentFilesContainer.style.display = "block";
+    recentFilesContainer.innerHTML = '<div class="recent-files-header">Recent Files</div>';
+
+    state.recentFiles.forEach((filePath) => {
+      // Check if file still exists
+      const fileExists = state.files.some(f => f.path === filePath);
+      if (!fileExists) return;
+
+      const fileName = filePath.split("/").pop();
+      const item = document.createElement("div");
+      item.className = "tree-item recent-item";
+      item.style.setProperty("--depth", 0);
+
+      const fileIcon = getFileIcon(fileName);
+      const isActive = state.activeTab && state.activeTab.path === filePath;
+
+      item.innerHTML = `
+        <div class="tree-icon ${fileIcon.class}">
+          <span class="material-icons">${fileIcon.icon}</span>
+        </div>
+        <span class="tree-name">${fileName}</span>
+      `;
+
+      if (isActive) {
+        item.classList.add("active");
+      }
+
+      const tab = state.openTabs.find((t) => t.path === filePath);
+      if (tab && tab.modified) {
+        item.classList.add("modified");
+      }
+
+      item.addEventListener("click", (e) => {
+        openFile(filePath);
+        if (isMobile()) hideSidebar();
+      });
+
+      // Context menu
+      item.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showContextMenu(e.clientX, e.clientY, { path: filePath, isFolder: false });
+      });
+
+      recentFilesContainer.appendChild(item);
+    });
+  }
+
+  // ============================================
   // Modal Functions
   // ============================================
 
   let modalCallback = null;
+  let activePollTimer = null;
+
+  // Default modal HTML structure for reset
+  const DEFAULT_MODAL_BODY_HTML = `
+    <input type="text" class="modal-input" id="modal-input" placeholder="">
+    <div class="modal-hint" id="modal-hint"></div>
+  `;
+
+  function resetModalToDefault() {
+    const modalBody = document.getElementById("modal-body");
+    const modalTitle = document.getElementById("modal-title");
+    const modal = document.getElementById("modal");
+    const modalFooter = document.querySelector(".modal-footer");
+
+    // Reset modal body to default
+    if (modalBody) {
+      modalBody.innerHTML = DEFAULT_MODAL_BODY_HTML;
+
+      // Re-bind element references after HTML reset
+      elements.modalInput = document.getElementById("modal-input");
+      elements.modalHint = document.getElementById("modal-hint");
+    }
+
+    // Reset modal title
+    if (modalTitle) {
+      modalTitle.textContent = "Modal Title";
+    }
+
+    // Reset modal width
+    if (modal) {
+      modal.style.maxWidth = "";
+    }
+
+    // Show modal footer
+    if (modalFooter) {
+      modalFooter.style.display = "";
+    }
+
+    // Clear any callback
+    modalCallback = null;
+  }
 
   function showModal(options) {
     const { title, placeholder, hint, value = "", confirmText = "Confirm", isDanger = false } = options;
+
+    // Ensure modal is in default state before showing
+    resetModalToDefault();
 
     elements.modalTitle.textContent = title;
     elements.modalInput.placeholder = placeholder || "";
@@ -817,6 +1086,46 @@
     });
   }
 
+  function showConfirmDialog(options) {
+    const { title, message, confirmText = "Confirm", cancelText = "Cancel", isDanger = false } = options;
+
+    // Ensure modal is in default state before showing
+    resetModalToDefault();
+
+    elements.modalTitle.textContent = title;
+    elements.modalInput.style.display = "none";
+    elements.modalHint.innerHTML = message;
+    elements.modalHint.style.fontSize = "14px";
+    elements.modalHint.style.color = "var(--text-primary)";
+    elements.modalConfirm.textContent = confirmText;
+    elements.modalCancel.textContent = cancelText;
+    elements.modalConfirm.className = isDanger ? "modal-btn danger" : "modal-btn primary";
+
+    elements.modalOverlay.classList.add("visible");
+
+    return new Promise((resolve) => {
+      const confirmHandler = () => {
+        elements.modalOverlay.classList.remove("visible");
+        resolve(true);
+        cleanup();
+      };
+
+      const cancelHandler = () => {
+        elements.modalOverlay.classList.remove("visible");
+        resolve(false);
+        cleanup();
+      };
+
+      const cleanup = () => {
+        elements.modalConfirm.removeEventListener("click", confirmHandler);
+        elements.modalCancel.removeEventListener("click", cancelHandler);
+      };
+
+      elements.modalConfirm.addEventListener("click", confirmHandler, { once: true });
+      elements.modalCancel.addEventListener("click", cancelHandler, { once: true });
+    });
+  }
+
   function hideModal() {
     elements.modalOverlay.classList.remove("visible");
     if (modalCallback) {
@@ -831,6 +1140,57 @@
     if (modalCallback) {
       modalCallback(value);
       modalCallback = null;
+    }
+  }
+
+  // ============================================
+  // Loading States
+  // ============================================
+
+  function showGlobalLoading(message = "Loading...") {
+    if (elements.loadingOverlay) {
+      elements.loadingText.textContent = message;
+      elements.loadingOverlay.classList.add("visible");
+    }
+  }
+
+  function hideGlobalLoading() {
+    if (elements.loadingOverlay) {
+      elements.loadingOverlay.classList.remove("visible");
+    }
+  }
+
+  function setButtonLoading(button, isLoading) {
+    if (!button) return;
+
+    if (isLoading) {
+      button.classList.add("loading");
+      button.disabled = true;
+    } else {
+      button.classList.remove("loading");
+      button.disabled = false;
+    }
+  }
+
+  function setFileTreeLoading(isLoading) {
+    if (elements.fileTree) {
+      if (isLoading) {
+        elements.fileTree.classList.add("loading");
+      } else {
+        elements.fileTree.classList.remove("loading");
+      }
+    }
+  }
+
+  function showShortcuts() {
+    if (elements.shortcutsOverlay) {
+      elements.shortcutsOverlay.classList.add("visible");
+    }
+  }
+
+  function hideShortcuts() {
+    if (elements.shortcutsOverlay) {
+      elements.shortcutsOverlay.classList.remove("visible");
     }
   }
 
@@ -943,12 +1303,22 @@
   async function loadFiles() {
     try {
       setConnectionStatus(true);
-      const files = await fetchWithAuth(`${API_BASE}?action=list_files&show_hidden=${state.showHidden}`);
-      state.files = files;
-      state.fileTree = buildFileTree(files);
+      setFileTreeLoading(true);
+      setButtonLoading(elements.btnRefresh, true);
+
+      const items = await fetchWithAuth(`${API_BASE}?action=list_all&show_hidden=${state.showHidden}`);
+      state.files = items.filter(item => item.type === "file");
+      state.folders = items.filter(item => item.type === "folder");
+      state.allItems = items;
+      state.fileTree = buildFileTree(items);
       renderFileTree();
+
+      setFileTreeLoading(false);
+      setButtonLoading(elements.btnRefresh, false);
     } catch (error) {
       setConnectionStatus(false);
+      setFileTreeLoading(false);
+      setButtonLoading(elements.btnRefresh, false);
       showToast("Failed to load files: " + error.message, "error");
     }
   }
@@ -973,6 +1343,10 @@
         body: JSON.stringify({ action: "write_file", path, content }),
       });
       showToast(`Saved ${path.split("/").pop()}`, "success");
+
+      // Auto-refresh git status after saving to show changes immediately
+      await gitStatus();
+
       return true;
     } catch (error) {
       showToast("Failed to save: " + error.message, "error");
@@ -990,6 +1364,10 @@
       showToast(`Created ${path.split("/").pop()}`, "success");
       await loadFiles();
       openFile(path);
+
+      // Auto-refresh git status after creating file
+      await gitStatus();
+
       return true;
     } catch (error) {
       showToast("Failed to create file: " + error.message, "error");
@@ -1008,6 +1386,10 @@
       await loadFiles();
       state.expandedFolders.add(path);
       renderFileTree();
+
+      // Auto-refresh git status after creating folder
+      await gitStatus();
+
       return true;
     } catch (error) {
       showToast("Failed to create folder: " + error.message, "error");
@@ -1031,6 +1413,10 @@
       }
 
       await loadFiles();
+
+      // Auto-refresh git status after deleting file
+      await gitStatus();
+
       return true;
     } catch (error) {
       showToast("Failed to delete: " + error.message, "error");
@@ -1047,6 +1433,10 @@
       });
       showToast(`Copied to ${destination.split("/").pop()}`, "success");
       await loadFiles();
+
+      // Auto-refresh git status after copying file
+      await gitStatus();
+
       return true;
     } catch (error) {
       showToast("Failed to copy: " + error.message, "error");
@@ -1071,6 +1461,10 @@
       }
 
       await loadFiles();
+
+      // Auto-refresh git status after renaming file
+      await gitStatus();
+
       return true;
     } catch (error) {
       showToast("Failed to rename: " + error.message, "error");
@@ -1100,6 +1494,10 @@
       });
       showToast(`Uploaded ${path.split("/").pop()}`, "success");
       await loadFiles();
+
+      // Auto-refresh git status after uploading file
+      await gitStatus();
+
       return true;
     } catch (error) {
       showToast("Failed to upload: " + error.message, "error");
@@ -1162,6 +1560,8 @@
 
     const basePath = state.currentFolderPath || "";
 
+    showGlobalLoading(`Uploading ${files.length} file(s)...`);
+
     for (const file of files) {
       try {
         const content = await readFileAsText(file);
@@ -1170,8 +1570,10 @@
         // Check if file exists
         const existingFile = state.files.find(f => f.path === filePath);
         if (existingFile) {
+          hideGlobalLoading();
           const overwrite = confirm(`File "${file.name}" already exists. Overwrite?`);
           if (!overwrite) continue;
+          showGlobalLoading(`Uploading ${file.name}...`);
           await uploadFile(filePath, content, true);
         } else {
           await uploadFile(filePath, content, false);
@@ -1180,9 +1582,12 @@
         // Open the uploaded file
         await openFile(filePath);
       } catch (error) {
+        hideGlobalLoading();
         showToast(`Failed to upload ${file.name}: ${error.message}`, "error");
       }
     }
+
+    hideGlobalLoading();
 
     // Reset input so same file can be uploaded again
     event.target.value = "";
@@ -1216,10 +1621,13 @@
 
   async function downloadFolder(path) {
     try {
-      showToast("Preparing download...", "success");
+      showGlobalLoading("Preparing download...");
+
       const data = await fetchWithAuth(
         `${API_BASE}?action=download_folder&path=${encodeURIComponent(path)}`
       );
+
+      hideGlobalLoading();
 
       if (data.success && data.data) {
         // Decode base64 to binary
@@ -1286,7 +1694,8 @@
     const targetPath = basePath ? `${basePath}/${result}` : result;
 
     try {
-      showToast("Uploading folder...", "success");
+      showGlobalLoading("Uploading and extracting folder...");
+
       const zipData = await readFileAsBase64(file);
 
       const response = await fetchWithAuth(API_BASE, {
@@ -1299,17 +1708,1561 @@
         }),
       });
 
+      hideGlobalLoading();
+
       if (response.success) {
         showToast(`Extracted ${response.files_extracted} files to ${result}`, "success");
         await loadFiles();
         state.expandedFolders.add(targetPath);
         renderFileTree();
+
+        // Auto-refresh git status after uploading folder
+        await gitStatus();
       }
     } catch (error) {
+      hideGlobalLoading();
       showToast("Failed to upload folder: " + error.message, "error");
     }
 
     event.target.value = "";
+  }
+
+  // ============================================
+  // GitHub Integration Functions
+  // ============================================
+
+  // Git state management
+  const gitState = {
+    files: {
+      modified: [],
+      added: [],
+      deleted: [],
+      untracked: [],
+      staged: [],
+      unstaged: []
+    },
+    selectedFiles: new Set(),
+    totalChanges: 0
+  };
+
+  async function gitStatus() {
+    try {
+      setButtonLoading(elements.btnGitStatus, true);
+
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_status" }),
+      });
+
+      setButtonLoading(elements.btnGitStatus, false);
+
+      if (data.success) {
+        // Update git state
+        gitState.files = data.files || {
+          modified: [],
+          added: [],
+          deleted: [],
+          untracked: [],
+          staged: [],
+          unstaged: []
+        };
+
+        // Calculate total changes
+        gitState.totalChanges = [
+          ...gitState.files.modified,
+          ...gitState.files.added,
+          ...gitState.files.deleted,
+          ...gitState.files.untracked
+        ].length;
+
+        // Update UI
+        updateGitPanel();
+
+        if (data.has_changes) {
+          showToast(`Git: ${gitState.totalChanges} change(s) detected`, "success");
+        } else {
+          showToast("Working tree clean, no changes", "success");
+        }
+      }
+    } catch (error) {
+      setButtonLoading(elements.btnGitStatus, false);
+      showToast("Git error: " + error.message, "error");
+    }
+  }
+
+  async function gitInit() {
+    const confirmed = await showConfirmDialog({
+      title: "Initialize Git Repository",
+      message: "Are you sure you want to initialize a new Git repository in the config directory?",
+      confirmText: "Initialize",
+      cancelText: "Cancel"
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      showToast("Initializing git repository...", "success");
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_init" }),
+      });
+
+      if (data.success) {
+        showToast("Git repository initialized successfully", "success");
+      }
+    } catch (error) {
+      showToast("Git init failed: " + error.message, "error");
+    }
+  }
+
+  async function gitAddRemote(name, url) {
+    try {
+      showToast("Adding git remote...", "success");
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_add_remote", name, url }),
+      });
+
+      if (data.success) {
+        showToast(data.message, "success");
+        return true;
+      }
+    } catch (error) {
+      showToast("Failed to add remote: " + error.message, "error");
+      return false;
+    }
+  }
+
+  async function githubCreateRepo(repoName, description, isPrivate) {
+    try {
+      showToast("Creating GitHub repository...", "info");
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "github_create_repo",
+          repo_name: repoName,
+          description: description,
+          is_private: isPrivate
+        }),
+      });
+
+      if (data.success) {
+        showToast(data.message, "success");
+
+        // Show link to new repo
+        if (data.html_url) {
+          setTimeout(() => {
+            showToast(
+              `View your repo: ${data.html_url}`,
+              "success",
+              10000  // Show for 10 seconds
+            );
+          }, 2000);
+        }
+
+        return data;
+      } else {
+        showToast("Failed to create repo: " + (data.message || "Unknown error"), "error");
+        return null;
+      }
+    } catch (error) {
+      showToast("Failed to create repo: " + error.message, "error");
+      return null;
+    }
+  }
+
+  async function gitGetRemotes() {
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_get_remotes" }),
+      });
+
+      if (data.success) {
+        return data.remotes || {};
+      }
+    } catch (error) {
+      console.error("Failed to get remotes:", error);
+      return {};
+    }
+  }
+
+  async function gitSetCredentials(username, token, rememberMe = true) {
+    try {
+      showToast("Configuring git credentials...", "success");
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_set_credentials", username, token, remember_me: rememberMe }),
+      });
+
+      if (data.success) {
+        showToast("Git credentials configured successfully", "success");
+        return true;
+      }
+    } catch (error) {
+      showToast("Failed to set credentials: " + error.message, "error");
+      return false;
+    }
+  }
+
+  async function gitTestConnection() {
+    try {
+      showToast("Testing connection to remote...", "success");
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_test_connection" }),
+      });
+
+      if (data.success) {
+        showToast("Connection successful!", "success");
+        return true;
+      } else {
+        showToast("Connection failed: " + (data.error || "Unknown error"), "error");
+        return false;
+      }
+    } catch (error) {
+      showToast("Connection test failed: " + error.message, "error");
+      return false;
+    }
+  }
+
+  async function gitClearCredentials() {
+    try {
+      showToast("Clearing GitHub credentials...", "info");
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_clear_credentials" }),
+      });
+
+      if (data.success) {
+        showToast("Successfully signed out from GitHub", "success");
+        return true;
+      } else {
+        showToast("Failed to sign out: " + (data.error || "Unknown error"), "error");
+        return false;
+      }
+    } catch (error) {
+      showToast("Failed to sign out: " + error.message, "error");
+      return false;
+    }
+  }
+
+  // GitHub OAuth Device Flow
+  async function githubDeviceFlowStart(clientId) {
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "github_device_flow_start", client_id: clientId }),
+      });
+
+      if (data.success) {
+        return {
+          success: true,
+          deviceCode: data.device_code,
+          userCode: data.user_code,
+          verificationUri: data.verification_uri,
+          expiresIn: data.expires_in,
+          interval: data.interval
+        };
+      }
+      return { success: false, error: data.message || "Unknown error" };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async function githubDeviceFlowPoll(clientId, deviceCode) {
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "github_device_flow_poll",
+          client_id: clientId,
+          device_code: deviceCode
+        }),
+      });
+
+      return data;
+    } catch (error) {
+      return { success: false, status: "error", message: error.message };
+    }
+  }
+
+  async function showGithubDeviceFlowLogin() {
+    // Ensure any previous polling timer is stopped before starting a new one
+    if (activePollTimer) {
+      clearInterval(activePollTimer);
+      activePollTimer = null;
+    }
+    // Shared Blueprint Studio OAuth Client ID
+    // This is public and safe to share - all users can use it
+    const SHARED_CLIENT_ID = "Ov23liKHRfvPI4p0eN2f";
+
+    // Load custom Client ID from localStorage (for advanced users who want their own)
+    const customClientId = localStorage.getItem("githubOAuthClientId") || "";
+
+    // Use custom if provided, otherwise use shared
+    const finalClientId = customClientId || SHARED_CLIENT_ID;
+
+    // Start device flow immediately (no prompt needed!)
+    showToast("Starting GitHub login...", "success");
+    const flowData = await githubDeviceFlowStart(finalClientId);
+
+    if (!flowData.success) {
+      showToast("Failed to start GitHub login: " + (flowData.error || "Unknown error"), "error");
+      return;
+    }
+
+    // Show device code modal
+    const modalOverlay = document.getElementById("modal-overlay");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalBody = document.getElementById("modal-body");
+    const modalFooter = document.querySelector(".modal-footer");
+
+    modalTitle.textContent = "Login with GitHub";
+
+    modalBody.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <div style="margin-bottom: 20px;">
+          <span class="material-icons" style="font-size: 48px; color: #4caf50;">verified_user</span>
+        </div>
+        <h3>Authenticate with GitHub</h3>
+        <p>Visit this URL in your browser:</p>
+        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <a href="${flowData.verificationUri}" target="_blank" style="color: #2196f3; font-size: 18px; text-decoration: none;">
+            ${flowData.verificationUri}
+          </a>
+        </div>
+        <p>Enter this code:</p>
+        <div style="background: #2196f3; color: white; padding: 20px; border-radius: 8px; margin: 15px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
+          ${flowData.userCode}
+        </div>
+        <div id="device-flow-status" style="margin-top: 20px; color: #666;">
+          <span class="material-icons" style="animation: spin 1s linear infinite;">sync</span>
+          <p>Waiting for authorization...</p>
+        </div>
+        <button class="btn-primary" id="btn-check-auth-now" style="width: 100%; padding: 10px; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px;">
+            <span class="material-icons">refresh</span>
+            Check Now
+        </button>
+      </div>
+    `;
+
+    modalOverlay.classList.add("visible");
+    modal.style.maxWidth = "500px";
+
+    // Hide default modal buttons
+    if (modalFooter) {
+      modalFooter.style.display = "none";
+    }
+
+    // Function to clean up and close the Device Flow modal
+    const closeDeviceFlow = () => {
+      if (activePollTimer) {
+        clearInterval(activePollTimer);
+        activePollTimer = null;
+      }
+      modalOverlay.classList.remove("visible");
+
+      // Reset modal to default state (don't try to restore saved state)
+      resetModalToDefault();
+
+      // Remove this specific overlay click handler
+      modalOverlay.removeEventListener("click", overlayClickHandler);
+    };
+
+    // Start polling
+    let pollInterval = flowData.interval * 1000;
+    const maxPolls = Math.floor(flowData.expiresIn / flowData.interval);
+    let pollCount = 0;
+
+    activePollTimer = setInterval(async () => {
+      pollCount++;
+
+      if (pollCount > maxPolls) {
+        const statusDiv = document.getElementById("device-flow-status");
+        if (statusDiv) {
+          statusDiv.innerHTML = `
+            <span class="material-icons" style="color: #f44336;">error</span>
+            <p style="color: #f44336;">Login expired. Please try again.</p>
+          `;
+        }
+        showToast("GitHub login expired", "error");
+        // The timer will be cleared inside closeDeviceFlow
+        setTimeout(() => closeDeviceFlow(), 2000);
+        return;
+      }
+
+      const result = await githubDeviceFlowPoll(finalClientId, flowData.deviceCode);
+
+      if (result.success && result.status === "authorized") {
+        const statusDiv = document.getElementById("device-flow-status");
+        if (statusDiv) {
+          statusDiv.innerHTML = `
+            <span class="material-icons" style="color: #4caf50;">check_circle</span>
+            <p style="color: #4caf50;">Successfully logged in as ${result.username}!</p>
+          `;
+        }
+        showToast(`Successfully logged in as ${result.username}!`, "success");
+
+        // The timer will be cleared inside closeDeviceFlow
+        setTimeout(() => {
+          closeDeviceFlow();
+        }, 2000);
+      } else if (result.status === "expired") {
+        showToast("GitHub login expired", "error");
+        setTimeout(() => closeDeviceFlow(), 1000);
+      } else if (result.status === "denied") {
+        showToast("GitHub login denied", "error");
+        setTimeout(() => closeDeviceFlow(), 1000);
+      } else if (result.status === "slow_down") {
+        // Increase polling interval
+        pollInterval = pollInterval * 1.5;
+      }
+      // If pending, just continue polling
+    }, pollInterval);
+
+    // Overlay click handler (defined separately so we can remove it)
+    const overlayClickHandler = (e) => {
+      if (e.target === modalOverlay) {
+        closeDeviceFlow();
+      }
+    };
+
+    modalOverlay.addEventListener("click", overlayClickHandler);
+
+    const btnCheckAuthNow = document.getElementById("btn-check-auth-now");
+    if (btnCheckAuthNow) {
+      btnCheckAuthNow.addEventListener("click", async () => {
+        btnCheckAuthNow.disabled = true; // Disable to prevent spamming
+        const btnTextSpan = btnCheckAuthNow.querySelector('span:not(.material-icons)');
+        if (btnTextSpan) btnTextSpan.textContent = "Checking...";
+        const btnIcon = btnCheckAuthNow.querySelector('.material-icons');
+        if (btnIcon) btnIcon.classList.add('spinning');
+
+        const statusDiv = document.getElementById("device-flow-status");
+        if (statusDiv) {
+            statusDiv.querySelector('p').textContent = "Checking status...";
+        }
+
+
+        const result = await githubDeviceFlowPoll(finalClientId, flowData.deviceCode);
+
+        if (btnIcon) btnIcon.classList.remove('spinning');
+
+        if (result.success && result.status === "authorized") {
+          if (statusDiv) {
+            statusDiv.innerHTML = `
+              <span class="material-icons" style="color: #4caf50;">check_circle</span>
+              <p style="color: #4caf50;">Successfully logged in as ${result.username}!</p>
+            `;
+          }
+          showToast(`Successfully logged in as ${result.username}!`, "success");
+          if (activePollTimer) {
+            clearInterval(activePollTimer);
+            activePollTimer = null;
+          }
+          setTimeout(() => {
+            closeDeviceFlow();
+          }, 2000);
+        } else if (result.status === "pending") {
+          if (statusDiv) {
+            statusDiv.querySelector('p').textContent = "Still waiting for authorization...";
+          }
+          showToast("Still waiting for authorization. Please complete login on GitHub.", "info", 3000);
+        } else if (result.status === "slow_down") {
+          if (statusDiv) {
+            statusDiv.querySelector('p').textContent = "GitHub requests slower polling. Waiting...";
+          }
+          showToast("GitHub requests slower polling. Automatic check interval increased.", "warning", 3000);
+          pollInterval = pollInterval * 1.5; // Update pollInterval for auto-polling
+        } else if (result.status === "expired") {
+          if (statusDiv) {
+            statusDiv.innerHTML = `
+              <span class="material-icons" style="color: #f44336;">error</span>
+              <p style="color: #f44336;">Login expired. Please try again.</p>
+            `;
+          }
+          showToast("GitHub login expired", "error");
+          if (activePollTimer) {
+            clearInterval(activePollTimer);
+            activePollTimer = null;
+          }
+          setTimeout(() => closeDeviceFlow(), 2000);
+        } else if (result.status === "denied") {
+          if (statusDiv) {
+            statusDiv.innerHTML = `
+              <span class="material-icons" style="color: #f44336;">error</span>
+              <p style="color: #f44336;">Login denied by user.</p>
+            `;
+          }
+          showToast("GitHub login denied", "error");
+          if (activePollTimer) {
+            clearInterval(activePollTimer);
+            activePollTimer = null;
+          }
+          setTimeout(() => closeDeviceFlow(), 2000);
+        } else {
+            // Generic error or other unexpected status
+            showToast("Error checking status: " + (result.message || "Unknown error"), "error");
+            if (statusDiv) {
+                statusDiv.querySelector('p').textContent = "Error checking status. Waiting...";
+            }
+        }
+        btnCheckAuthNow.disabled = false; // Re-enable button
+        if (btnTextSpan) btnTextSpan.textContent = "Check Now";
+      });
+    }
+  }
+
+  async function gitStage(files) {
+    if (!files || files.length === 0) return;
+
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_stage", files }),
+      });
+
+      if (data.success) {
+        showToast(data.message, "success");
+        await gitStatus(); // Refresh status
+      } else {
+        // Error returned from backend
+        const errorMsg = data.message || "";
+        if (errorMsg.includes("index.lock") || errorMsg.includes("File exists")) {
+          showToast("Git lock detected. Staging failed.", "error", 0, {
+            text: "Clean & Retry",
+            callback: async () => {
+              await handleGitLockAndRetry(files);
+            }
+          });
+        } else {
+          showToast("Failed to stage files: " + errorMsg, "error");
+        }
+      }
+    } catch (error) {
+      // Exception thrown (500 error, network error, etc.)
+      const errorMsg = error.message || "";
+      if (errorMsg.includes("index.lock") || errorMsg.includes("File exists")) {
+        showToast("Git lock detected. Staging failed.", "error", 0, {
+          text: "Clean & Retry",
+          callback: async () => {
+            await handleGitLockAndRetry(files);
+          }
+        });
+      } else {
+        showToast("Failed to stage files: " + errorMsg, "error");
+      }
+    }
+  }
+
+  // Handle Git lock file cleanup and retry staging
+  async function handleGitLockAndRetry(files) {
+    const cleaned = await gitCleanLocks();
+
+    if (cleaned) {
+      // Wait a moment for filesystem
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Retry the stage operation
+      try {
+        const retryData = await fetchWithAuth(API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "git_stage", files }),
+        });
+
+        if (retryData.success) {
+          showToast(retryData.message, "success");
+          await gitStatus();
+        } else {
+          showToast("Failed to stage after cleaning locks. Try again or restart Home Assistant.", "error");
+        }
+      } catch (retryError) {
+        showToast("Failed to stage after cleaning locks. Try again or restart Home Assistant.", "error");
+      }
+    } else {
+      showToast("Could not clean lock files. Please restart Home Assistant.", "error");
+    }
+  }
+
+  // Clean Git lock files
+  async function gitCleanLocks() {
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_clean_locks" }),
+      });
+
+      if (data.success) {
+        showToast(data.message, "success");
+        return true;
+      } else {
+        showToast("Failed to clean Git locks", "error");
+        return false;
+      }
+    } catch (error) {
+      showToast("Failed to clean Git locks: " + error.message, "error");
+      return false;
+    }
+  }
+
+  async function gitUnstage(files) {
+    if (!files || files.length === 0) return;
+
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_unstage", files }),
+      });
+
+      if (data.success) {
+        showToast(data.message, "success");
+        await gitStatus(); // Refresh status
+      }
+    } catch (error) {
+      showToast("Failed to unstage files: " + error.message, "error");
+    }
+  }
+
+  async function gitReset(files) {
+    if (!files || files.length === 0) return;
+
+    const confirmed = await showConfirmDialog({
+      title: "Discard Changes",
+      message: `Are you sure you want to discard changes to ${files.length} file(s)?<br><br>This action cannot be undone.`,
+      confirmText: "Discard",
+      cancelText: "Cancel",
+      isDanger: true
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_reset", files }),
+      });
+
+      if (data.success) {
+        showToast(data.message, "success");
+        await gitStatus(); // Refresh status
+      }
+    } catch (error) {
+      showToast("Failed to reset files: " + error.message, "error");
+    }
+  }
+
+  async function gitCommit(commitMessage) {
+    try {
+      showToast("Committing staged changes...", "success");
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_commit", commit_message: commitMessage }),
+      });
+
+      if (data.success) {
+        showToast("Changes committed successfully", "success");
+        await gitStatus(); // Refresh status
+        return true;
+      }
+    } catch (error) {
+      showToast("Git commit failed: " + error.message, "error");
+      return false;
+    }
+  }
+
+  async function gitPull() {
+    const confirmed = await showConfirmDialog({
+      title: "Pull from Remote",
+      message: "Are you sure you want to pull changes from the remote repository? This will update your local files.",
+      confirmText: "Pull",
+      cancelText: "Cancel"
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setButtonLoading(elements.btnGitPull, true);
+      showToast("Pulling from remote...", "success");
+
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_pull" }),
+      });
+
+      setButtonLoading(elements.btnGitPull, false);
+
+      if (data.success) {
+        showToast("Successfully pulled from remote", "success");
+        // Reload files to show changes
+        await loadFiles();
+        await gitStatus();
+      }
+    } catch (error) {
+      setButtonLoading(elements.btnGitPull, false);
+      showToast("Git pull failed: " + error.message, "error");
+    }
+  }
+
+  async function gitPush() {
+    try {
+      setButtonLoading(elements.btnGitPush, true);
+      showToast("Pushing to remote...", "info");
+
+      // First try to push existing commits without committing
+      const pushData = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "git_push_only"
+        }),
+      });
+
+      if (pushData.success) {
+        setButtonLoading(elements.btnGitPush, false);
+        showToast(pushData.message || "Successfully pushed to remote", "success");
+        await gitStatus();
+        return;
+      }
+
+      // If push_only failed, show the error
+      const errorMessage = pushData.message || pushData.error || "Unknown error";
+
+      // If push_only failed, check if it's because of uncommitted changes
+      if (errorMessage.includes("uncommitted changes")) {
+        setButtonLoading(elements.btnGitPush, false);
+
+        // Ask for commit message and use git_push (commit + push)
+        const commitMessage = await showModal({
+          title: "Commit & Push Changes",
+          placeholder: "Commit message",
+          value: "Update configuration via Blueprint Studio",
+          hint: "You have uncommitted changes. Enter a message to commit and push:",
+        });
+
+        if (!commitMessage) {
+          return;
+        }
+
+        setButtonLoading(elements.btnGitPush, true);
+        showToast("Committing and pushing changes...", "info");
+
+        const data = await fetchWithAuth(API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "git_push",
+            commit_message: commitMessage,
+          }),
+        });
+
+        setButtonLoading(elements.btnGitPush, false);
+
+        if (data.success) {
+          showToast("Successfully pushed to remote", "success");
+          await gitStatus();
+        } else {
+          const errMsg = data.message || data.error || "Unknown error";
+          showToast("Push failed: " + errMsg, "error");
+        }
+      } else if (errorMessage.includes("No commits to push")) {
+        setButtonLoading(elements.btnGitPush, false);
+        showToast("No commits to push. Please stage and commit files first.", "warning", 0, {
+          text: "Open Git Panel",
+          callback: () => {
+            const gitPanel = document.getElementById("git-panel");
+            if (gitPanel) {
+              gitPanel.classList.add("visible");
+              const gitPanelHeader = gitPanel.querySelector(".git-panel-header"); // Assuming a header or first element to scroll to
+              if (gitPanelHeader) {
+                gitPanelHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }
+          }
+        });
+      } else {
+        setButtonLoading(elements.btnGitPush, false);
+        // Show the actual error message
+        showToast("Push failed: " + errorMessage, "error");
+      }
+    } catch (error) {
+      setButtonLoading(elements.btnGitPush, false);
+      console.error("Git push exception:", error);
+      showToast("Git push failed: " + error.message, "error");
+    }
+  }
+
+  // Update Git Panel UI
+  function updateGitPanel() {
+    const panel = document.getElementById("git-panel");
+    const container = document.getElementById("git-files-container");
+    const badge = document.getElementById("git-changes-count");
+    const commitBtn = document.getElementById("btn-commit-staged");
+
+    // Update badge
+    badge.textContent = gitState.totalChanges;
+
+    // Show/hide panel based on changes
+    if (gitState.totalChanges > 0) {
+      panel.classList.add("visible");
+
+      // Auto-resize sidebar if needed to fit stage buttons cleanly
+      // Only do this on desktop (not mobile) and if sidebar is too narrow
+      if (!isMobile() && elements.sidebar) {
+        const currentWidth = parseInt(window.getComputedStyle(elements.sidebar).width);
+        // If sidebar is less than 340px, resize to 360px for better button layout
+        if (currentWidth < 340) {
+          elements.sidebar.style.width = "360px";
+        }
+      }
+
+      renderGitFiles(container);
+    } else {
+      container.innerHTML = `
+        <div class="git-empty-state">
+          <span class="material-icons">check_circle</span>
+          <p>No changes detected</p>
+          <div class="git-empty-state-actions" style="display: flex; gap: 8px; margin-top: 16px;">
+            <button class="btn-secondary" id="btn-git-pull-empty-state">
+              <span class="material-icons">cloud_download</span>
+              Pull from Remote
+            </button>
+            <button class="btn-secondary" id="btn-git-refresh-empty-state">
+              <span class="material-icons">refresh</span>
+              Refresh Status
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Enable/disable commit button based on staged files
+    commitBtn.disabled = gitState.files.staged.length === 0;
+  }
+
+  // Render git files in the panel
+  function renderGitFiles(container) {
+    const groups = [
+      {
+        key: "staged",
+        title: "Staged Changes",
+        files: gitState.files.staged,
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="20" height="20"><path d="M10.5 7a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zm1.43.75a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.001 4.001 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5h-3.32z"></path></svg>',
+        color: "success"
+      },
+      {
+        key: "modified",
+        title: "Modified",
+        files: gitState.files.modified.filter(f => !gitState.files.staged.includes(f)),
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="20" height="20"><path d="M2.75 1h10.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 15H2.75A1.75 1.75 0 0 1 1 13.25V2.75C1 1.784 1.784 1 2.75 1ZM2.5 2.75v10.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25H2.75a.25.25 0 0 0-.25.25Zm1.75 6.5a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5h-5.5a.75.75 0 0 1-.75-.75ZM5 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 5.25Z"></path></svg>',
+        color: "modified"
+      },
+      {
+        key: "added",
+        title: "Added",
+        files: gitState.files.added.filter(f => !gitState.files.staged.includes(f)),
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="20" height="20" fill="#51cf66"><path d="M13.25 2.5H2.75a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25ZM2.75 1h10.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 15H2.75A1.75 1.75 0 0 1 1 13.25V2.75C1 1.784 1.784 1 2.75 1ZM8 4a.75.75 0 0 1 .75.75v2.5h2.5a.75.75 0 0 1 0 1.5h-2.5v2.5a.75.75 0 0 1-1.5 0v-2.5h-2.5a.75.75 0 0 1 0-1.5h2.5v-2.5A.75.75 0 0 1 8 4Z"></path></svg>',
+        color: "added"
+      },
+      {
+        key: "deleted",
+        title: "Deleted",
+        files: gitState.files.deleted.filter(f => !gitState.files.staged.includes(f)),
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="20" height="20" fill="#ff6b6b"><path d="M13.25 2.5H2.75a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25ZM2.75 1h10.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 15H2.75A1.75 1.75 0 0 1 1 13.25V2.75C1 1.784 1.784 1 2.75 1Zm8.5 7.25a.75.75 0 0 1-.75.75h-5a.75.75 0 0 1 0-1.5h5a.75.75 0 0 1 .75.75Z"></path></svg>',
+        color: "deleted"
+      },
+      {
+        key: "untracked",
+        title: "Untracked",
+        files: gitState.files.untracked,
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="20" height="20"><path d="M8 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"></path></svg>',
+        color: "untracked"
+      }
+    ];
+
+    let html = "";
+
+    for (const group of groups) {
+      if (group.files.length === 0) continue;
+
+      html += `
+        <div class="git-file-group" data-group="${group.key}">
+          <div class="git-file-group-header">
+            <span class="git-file-group-icon ${group.color}">${group.icon}</span>
+            <span>${group.title}</span>
+            <span class="git-file-group-count">(${group.files.length})</span>
+            <span class="material-icons git-file-group-chevron">chevron_right</span>
+          </div>
+          <div class="git-file-list">
+      `;
+
+      for (const file of group.files) {
+        const isStaged = gitState.files.staged.includes(file);
+        const isUnstaged = gitState.files.unstaged.includes(file);
+        const checked = gitState.selectedFiles.has(file) ? 'checked' : '';
+
+        html += `
+          <div class="git-file-item" data-file="${file}">
+            <input type="checkbox" class="git-file-checkbox" ${checked} data-file-path="${file}" />
+            <span class="git-file-icon ${group.color}">${group.icon}</span>
+            <span class="git-file-name" title="${file}">${file}</span>
+            ${isStaged ? '<span class="git-file-status staged">Staged</span>' : ''}
+            ${isUnstaged && !isStaged ? '<span class="git-file-status unstaged">Unstaged</span>' : ''}
+          </div>
+        `;
+      }
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }
+
+  // Toggle git file group collapse
+  function toggleGitGroup(groupKey) {
+    const group = document.querySelector(`.git-file-group[data-group="${groupKey}"]`);
+    if (group) {
+      group.classList.toggle("collapsed");
+    }
+  }
+
+  // Toggle file selection
+  function toggleFileSelection(file) {
+    if (gitState.selectedFiles.has(file)) {
+      gitState.selectedFiles.delete(file);
+    } else {
+      gitState.selectedFiles.add(file);
+    }
+  }
+
+  // Stage selected files
+  async function stageSelectedFiles() {
+    const selectedFiles = Array.from(gitState.selectedFiles);
+
+    if (selectedFiles.length === 0) {
+      showToast("No files selected. Check boxes next to files you want to stage.", "warning");
+      return;
+    }
+
+    await gitStage(selectedFiles);
+    gitState.selectedFiles.clear(); // Clear selection after staging
+  }
+
+  // Stage all unstaged files
+  async function stageAllFiles() {
+    const unstagedFiles = [
+      ...gitState.files.modified.filter(f => !gitState.files.staged.includes(f)),
+      ...gitState.files.added.filter(f => !gitState.files.staged.includes(f)),
+      ...gitState.files.deleted.filter(f => !gitState.files.staged.includes(f)),
+      ...gitState.files.untracked
+    ];
+
+    if (unstagedFiles.length > 0) {
+      await gitStage(unstagedFiles);
+    }
+  }
+
+  // Unstage all staged files
+  async function unstageAllFiles() {
+    if (gitState.files.staged.length > 0) {
+      await gitUnstage(gitState.files.staged);
+    }
+  }
+
+  // Commit staged files
+  async function commitStagedFiles() {
+    const commitMessage = await showModal({
+      title: "Commit Changes",
+      placeholder: "Commit message",
+      value: "Update via Blueprint Studio",
+      hint: `Committing ${gitState.files.staged.length} staged file(s)`,
+    });
+
+    if (!commitMessage) {
+      return;
+    }
+
+    await gitCommit(commitMessage);
+  }
+
+  // ============================================
+  // App Settings
+  // ============================================
+
+  // Show App Settings modal
+  async function showAppSettings() {
+    const modalOverlay = document.getElementById("modal-overlay");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalBody = document.getElementById("modal-body");
+    const modalFooter = document.querySelector(".modal-footer");
+
+    // Get current setting from localStorage
+    const gitEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false"; // Default to true
+
+    modalTitle.textContent = "Blueprint Studio Settings";
+
+    modalBody.innerHTML = `
+      <div class="git-settings-content">
+        <div class="git-settings-section">
+          <div class="git-settings-label">Features</div>
+
+          <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+            <div style="flex: 1;">
+              <div style="font-weight: 500; margin-bottom: 4px;">GitHub Integration</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Push/pull configs to GitHub, stage changes, and manage commits</div>
+            </div>
+            <label class="toggle-switch" style="margin-left: 16px;">
+              <input type="checkbox" id="git-integration-toggle" ${gitEnabled ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; font-size: 13px;">
+            <span class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--info-color, #2196f3);">info</span>
+            <span style="margin-left: 8px;">Changes will take effect immediately</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    modalOverlay.classList.add("visible");
+    modal.style.maxWidth = "500px";
+
+    // Hide default modal buttons
+    if (modalFooter) {
+      modalFooter.style.display = "none";
+    }
+
+    // Function to clean up and close the Settings modal
+    const closeSettings = () => {
+      modalOverlay.classList.remove("visible");
+
+      // Reset modal to default state (don't try to restore saved state)
+      resetModalToDefault();
+
+      // Remove overlay click handler
+      modalOverlay.removeEventListener("click", overlayClickHandler);
+    };
+
+    // Overlay click handler
+    const overlayClickHandler = (e) => {
+      if (e.target === modalOverlay) {
+        closeSettings();
+      }
+    };
+
+    modalOverlay.addEventListener("click", overlayClickHandler);
+
+    // Handle Git integration toggle
+    const gitToggle = document.getElementById("git-integration-toggle");
+    if (gitToggle) {
+      gitToggle.addEventListener("change", (e) => {
+        const enabled = e.target.checked;
+        localStorage.setItem("gitIntegrationEnabled", enabled);
+        applyGitVisibility();
+        showToast(enabled ? "GitHub integration enabled" : "GitHub integration disabled", "success");
+      });
+    }
+  }
+
+  // Apply Git visibility based on localStorage setting
+  function applyGitVisibility() {
+    const gitEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false"; // Default to true
+
+    if (gitEnabled) {
+      document.body.classList.remove("git-disabled");
+    } else {
+      document.body.classList.add("git-disabled");
+    }
+  }
+
+  // ============================================
+  // Git Settings
+  // ============================================
+
+  // Show Git Settings modal
+  async function showGitSettings() {
+    // Get current remotes
+    const remotes = await gitGetRemotes();
+
+    // Get saved credentials
+    const credentialsData = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_get_credentials" }),
+    });
+
+    const savedUsername = credentialsData.has_credentials ? credentialsData.username : "";
+    const hasCredentials = credentialsData.has_credentials;
+
+    // Check if OAuth Client ID is saved
+    const savedClientId = localStorage.getItem("githubOAuthClientId") || "";
+    const hasOAuthSetup = savedClientId.length > 0;
+
+    // Create modal content
+    const modalOverlay = document.getElementById("modal-overlay");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalBody = document.getElementById("modal-body");
+    const modalFooter = document.querySelector(".modal-footer");
+
+    modalTitle.textContent = "Git Settings";
+
+    let remotesHtml = "";
+    if (Object.keys(remotes).length > 0) {
+      remotesHtml = '<div class="git-settings-section"><div class="git-settings-label">Current Remotes</div>';
+      for (const [name, url] of Object.entries(remotes)) {
+        remotesHtml += `
+          <div class="git-remote-item">
+            <span class="git-remote-name">${name}</span>
+            <span class="git-remote-url">${url}</span>
+          </div>
+        `;
+      }
+      remotesHtml += '</div>';
+    }
+
+    let credentialsStatusHtml = "";
+    if (hasCredentials) {
+      credentialsStatusHtml = `
+        <div class="git-settings-info" style="color: #4caf50; margin-bottom: 12px;">
+          <span class="material-icons">check_circle</span>
+          <span>You are logged in as <strong>${savedUsername}</strong></span>
+        </div>
+        <button id="btn-github-signout" style="width: 100%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #f44336; color: white; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; transition: background 0.15s;">
+          <span class="material-icons">logout</span>
+          <span>Sign Out</span>
+        </button>
+      `;
+    }
+
+    modalBody.innerHTML = `
+      <div class="git-settings-content">
+        ${remotesHtml}
+
+        ${hasCredentials ? `
+        <div class="git-settings-section" style="background: var(--primary-background-color); padding: 16px; border-radius: 8px; border: 2px dashed #2196f3;">
+          <div class="git-settings-label" style="color: #1976d2; font-weight: 600;">
+            <span class="material-icons" style="vertical-align: middle; margin-right: 4px;">add_circle</span>
+            Quick Start: Create New GitHub Repository
+          </div>
+          <div class="git-settings-info" style="margin-bottom: 12px; color: #f0f7ff;">
+            Create a new repository on GitHub and automatically connect it to Blueprint Studio.
+          </div>
+          <button class="btn-primary" id="btn-create-github-repo" style="width: 100%; padding: 12px; font-size: 15px;">
+            <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">rocket_launch</span>
+            Create New GitHub Repository
+          </button>
+        </div>
+
+        <div style="display: flex; align-items: center; text-align: center; margin: 20px 0; color: #666;">
+          <div style="flex-grow: 1; border-bottom: 1px solid #ddd;"></div>
+          <span style="flex-shrink: 0; padding: 0 10px; background: var(--primary-background-color);">OR Connect Existing Repo</span>
+          <div style="flex-grow: 1; border-bottom: 1px solid #ddd;"></div>
+        </div>
+        ` : ''}
+
+        <div class="git-settings-section">
+          <div class="git-settings-label">Repository URL</div>
+          <input type="text" class="git-settings-input" id="git-repo-url"
+                 placeholder="https://github.com/username/repo.git"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          <div class="git-settings-buttons">
+            <button class="btn-secondary" id="btn-git-init-modal">Init Repo</button>
+            <button class="btn-primary" id="btn-save-git-remote">Save Remote</button>
+          </div>
+        </div>
+
+        <div class="git-settings-section">
+          <div class="git-settings-label">
+            <svg height="20" width="20" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 8px; fill: currentColor;">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+            </svg>
+            GitHub Authentication
+          </div>
+
+          ${credentialsStatusHtml}
+
+          ${!hasCredentials ? `
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+              <div style="color: white; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <span class="material-icons">verified_user</span>
+                Recommended: OAuth Login
+              </div>
+              <div style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 12px;">
+                Secure authentication via GitHub OAuth - no tokens to manage!
+              </div>
+              <button class="btn-primary" id="btn-github-device-login" style="width: 100%; padding: 12px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; background: white; color: #667eea; font-weight: 600;">
+                <svg height="20" width="20" viewBox="0 0 16 16" style="fill: #667eea;">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+                <span>Login with GitHub</span>
+              </button>
+            </div>
+
+            <div style="text-align: center; margin: 24px 0; position: relative;">
+              <div style="border-top: 1px solid var(--border-color);"></div>
+              <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--modal-bg); padding: 0 12px; font-size: 12px; color: var(--text-secondary); font-weight: 600;">OR USE PERSONAL ACCESS TOKEN</span>
+            </div>
+          ` : ''}
+
+          ${hasCredentials ? `
+            <div style="margin-bottom: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+              <div class="git-settings-label">Update Credentials</div>
+            </div>
+          ` : ''}
+
+          <input type="text" class="git-settings-input" id="git-username"
+                 placeholder="GitHub username"
+                 value="${savedUsername}"
+                 autocomplete="username" autocorrect="off" autocapitalize="off" spellcheck="false"
+                 style="margin-bottom: 8px;" />
+          <input type="password" class="git-settings-input" id="git-token"
+                 placeholder="${hasCredentials ? 'Enter new token to update (leave blank to keep current)' : 'Personal Access Token'}"
+                 autocomplete="off"
+                 style="margin-bottom: 12px;" />
+
+          <label for="git-remember-me" style="display: flex; align-items: center; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; cursor: pointer; margin-bottom: 12px; transition: background 0.15s;">
+            <input type="checkbox" id="git-remember-me" ${hasCredentials ? 'checked' : ''} style="margin-right: 12px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-color);" />
+            <div style="flex: 1;">
+              <div style="font-weight: 500; font-size: 14px; margin-bottom: 2px;">Remember me</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Keep me logged in after restart</div>
+            </div>
+          </label>
+
+          <div class="git-settings-info" style="margin-bottom: 16px;">
+            <span class="material-icons">info</span>
+            <div>
+              <div style="font-weight: 500; margin-bottom: 4px;">Create a Personal Access Token:</div>
+              <a href="https://github.com/settings/tokens/new" target="_blank" style="color: var(--accent-color); text-decoration: none;">github.com/settings/tokens/new ↗</a>
+              <div style="margin-top: 4px; font-size: 12px;">Required scope: <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">repo</code></div>
+            </div>
+          </div>
+
+          <div class="git-settings-buttons">
+            <button class="btn-secondary" id="btn-test-git-connection">Test Connection</button>
+            <button class="btn-primary" id="btn-save-git-credentials">${hasCredentials ? 'Update' : 'Save'} Credentials</button>
+          </div>
+        </div>
+
+        <div class="git-settings-section">
+          <div class="git-settings-label">Troubleshooting</div>
+          <div class="git-settings-info">
+            <span class="material-icons">build</span>
+            <span>If Git operations fail with "index.lock" errors, click below to clean lock files.</span>
+          </div>
+          <button class="btn-secondary" id="btn-clean-git-locks" style="width: 100%;">
+            <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">delete_sweep</span>
+            Clean Git Lock Files
+          </button>
+        </div>
+      </div>
+    `;
+
+    modalOverlay.classList.add("visible");
+
+    // Set wider modal for Git Settings (responsive on mobile via CSS)
+    modal.style.maxWidth = "650px";
+
+    // Hide default modal buttons
+    if (modalFooter) {
+      modalFooter.style.display = "none";
+    }
+
+    // Function to clean up and close the Git Settings modal
+    const closeGitSettings = () => {
+      modalOverlay.classList.remove("visible");
+
+      // Reset modal to default state (don't try to restore saved state)
+      resetModalToDefault();
+
+      // Remove this specific overlay click handler
+      modalOverlay.removeEventListener("click", overlayClickHandler);
+    };
+
+    // Overlay click handler (defined separately so we can remove it)
+    const overlayClickHandler = (e) => {
+      if (e.target === modalOverlay) {
+        closeGitSettings();
+      }
+    };
+
+    // Attach overlay click handler
+    modalOverlay.addEventListener("click", overlayClickHandler);
+
+    // Attach event handlers for Git Settings modal buttons (use once to prevent duplicates)
+    const btnGitInitModal = document.getElementById("btn-git-init-modal");
+    const btnSaveGitRemote = document.getElementById("btn-save-git-remote");
+    const btnCreateGithubRepo = document.getElementById("btn-create-github-repo");
+    const btnGithubDeviceLogin = document.getElementById("btn-github-device-login");
+    const btnGithubSignout = document.getElementById("btn-github-signout");
+    const btnTestGitConnection = document.getElementById("btn-test-git-connection");
+    const btnSaveGitCredentials = document.getElementById("btn-save-git-credentials");
+    const btnCleanGitLocks = document.getElementById("btn-clean-git-locks");
+
+    if (btnGitInitModal) {
+      btnGitInitModal.addEventListener("click", gitInit, { once: true });
+    }
+    if (btnSaveGitRemote) {
+      btnSaveGitRemote.addEventListener("click", async () => {
+        await saveGitRemote();
+        closeGitSettings();
+      }, { once: true });
+    }
+    if (btnGithubDeviceLogin) {
+      btnGithubDeviceLogin.addEventListener("click", async () => {
+        closeGitSettings();  // Close Git Settings first
+        await showGithubDeviceFlowLogin();
+      }, { once: true });
+    }
+    if (btnGithubSignout) {
+      btnGithubSignout.addEventListener("click", async () => {
+        const confirmed = await showConfirmDialog({
+          title: "Sign Out from GitHub",
+          message: "Are you sure you want to sign out?<br><br>Your saved credentials will be removed and you'll need to login again to use GitHub features.",
+          confirmText: "Sign Out",
+          cancelText: "Cancel",
+          isDanger: true
+        });
+
+        if (confirmed) {
+          await gitClearCredentials();
+          closeGitSettings();
+          // Reopen settings to show updated state
+          setTimeout(() => showGitSettings(), 300);
+        }
+      }, { once: true });
+    }
+    if (btnTestGitConnection) {
+      btnTestGitConnection.addEventListener("click", testGitConnection, { once: true });
+    }
+    if (btnSaveGitCredentials) {
+      btnSaveGitCredentials.addEventListener("click", async () => {
+        await saveGitCredentials();
+        closeGitSettings();
+      }, { once: true });
+    }
+    if (btnCleanGitLocks) {
+      btnCleanGitLocks.addEventListener("click", async () => {
+        showToast("Cleaning Git lock files...", "info");
+        const success = await gitCleanLocks();
+        if (success) {
+          showToast("Git lock files cleaned successfully", "success");
+        } else {
+          showToast("No lock files found or failed to clean", "warning");
+        }
+      }, { once: true });
+    }
+    if (btnCreateGithubRepo) {
+      btnCreateGithubRepo.addEventListener("click", async () => {
+        await showCreateGithubRepoDialog();
+      }, { once: true });
+    }
+
+    // Mobile optimization: prevent iOS zoom on input focus
+    if (isMobile()) {
+      const inputs = modalBody.querySelectorAll('.git-settings-input');
+      inputs.forEach(input => {
+        // Ensure font-size is 16px on mobile to prevent zoom
+        input.style.fontSize = '16px';
+      });
+    }
+  }
+
+  async function showCreateGithubRepoDialog() {
+    // Check if logged in
+    const credentialsData = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_get_credentials" }),
+    });
+
+    if (!credentialsData.has_credentials) {
+      showToast("Please login with GitHub first", "error");
+      return;
+    }
+
+    // Create modal content
+    const modalOverlay = document.getElementById("modal-overlay");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalBody = document.getElementById("modal-body");
+    const modalFooter = document.querySelector(".modal-footer");
+
+    modalTitle.textContent = "Create GitHub Repository";
+
+    modalBody.innerHTML = `
+      <div class="git-settings-content">
+        <div class="git-settings-section">
+          <div class="git-settings-label">Repository Name *</div>
+          <input type="text" class="git-settings-input" id="new-repo-name"
+                 placeholder="home-assistant-config"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          <div class="git-settings-info" style="font-size: 12px; margin-top: 4px;">
+            Will be created as: ${credentialsData.username}/<span id="repo-name-preview">repository-name</span>
+          </div>
+        </div>
+
+        <div class="git-settings-section">
+          <div class="git-settings-label">Description (Optional)</div>
+          <input type="text" class="git-settings-input" id="new-repo-description"
+                 placeholder="My Home Assistant configuration"
+                 autocomplete="off" />
+        </div>
+
+        <div class="git-settings-section">
+          <div class="git-settings-label">Visibility</div>
+          <label style="display: flex; align-items: center; cursor: pointer; padding: 8px;">
+            <input type="radio" name="repo-visibility" value="private" checked style="margin-right: 8px;">
+            <div>
+              <div style="font-weight: 500;">Private (Recommended)</div>
+              <div style="font-size: 12px; color: #666;">Only you can see this repository</div>
+            </div>
+          </label>
+          <label style="display: flex; align-items: center; cursor: pointer; padding: 8px;">
+            <input type="radio" name="repo-visibility" value="public" style="margin-right: 8px;">
+            <div>
+              <div style="font-weight: 500;">Public</div>
+              <div style="font-size: 12px; color: #666;">Anyone can see this repository</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="git-settings-buttons">
+          <button class="btn-secondary" id="btn-cancel-create-repo">Cancel</button>
+          <button class="btn-primary" id="btn-confirm-create-repo">
+            <span class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">add</span>
+            Create Repository
+          </button>
+        </div>
+      </div>
+    `;
+
+    modalOverlay.classList.add("visible");
+    modal.style.maxWidth = "500px";
+
+    if (modalFooter) {
+      modalFooter.style.display = "none";
+    }
+
+    // Cleanup function
+    const closeDialog = () => {
+      modalOverlay.classList.remove("visible");
+
+      // Reset modal to default state (don't try to restore saved state)
+      resetModalToDefault();
+
+      modalOverlay.removeEventListener("click", overlayClickHandler);
+    };
+
+    // Overlay click handler
+    const overlayClickHandler = (e) => {
+      if (e.target === modalOverlay) {
+        closeDialog();
+      }
+    };
+    modalOverlay.addEventListener("click", overlayClickHandler);
+
+    // Update preview as user types
+    const repoNameInput = document.getElementById("new-repo-name");
+    const repoNamePreview = document.getElementById("repo-name-preview");
+    repoNameInput.addEventListener("input", () => {
+      repoNamePreview.textContent = repoNameInput.value || "repository-name";
+    });
+
+    // Cancel button
+    document.getElementById("btn-cancel-create-repo").addEventListener("click", () => {
+      closeDialog();
+    }, { once: true });
+
+    // Create button
+    document.getElementById("btn-confirm-create-repo").addEventListener("click", async () => {
+      const repoName = repoNameInput.value.trim();
+      const description = document.getElementById("new-repo-description").value.trim();
+      const isPrivate = document.querySelector('input[name="repo-visibility"]:checked').value === "private";
+
+      if (!repoName) {
+        showToast("Repository name is required", "error");
+        return;
+      }
+
+      // Validate repo name format
+      if (!/^[a-zA-Z0-9._-]+$/.test(repoName)) {
+        showToast("Repository name can only contain letters, numbers, dots, hyphens, and underscores", "error");
+        return;
+      }
+
+      closeDialog();
+
+      // Create the repo
+      await githubCreateRepo(repoName, description, isPrivate);
+
+      // Refresh git status to show the new repo is ready
+      await gitStatus();
+    }, { once: true });
+  }
+
+  // Save git remote
+  async function saveGitRemote() {
+    const url = document.getElementById("git-repo-url")?.value;
+    if (!url) {
+      showToast("Please enter a repository URL", "error");
+      return;
+    }
+
+    const success = await gitAddRemote("origin", url);
+    if (success) {
+      // Refresh settings modal to show updated remotes
+      setTimeout(() => showGitSettings(), 500);
+    }
+  }
+
+  // Save git credentials
+  async function saveGitCredentials() {
+    const username = document.getElementById("git-username")?.value;
+    const token = document.getElementById("git-token")?.value;
+    const rememberMe = document.getElementById("git-remember-me")?.checked ?? true;
+
+    if (!username || !token) {
+      showToast("Please enter both username and token", "error");
+      return;
+    }
+
+    await gitSetCredentials(username, token, rememberMe);
+  }
+
+  // Test git connection
+  async function testGitConnection() {
+    await gitTestConnection();
   }
 
   // ============================================
@@ -1407,8 +3360,11 @@
 
   function renderFileTree() {
     if (!elements.fileTree) return;
+    renderRecentFilesPanel(); // Call to render recent files
+    renderFavoritesPanel();  // Render favorites next
     elements.fileTree.innerHTML = "";
     renderTreeLevel(state.fileTree, elements.fileTree, 0);
+    updateToggleAllButton(); // Update the button state
   }
 
   function renderTreeLevel(tree, container, depth) {
@@ -1621,6 +3577,39 @@
     const actions = document.createElement("div");
     actions.className = "tree-item-actions";
 
+    item.appendChild(chevron);
+    item.appendChild(icon);
+    item.appendChild(nameSpan);
+
+    // Add file size if it's a file and size is available
+    if (!isFolder && itemPath) {
+      const file = state.files.find(f => f.path === itemPath);
+      if (file && typeof file.size === 'number') {
+        const sizeSpan = document.createElement("span");
+        sizeSpan.className = "tree-file-size";
+        sizeSpan.textContent = formatBytes(file.size);
+        sizeSpan.style.marginLeft = "auto"; // Push to the right
+        sizeSpan.style.marginRight = "10px"; // Some spacing
+        sizeSpan.style.fontSize = "0.75em"; // Smaller font
+        sizeSpan.style.color = "var(--text-secondary)"; // Muted color
+        item.appendChild(sizeSpan);
+      }
+    }
+
+    // Add pin button for files only
+    if (!isFolder && itemPath) {
+      const pinBtn = document.createElement("button");
+      pinBtn.className = "tree-action-btn";
+      pinBtn.title = isFavorite(itemPath) ? "Unpin from favorites" : "Pin to favorites";
+      pinBtn.innerHTML = `<span class="material-icons">${isFavorite(itemPath) ? 'push_pin' : 'push_pin'}</span>`;
+      pinBtn.style.color = isFavorite(itemPath) ? 'var(--warning-color)' : '';
+      pinBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleFavorite(itemPath);
+      });
+      actions.appendChild(pinBtn);
+    }
+
     const renameBtn = document.createElement("button");
     renameBtn.className = "tree-action-btn";
     renameBtn.title = "Rename";
@@ -1642,9 +3631,6 @@
     actions.appendChild(renameBtn);
     actions.appendChild(deleteBtn);
 
-    item.appendChild(chevron);
-    item.appendChild(icon);
-    item.appendChild(nameSpan);
     item.appendChild(actions);
 
     if (itemPath) {
@@ -1685,6 +3671,14 @@
         };
 
         state.openTabs.push(tab);
+
+        // Update recent files
+        state.recentFiles = state.recentFiles.filter(p => p !== path); // Remove if already exists
+        state.recentFiles.unshift(path); // Add to the beginning
+        if (state.recentFiles.length > MAX_RECENT_FILES) {
+          state.recentFiles.pop(); // Trim to max size
+        }
+
       } catch (error) {
         return;
       }
@@ -1693,6 +3687,7 @@
     activateTab(tab);
     renderTabs();
     renderFileTree();
+    saveSettings();  // Save open tabs state
   }
 
   function activateTab(tab) {
@@ -1764,8 +3759,74 @@
       elements.filePath.textContent = tab.path;
     }
 
+    // Update breadcrumb navigation
+    updateBreadcrumb(tab.path);
+
     // Update current folder path
     state.currentFolderPath = tab.path.split("/").slice(0, -1).join("/");
+  }
+
+  // ============================================
+  // Breadcrumb Navigation
+  // ============================================
+
+  function updateBreadcrumb(path) {
+    if (!elements.breadcrumb) return;
+
+    elements.breadcrumb.innerHTML = "";
+
+    if (!path) return;
+
+    const parts = path.split("/");
+    let currentPath = "";
+
+    parts.forEach((part, index) => {
+      if (index > 0) {
+        currentPath += "/";
+      }
+      currentPath += part;
+
+      // Create breadcrumb item
+      const item = document.createElement("span");
+      item.className = "breadcrumb-item";
+
+      const link = document.createElement("span");
+      link.className = "breadcrumb-link";
+      link.textContent = part;
+      link.title = currentPath;
+
+      // Make all parts except the last one clickable to open folder
+      if (index < parts.length - 1) {
+        const folderPath = currentPath;
+        link.style.cursor = "pointer";
+        link.addEventListener("click", () => {
+          // Expand folder in tree
+          expandFolderInTree(folderPath);
+        });
+      }
+
+      item.appendChild(link);
+
+      // Add separator except for last item
+      if (index < parts.length - 1) {
+        const separator = document.createElement("span");
+        separator.className = "breadcrumb-separator";
+        separator.textContent = "›";
+        item.appendChild(separator);
+      }
+
+      elements.breadcrumb.appendChild(item);
+    });
+  }
+
+  function expandFolderInTree(folderPath) {
+    // This will expand the folder in the file tree
+    // The folder is already rendered, we just need to expand it
+    const folderElement = document.querySelector(`[data-path="${folderPath}"]`);
+    if (folderElement && folderElement.classList.contains("tree-item")) {
+      // Trigger click on the folder to expand it
+      folderElement.click();
+    }
   }
 
   function handleEditorChange() {
@@ -1960,12 +4021,17 @@
         if (elements.filePath) {
           elements.filePath.textContent = "";
         }
+        // Clear breadcrumb
+        if (elements.breadcrumb) {
+          elements.breadcrumb.innerHTML = "";
+        }
       }
     }
 
     renderTabs();
     renderFileTree();
     updateToolbarState();
+    saveSettings();  // Save open tabs state
   }
 
   // ============================================
@@ -1976,7 +4042,11 @@
     if (!state.activeTab) return;
 
     const tab = state.activeTab;
+    setButtonLoading(elements.btnSave, true);
+
     const success = await saveFile(tab.path, tab.content);
+
+    setButtonLoading(elements.btnSave, false);
 
     if (success) {
       tab.originalContent = tab.content;
@@ -1990,6 +4060,8 @@
   async function saveAllFiles() {
     const modifiedTabs = state.openTabs.filter((t) => t.modified);
 
+    setButtonLoading(elements.btnSaveAll, true);
+
     for (const tab of modifiedTabs) {
       const success = await saveFile(tab.path, tab.content);
       if (success) {
@@ -1997,6 +4069,8 @@
         tab.modified = false;
       }
     }
+
+    setButtonLoading(elements.btnSaveAll, false);
 
     renderTabs();
     renderFileTree();
@@ -2047,6 +4121,19 @@
       }
       if (elements.statusLanguage) {
         elements.statusLanguage.innerHTML = "<span>-</span>";
+      }
+    }
+  }
+
+  function updateToggleAllButton() {
+    if (elements.btnToggleAll) {
+      const icon = elements.btnToggleAll.querySelector('.material-icons');
+      if (state.expandedFolders.size > 0) {
+        elements.btnToggleAll.title = "Collapse All";
+        icon.textContent = "unfold_less";
+      } else {
+        elements.btnToggleAll.title = "Expand All";
+        icon.textContent = "unfold_more";
       }
     }
   }
@@ -2151,6 +4238,11 @@
       elements.btnRefresh.addEventListener("click", loadFiles);
     }
 
+    // App Settings
+    if (elements.btnAppSettings) {
+      elements.btnAppSettings.addEventListener("click", showAppSettings);
+    }
+
     // Validate YAML
     if (elements.btnValidate) {
       elements.btnValidate.addEventListener("click", async () => {
@@ -2163,6 +4255,47 @@
           }
         } else {
           showToast("No file open", "warning");
+        }
+      });
+    }
+
+    // Breadcrumb copy button
+    if (elements.breadcrumbCopy) {
+      elements.breadcrumbCopy.addEventListener("click", () => {
+        const path = elements.filePath?.textContent;
+        if (path) {
+          navigator.clipboard.writeText(path).then(() => {
+            // Visual feedback
+            elements.breadcrumbCopy.classList.add("copied");
+            const icon = elements.breadcrumbCopy.querySelector(".material-icons");
+            if (icon) {
+              const originalIcon = icon.textContent;
+              icon.textContent = "check";
+              setTimeout(() => {
+                icon.textContent = originalIcon;
+                elements.breadcrumbCopy.classList.remove("copied");
+              }, 2000);
+            }
+            showToast("Path copied to clipboard", "success");
+          }).catch(() => {
+            showToast("Failed to copy path", "error");
+          });
+        } else {
+          showToast("No file open", "warning");
+        }
+      });
+    }
+
+    // Shortcuts overlay close button
+    if (elements.shortcutsClose) {
+      elements.shortcutsClose.addEventListener("click", hideShortcuts);
+    }
+
+    // Close shortcuts on overlay click
+    if (elements.shortcutsOverlay) {
+      elements.shortcutsOverlay.addEventListener("click", (e) => {
+        if (e.target === elements.shortcutsOverlay) {
+          hideShortcuts();
         }
       });
     }
@@ -2207,27 +4340,151 @@
       elements.folderUploadInput.addEventListener("change", handleFolderUpload);
     }
 
-    // Collapse/Expand all
-    if (elements.btnCollapseAll) {
-      elements.btnCollapseAll.addEventListener("click", () => {
-        state.expandedFolders.clear();
-        renderFileTree();
+    // Git buttons
+    if (elements.btnGitStatus) {
+      elements.btnGitStatus.addEventListener("click", gitStatus);
+    }
+    if (elements.btnGitPull) {
+      elements.btnGitPull.addEventListener("click", gitPull);
+    }
+    if (elements.btnGitPush) {
+      elements.btnGitPush.addEventListener("click", gitPush);
+    }
+
+    // Git Settings button
+    if (elements.btnGitSettings) {
+      elements.btnGitSettings.addEventListener("click", showGitSettings);
+    }
+
+    // Git panel buttons
+    if (elements.btnGitRefresh) {
+      elements.btnGitRefresh.addEventListener("click", gitStatus);
+    }
+    if (elements.btnGitCollapse) {
+      elements.btnGitCollapse.addEventListener("click", () => {
+        const panel = document.getElementById("git-panel");
+        if (panel) {
+          panel.classList.toggle("visible");
+          const icon = elements.btnGitCollapse.querySelector(".material-icons");
+          if (icon) {
+            icon.textContent = panel.classList.contains("visible") ? "expand_less" : "expand_more";
+          }
+        }
       });
     }
-    if (elements.btnExpandAll) {
-      elements.btnExpandAll.addEventListener("click", () => {
-        function expandAll(tree) {
-          for (const key of Object.keys(tree)) {
-            if (!key.startsWith("_")) {
-              if (tree[key]._path) {
-                state.expandedFolders.add(tree[key]._path);
-              }
-              expandAll(tree[key]);
+    if (elements.btnStageSelected) {
+      elements.btnStageSelected.addEventListener("click", stageSelectedFiles);
+    }
+    if (elements.btnStageAll) {
+      elements.btnStageAll.addEventListener("click", stageAllFiles);
+    }
+    if (elements.btnUnstageAll) {
+      elements.btnUnstageAll.addEventListener("click", unstageAllFiles);
+    }
+    if (elements.btnCommitStaged) {
+      elements.btnCommitStaged.addEventListener("click", commitStagedFiles);
+    }
+
+    // Git panel event delegation for dynamically created elements
+    const gitFilesContainer = document.getElementById("git-files-container");
+    if (gitFilesContainer) {
+      // Touch event tracking for mobile gestures
+      let touchStartY = 0;
+      let touchStartTime = 0;
+      let isTouchScroll = false;
+
+      // Click event delegation for group headers AND new empty state buttons
+      gitFilesContainer.addEventListener("click", (e) => {
+        // Handle git file group header clicks (toggle collapse)
+        const groupHeader = e.target.closest(".git-file-group-header");
+        if (groupHeader && !isTouchScroll) {
+          const groupElement = groupHeader.closest(".git-file-group");
+          if (groupElement) {
+            const groupKey = groupElement.getAttribute("data-group");
+            toggleGitGroup(groupKey);
+          }
+        }
+
+        // Handle empty state buttons
+        const target = e.target.closest('button'); // Get the button itself if clicked on icon/span inside
+        if (target) {
+          if (target.id === "btn-git-pull-empty-state") {
+            gitPull();
+          } else if (target.id === "btn-git-refresh-empty-state") {
+            gitStatus();
+          }
+        }
+      });
+
+      // Touch start event for detecting scroll vs tap
+      gitFilesContainer.addEventListener("touchstart", (e) => {
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        isTouchScroll = false;
+      }, { passive: true });
+
+      // Touch move event for detecting scroll
+      gitFilesContainer.addEventListener("touchmove", (e) => {
+        const touchY = e.touches[0].clientY;
+        const deltaY = Math.abs(touchY - touchStartY);
+
+        // If user moved more than 10px, consider it a scroll
+        if (deltaY > 10) {
+          isTouchScroll = true;
+        }
+      }, { passive: true });
+
+      // Touch end event for tap gestures
+      gitFilesContainer.addEventListener("touchend", (e) => {
+        const touchDuration = Date.now() - touchStartTime;
+
+        // If it was a quick tap (not a scroll), handle as click
+        if (!isTouchScroll && touchDuration < 300) {
+          const groupHeader = e.target.closest(".git-file-group-header");
+          if (groupHeader) {
+            e.preventDefault(); // Prevent double-firing with click event
+            const groupElement = groupHeader.closest(".git-file-group");
+            if (groupElement) {
+              const groupKey = groupElement.getAttribute("data-group");
+              toggleGitGroup(groupKey);
             }
           }
         }
-        expandAll(state.fileTree);
-        renderFileTree();
+      });
+
+      // Change event delegation for checkboxes
+      gitFilesContainer.addEventListener("change", (e) => {
+        // Handle checkbox changes for file selection
+        if (e.target.classList.contains("git-file-checkbox")) {
+          const filePath = e.target.getAttribute("data-file-path");
+          if (filePath) {
+            toggleFileSelection(filePath);
+          }
+        }
+      });
+    }
+
+    // Toggle Collapse/Expand all
+    if (elements.btnToggleAll) {
+      elements.btnToggleAll.addEventListener("click", () => {
+        if (state.expandedFolders.size > 0) {
+          // Collapse all
+          state.expandedFolders.clear();
+        } else {
+          // Expand all
+          function expandAll(tree) {
+            for (const key of Object.keys(tree)) {
+              if (!key.startsWith("_")) {
+                if (tree[key]._path) {
+                  state.expandedFolders.add(tree[key]._path);
+                }
+                expandAll(tree[key]);
+              }
+            }
+          }
+          expandAll(state.fileTree);
+        }
+        renderFileTree(); // This will also call updateToggleAllButton
       });
     }
 
@@ -2247,6 +4504,14 @@
         state.searchQuery = e.target.value;
         renderFileTree();
       });
+    }
+
+    // Welcome screen actions
+    if (elements.btnWelcomeNewFile) {
+      elements.btnWelcomeNewFile.addEventListener("click", promptNewFile);
+    }
+    if (elements.btnWelcomeUploadFile) {
+      elements.btnWelcomeUploadFile.addEventListener("click", triggerUpload);
     }
 
     // Theme toggle
@@ -2335,6 +4600,20 @@
 
     // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
+      // ? - Show keyboard shortcuts help (only if not typing in input/textarea)
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const activeElement = document.activeElement;
+        const isTyping = activeElement && (
+          activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.classList.contains("CodeMirror")
+        );
+        if (!isTyping) {
+          e.preventDefault();
+          showShortcuts();
+        }
+      }
+
       // Ctrl/Cmd + S
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
@@ -2355,7 +4634,9 @@
 
       // Escape - close sidebar on mobile, hide modals/menus
       if (e.key === "Escape") {
-        if (elements.modalOverlay.classList.contains("visible")) {
+        if (elements.shortcutsOverlay.classList.contains("visible")) {
+          hideShortcuts();
+        } else if (elements.modalOverlay.classList.contains("visible")) {
           hideModal();
         } else if (elements.contextMenu.classList.contains("visible")) {
           hideContextMenu();
@@ -2433,10 +4714,40 @@
   // Initialization
   // ============================================
 
+  async function restoreOpenTabs() {
+    if (!state._savedOpenTabs || state._savedOpenTabs.length === 0) {
+      return;
+    }
+
+    // Restore tabs
+    for (const tabState of state._savedOpenTabs) {
+      // Check if file still exists
+      const fileExists = state.files.some(f => f.path === tabState.path);
+      if (fileExists) {
+        await openFile(tabState.path);
+      }
+    }
+
+    // Restore active tab
+    if (state._savedActiveTabPath) {
+      const activeTab = state.openTabs.find(t => t.path === state._savedActiveTabPath);
+      if (activeTab) {
+        activateTab(activeTab);
+        renderTabs();
+        renderFileTree();
+      }
+    }
+
+    // Clear saved state
+    delete state._savedOpenTabs;
+    delete state._savedActiveTabPath;
+  }
+
   async function init() {
     initElements();
     loadSettings();
     applyTheme();
+    applyGitVisibility(); // Apply Git visibility setting
     updateShowHiddenButton();
     initEventListeners();
     initResizeHandle();
@@ -2453,8 +4764,84 @@
     // Don't auto-expand folders - let users expand what they need
     renderFileTree();
 
+    // Restore open tabs after files are loaded
+    await restoreOpenTabs();
+
     updateToolbarState();
     updateStatusBar();
+
+    // Load git status (silently, without toast)
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_status" }),
+      });
+
+      if (data.success && data.files) {
+        gitState.files = data.files;
+        gitState.totalChanges = [
+          ...gitState.files.modified,
+          ...gitState.files.added,
+          ...gitState.files.deleted,
+          ...gitState.files.untracked
+        ].length;
+        updateGitPanel();
+      }
+    } catch (error) {
+      // Silently fail - git might not be initialized
+      console.log("Git status not available:", error.message);
+    }
+
+    // Start periodic git status polling (every 30 seconds)
+    // This catches changes made outside Blueprint Studio
+    startGitStatusPolling();
+  }
+
+  // Periodic git status polling
+  let gitStatusPollingInterval = null;
+
+  function startGitStatusPolling() {
+    // Clear any existing interval
+    if (gitStatusPollingInterval) {
+      clearInterval(gitStatusPollingInterval);
+    }
+
+    // Poll every 30 seconds
+    gitStatusPollingInterval = setInterval(async () => {
+      try {
+        // Only poll if git is visible and initialized
+        if (!settings.showGit) {
+          return;
+        }
+
+        const data = await fetchWithAuth(API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "git_status" }),
+        });
+
+        if (data.success && data.files) {
+          gitState.files = data.files;
+          gitState.totalChanges = [
+            ...gitState.files.modified,
+            ...gitState.files.added,
+            ...gitState.files.deleted,
+            ...gitState.files.untracked
+          ].length;
+          updateGitPanel();
+        }
+      } catch (error) {
+        // Silently fail - don't spam console
+      }
+    }, 30000); // 30 seconds
+  }
+
+  function stopGitStatusPolling() {
+    if (gitStatusPollingInterval) {
+      clearInterval(gitStatusPollingInterval);
+      gitStatusPollingInterval = null;
+    }
   }
 
   // Start the application
