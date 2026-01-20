@@ -1,6 +1,6 @@
 # Blueprint Studio 🚀
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/release/soulripper13/blueprint-studio.svg)](https://github.com/soulripper13/blueprint-studio/releases)
 [![License](https://img.shields.io/github/license/soulripper13/blueprint-studio.svg)](LICENSE)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1.0%2B-blue.svg)
