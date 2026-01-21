@@ -520,6 +520,7 @@
     sidebarVisible: window.innerWidth > MOBILE_BREAKPOINT,
     theme: "dark",
     showHidden: false,  // Show hidden files/folders
+    showRecentFiles: true, // Show recent files panel
     contextMenuTarget: null,
     currentFolderPath: "",
     editor: null,  // Single shared editor instance
@@ -767,6 +768,37 @@
     }
   }
 
+  function translateYamlError(errorMessage) {
+    const translations = [
+      {
+        pattern: /could not find expected ':',/i,
+        translation: "<b>Missing Colon:</b> Every line should be a key-value pair (e.g., `key: value`). The parser couldn't find a colon (:) on or near this line."
+      },
+      {
+        pattern: /mapping values are not allowed here/i,
+        translation: "<b>Indentation Error:</b> A line is indented incorrectly. Check that this line and the ones around it have the correct number of spaces. Child items should typically be indented 2 spaces more than their parent."
+      },
+      {
+        pattern: /bad indentation/i,
+        translation: "<b>Indentation Error:</b> The number of spaces on this line is incorrect. Ensure it aligns properly with the lines above and below it."
+      },
+      {
+        pattern: /unexpected character/i,
+        translation: "<b>Unexpected Character:</b> There's a character on this line that doesn't belong. This can sometimes be caused by a copy-paste error or a typo."
+      }
+    ];
+
+    for (const rule of translations) {
+      if (rule.pattern.test(errorMessage)) {
+        // Return the simple explanation along with the original technical error for reference
+        return `${rule.translation}<br><br><b>Original Error:</b><br>${errorMessage}`;
+      }
+    }
+    
+    // If no specific translation is found, just return the original error
+    return errorMessage;
+  }
+
   function formatBytes(bytes, decimals = 2) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -787,6 +819,7 @@
         const settings = JSON.parse(stored);
         state.theme = settings.theme || "dark";
         state.showHidden = settings.showHidden || false;
+        state.showRecentFiles = settings.showRecentFiles !== false; // Default to true
         state.favoriteFiles = settings.favoriteFiles || [];
         state.recentFiles = settings.recentFiles || []; // Load recent files
         state.gitConfig = settings.gitConfig || null;
@@ -811,6 +844,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         theme: state.theme,
         showHidden: state.showHidden,
+        showRecentFiles: state.showRecentFiles, // Save showRecentFiles
         favoriteFiles: state.favoriteFiles, // Corrected to use state.favoriteFiles
         recentFiles: state.recentFiles,     // Save recent files
         openTabs: openTabsState,
@@ -964,6 +998,11 @@
     const recentFilesContainer = document.getElementById("recent-files-panel");
     if (!recentFilesContainer) return;
 
+    if (!state.showRecentFiles) {
+      recentFilesContainer.style.display = "none";
+      return;
+    }
+
     if (state.recentFiles.length === 0) {
       recentFilesContainer.style.display = "none";
       return;
@@ -1065,21 +1104,36 @@
   }
 
   function showModal(options) {
-    const { title, placeholder, hint, value = "", confirmText = "Confirm", isDanger = false } = options;
+    const { title, message, placeholder, hint, value = "", confirmText = "Confirm", isDanger = false } = options;
 
     // Ensure modal is in default state before showing
     resetModalToDefault();
 
     elements.modalTitle.textContent = title;
-    elements.modalInput.placeholder = placeholder || "";
-    elements.modalInput.value = value;
-    elements.modalHint.textContent = hint || "";
     elements.modalConfirm.textContent = confirmText;
     elements.modalConfirm.className = isDanger ? "modal-btn danger" : "modal-btn primary";
+    
+    if (message) {
+        // Message mode
+        elements.modalInput.style.display = "none";
+        elements.modalHint.innerHTML = message;
+        elements.modalHint.style.fontSize = "14px";
+        elements.modalHint.style.color = "var(--text-primary)";
+        elements.modalCancel.style.display = "none"; // Hide cancel button
+    } else {
+        // Input mode
+        elements.modalInput.style.display = "";
+        elements.modalHint.style.fontSize = "";
+        elements.modalHint.style.color = "";
+        elements.modalCancel.style.display = ""; // Show cancel button
+        elements.modalInput.placeholder = placeholder || "";
+        elements.modalInput.value = value;
+        elements.modalHint.textContent = hint || "";
+        elements.modalInput.focus();
+        elements.modalInput.select();
+    }
 
     elements.modalOverlay.classList.add("visible");
-    elements.modalInput.focus();
-    elements.modalInput.select();
 
     return new Promise((resolve) => {
       modalCallback = resolve;
@@ -1342,7 +1396,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "write_file", path, content }),
       });
-      showToast(`Saved ${path.split("/").pop()}`, "success");
+      // Refresh files to get updated size (including current file's new size)
+      await loadFiles();
+      // Find the file to get its size
+      const fileEntry = state.files.find(f => f.path === path);
+      const fileSize = fileEntry && typeof fileEntry.size === 'number' ? ` (${formatBytes(fileEntry.size)})` : '';
+      showToast(`Saved ${path.split("/").pop()}${fileSize}`, "success");
 
       // Auto-refresh git status after saving to show changes immediately
       await gitStatus();
@@ -2726,7 +2785,8 @@
     const modalFooter = document.querySelector(".modal-footer");
 
     // Get current setting from localStorage
-    const gitEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false"; // Default to true
+    const gitEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false"; // Default to true;
+    const showRecentFiles = state.showRecentFiles;
 
     modalTitle.textContent = "Blueprint Studio Settings";
 
@@ -2742,6 +2802,17 @@
             </div>
             <label class="toggle-switch" style="margin-left: 16px;">
               <input type="checkbox" id="git-integration-toggle" ${gitEnabled ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+            <div style="flex: 1;">
+              <div style="font-weight: 500; margin-bottom: 4px;">Show Recent Files</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Display recently opened files at the top of the file tree</div>
+            </div>
+            <label class="toggle-switch" style="margin-left: 16px;">
+              <input type="checkbox" id="recent-files-toggle" ${showRecentFiles ? 'checked' : ''}>
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -2790,6 +2861,16 @@
         localStorage.setItem("gitIntegrationEnabled", enabled);
         applyGitVisibility();
         showToast(enabled ? "GitHub integration enabled" : "GitHub integration disabled", "success");
+      });
+    }
+
+    // Handle Recent Files toggle
+    const recentFilesToggle = document.getElementById("recent-files-toggle");
+    if (recentFilesToggle) {
+      recentFilesToggle.addEventListener("change", (e) => {
+        state.showRecentFiles = e.target.checked;
+        saveSettings();
+        renderFileTree();
       });
     }
   }
@@ -4042,14 +4123,37 @@
     if (!state.activeTab) return;
 
     const tab = state.activeTab;
+    const content = tab.content;
+    const isYaml = tab.path.endsWith(".yaml") || tab.path.endsWith(".yml");
+
+    // 1. Validate if it's a YAML file
+    if (isYaml) {
+      const validationResult = await validateYaml(content);
+      if (!validationResult.valid) {
+        const confirmed = await showConfirmDialog({
+          title: "YAML Validation Error",
+          message: `The file contains an error and may not work with Home Assistant.<br><br><div style="background: var(--bg-tertiary); padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">${translateYamlError(validationResult.error)}</div>`,
+          confirmText: "Save Anyway",
+          cancelText: "Cancel",
+          isDanger: true
+        });
+
+        if (!confirmed) {
+          showToast("Save cancelled due to validation errors.", "warning");
+          return; // Abort save
+        }
+      }
+    }
+
+    // 2. Proceed with saving
     setButtonLoading(elements.btnSave, true);
 
-    const success = await saveFile(tab.path, tab.content);
+    const success = await saveFile(tab.path, content);
 
     setButtonLoading(elements.btnSave, false);
 
     if (success) {
-      tab.originalContent = tab.content;
+      tab.originalContent = content;
       tab.modified = false;
       renderTabs();
       renderFileTree();
@@ -4251,7 +4355,18 @@
           if (result.valid) {
             showToast("YAML is valid!", "success");
           } else {
-            showToast("YAML error: " + result.error, "error");
+            showToast("YAML error detected.", "error", 0, { // Use duration 0 to keep toast visible until action
+              text: "View Details",
+              callback: async () => {
+                // Display the full error in a modal
+                await showModal({
+                  title: "YAML Validation Error",
+                  message: `<div style="background: var(--bg-tertiary); padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; max-height: 300px; overflow-y: auto;">${translateYamlError(result.error)}</div>`,
+                  confirmText: "Close",
+                  isDanger: true // Indicate error
+                });
+              }
+            });
           }
         } else {
           showToast("No file open", "warning");

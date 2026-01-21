@@ -1006,7 +1006,7 @@
       width: 32px;
       height: 32px;
       border: none;
-      background: transparent;
+      background: var(--modal-bg);
       border-radius: 4px;
       color: var(--text-secondary);
       cursor: pointer;
@@ -1198,6 +1198,51 @@
       flex: 1;
       font-size: 14px;
     }
+
+    .toast-close-btn {
+      position: relative; /* Set positioning context */
+      width: 24px;
+      height: 24px;
+      margin-left: 8px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .toast-close-btn:hover {
+      background: var(--bg-hover);
+    }
+
+    .toast-close-btn .material-icons {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .toast-action-btn {
+      margin-left: auto; /* Push to the right */
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .toast-action-btn:hover {
+      background: var(--bg-hover);
+    }
+
 
     @keyframes slideUp {
       from {
@@ -2116,7 +2161,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: var(--divider-color);
+      background-color: #ccc;
       border-radius: 26px;
       transition: background-color 0.2s;
     }
