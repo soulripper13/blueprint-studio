@@ -91,7 +91,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 ### Git Settings & Authentication
 *One-click OAuth login or Personal Access Token authentication*
 
-![Git Settings Modal](images/screenshot-git-settings.png)
+![Git Settings Modal](images/screenshot-git-settings-1.png)
 
 ---
 
@@ -168,7 +168,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 
 ### Toolbar 🛠️
 <div align="center">
-  <img src="images/screenshot-toolbar-restart.png" alt="Restart Home Assistant Button" width="600">
+  <img src="images/screenshot-toolbar-restart.png" alt="Restart Home Assistant Button" width="800">
   <p><em>New Restart Button - Quickly restart HA from the toolbar</em></p>
 </div>
 
@@ -295,7 +295,8 @@ Blueprint Studio requires **no configuration**! After installation:
 **Sync your Home Assistant configuration with GitHub!**
 
 <div align="center">
-  <img src="images/screenshot-git-settings.png" alt="Git Settings Modal" width="800">
+  <img src="images/screenshot-git-settings-1.png" alt="Git Settings Modal" width="800">
+  <img src="images/screenshot-git-settings-2.png" alt="Git Settings Modal" width="800">
   <p><em>Git Settings - One-click OAuth login or Personal Access Token</em></p>
 </div>
 
@@ -343,7 +344,7 @@ Blueprint Studio requires **no configuration**! After installation:
 **Visual Sync Status & Exclusions**
 
 <div align="center">
-  <img src="images/screenshot-git-sync.png" alt="Visual Sync Status" width="800">
+  <img src="images/screenshot-git-sync.png" alt="Visual Sync Status" width="400"> <img src="images/screenshot-git-sync1.png" alt="Visual Sync Status" width="400">
   <p><em>Visual Sync Status - See exactly how many commits to Push (↑) or Pull (↓)</em></p>
 </div>
 
