@@ -91,7 +91,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 ### Git Settings & Authentication
 *One-click OAuth login or Personal Access Token authentication*
 
-![Git Settings Modal](images/screenshot-git-settings-1.png)
+![Git Settings Modal](images/screenshot-git-settings.png)
 
 ---
 
@@ -139,7 +139,8 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 
 ### File Management 📁
 - **Create Files & Folders** - Right-click context menu for creating new items ➕
-- **Upload Files** - Drag & drop or click to upload files from your computer ⬆️
+- **Drag & Drop Reorganization** - Move files and folders by dragging them 📦
+- **Upload Files** - Drag & drop files directly into the file tree or use the upload button ⬆️
 - **Download Files** - Download individual files or entire folders as ZIP ⬇️
 - **Copy & Paste** - Duplicate files and folders 📋
 - **Rename & Move** - Rename files or move them to different locations 🔄
@@ -168,7 +169,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 
 ### Toolbar 🛠️
 <div align="center">
-  <img src="images/screenshot-toolbar-restart.png" alt="Restart Home Assistant Button" width="800">
+  <img src="images/screenshot-toolbar-restart.png" alt="Restart Home Assistant Button" width="600">
   <p><em>New Restart Button - Quickly restart HA from the toolbar</em></p>
 </div>
 
@@ -186,6 +187,10 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 ### Keyboard Shortcuts ⌨️
 | Shortcut | Action |
 |----------|--------|
+| `Ctrl+P` / `Cmd+P` | Quick File Switcher 🔍 |
+| `Ctrl+B` / `Cmd+B` | Toggle Sidebar 📂 |
+| `Ctrl+Tab` | Next Tab ➡️ |
+| `Ctrl+Shift+Tab` | Previous Tab ⬅️ |
 | `Ctrl+S` / `Cmd+S` | Save file 💾 |
 | `Ctrl+Shift+S` / `Cmd+Shift+S` | Save all files 💾📁 |
 | `Ctrl+F` / `Cmd+F` | Search in file 🔍 |
@@ -295,8 +300,7 @@ Blueprint Studio requires **no configuration**! After installation:
 **Sync your Home Assistant configuration with GitHub!**
 
 <div align="center">
-  <img src="images/screenshot-git-settings-1.png" alt="Git Settings Modal" width="800">
-  <img src="images/screenshot-git-settings-2.png" alt="Git Settings Modal" width="800">
+  <img src="images/screenshot-git-settings.png" alt="Git Settings Modal" width="800">
   <p><em>Git Settings - One-click OAuth login or Personal Access Token</em></p>
 </div>
 
@@ -344,7 +348,7 @@ Blueprint Studio requires **no configuration**! After installation:
 **Visual Sync Status & Exclusions**
 
 <div align="center">
-  <img src="images/screenshot-git-sync.png" alt="Visual Sync Status" width="400"> <img src="images/screenshot-git-sync1.png" alt="Visual Sync Status" width="400">
+  <img src="images/screenshot-git-sync.png" alt="Visual Sync Status" width="800">
   <p><em>Visual Sync Status - See exactly how many commits to Push (↑) or Pull (↓)</em></p>
 </div>
 

@@ -520,6 +520,20 @@
       color: white;
     }
 
+    .tree-item.drag-over {
+      background: var(--accent-color-transparent, rgba(33, 150, 243, 0.2)) !important;
+      border: 1px dashed var(--accent-color);
+    }
+
+    .tree-item.dragging {
+      opacity: 0.5;
+    }
+
+    .file-tree.drag-over-root {
+      background: var(--bg-hover);
+      border: 2px dashed var(--accent-color);
+    }
+
     .tree-item.modified::after {
       content: '';
       width: 8px;
@@ -2286,6 +2300,98 @@
     #btn-github-signout:active {
       background: #b71c1c !important;
     }
+
+    /* Quick Switcher */
+    .quick-switcher-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10001; /* Above modal overlay */
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 100px;
+    }
+
+    .quick-switcher-overlay.visible {
+      display: flex;
+    }
+
+    .quick-switcher {
+      width: 500px;
+      max-width: 90vw;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .quick-switcher-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-primary);
+      border: none;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-size: 16px;
+      outline: none;
+    }
+
+    .quick-switcher-results {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .quick-switcher-item {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+    }
+
+    .quick-switcher-item:hover, .quick-switcher-item.selected {
+      background: var(--bg-tertiary);
+      border-left-color: var(--accent-color);
+    }
+
+    .quick-switcher-item .material-icons {
+      font-size: 18px;
+      margin-right: 10px;
+      color: var(--text-secondary);
+    }
+
+    .quick-switcher-path {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-left: auto;
+      opacity: 0.7;
+    }
+
+    .quick-switcher-footer {
+      padding: 6px 12px;
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .quick-switcher-footer kbd {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -2570,6 +2676,19 @@
       <div class="modal-footer">
         <button class="modal-btn secondary" id="modal-cancel">Cancel</button>
         <button class="modal-btn primary" id="modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Switcher Overlay -->
+  <div class="quick-switcher-overlay" id="quick-switcher-overlay">
+    <div class="quick-switcher">
+      <input type="text" class="quick-switcher-input" id="quick-switcher-input" placeholder="Search files by name..." autocomplete="off">
+      <div class="quick-switcher-results" id="quick-switcher-results"></div>
+      <div class="quick-switcher-footer">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
+        <span><kbd>Enter</kbd> to open</span>
+        <span><kbd>Esc</kbd> to close</span>
       </div>
     </div>
   </div>

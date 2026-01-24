@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-01-23
+## [1.3.1] - 2026-01-22
+
+### ✨ New Features
+*   **Drag & Drop Reorganization**: Move files and folders by dragging them in the file tree. Supports dropping into folders and back to the root directory, with visual feedback and safety confirmations.
+*   **Drag & Drop Upload**: Upload files from your computer by simply dragging them into the file explorer.
+*   **Quick File Switcher**: Press `Ctrl+P` (or `Cmd+P`) to instantly search and open files by name using fuzzy matching.
+*   **Toggle Sidebar Shortcut**: Use `Ctrl+B` (or `Cmd+B`) to quickly show/hide the file explorer sidebar.
+*   **Tab Switching Shortcuts**: Navigate open tabs with `Ctrl+Tab` (Next) and `Ctrl+Shift+Tab` (Previous).
+
+## [1.3.0] - 2026-01-22
 
 ### ✨ New Features
 *   **Onboarding Wizard**: A guided tour for new users to initialize their repo, configure ignores, and connect to GitHub.

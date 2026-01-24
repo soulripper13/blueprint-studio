@@ -601,6 +601,11 @@
     elements.shortcutsClose = document.getElementById("shortcuts-close");
     elements.btnWelcomeNewFile = document.getElementById("btn-welcome-new-file");
     elements.btnWelcomeUploadFile = document.getElementById("btn-welcome-upload-file");
+    
+    // Quick Switcher
+    elements.quickSwitcherOverlay = document.getElementById("quick-switcher-overlay");
+    elements.quickSwitcherInput = document.getElementById("quick-switcher-input");
+    elements.quickSwitcherResults = document.getElementById("quick-switcher-results");
   }
 
   // ============================================
@@ -1312,6 +1317,81 @@
   }
 
   // ============================================
+  // Quick Switcher
+  // ============================================
+
+  let quickSwitcherSelectedIndex = 0;
+
+  function showQuickSwitcher() {
+    if (!elements.quickSwitcherOverlay) return;
+    elements.quickSwitcherOverlay.classList.add("visible");
+    elements.quickSwitcherInput.value = "";
+    elements.quickSwitcherInput.focus();
+    updateQuickSwitcherResults("");
+  }
+
+  function hideQuickSwitcher() {
+    if (!elements.quickSwitcherOverlay) return;
+    elements.quickSwitcherOverlay.classList.remove("visible");
+  }
+
+  function updateQuickSwitcherResults(query) {
+    if (!elements.quickSwitcherResults) return;
+    
+    query = query.toLowerCase();
+    let matches = [];
+
+    // Filter files
+    if (!query) {
+        // Show recent files if no query
+        matches = state.recentFiles.map(path => {
+            return state.files.find(f => f.path === path);
+        }).filter(f => f); // Filter out nulls
+        
+        // Fill up with other files up to limit
+        if (matches.length < 20) {
+            const others = state.files.filter(f => !state.recentFiles.includes(f.path));
+            matches = matches.concat(others.slice(0, 20 - matches.length));
+        }
+    } else {
+        // Simple fuzzy: check if name includes query
+        matches = state.files.filter(f => f.name.toLowerCase().includes(query));
+        
+        // Also search paths if few matches
+        if (matches.length < 10) {
+            const pathMatches = state.files.filter(f => 
+                !matches.includes(f) && f.path.toLowerCase().includes(query)
+            );
+            matches = matches.concat(pathMatches);
+        }
+    }
+
+    // Limit results
+    matches = matches.slice(0, 50);
+    quickSwitcherSelectedIndex = 0;
+
+    let html = "";
+    matches.forEach((file, index) => {
+        const fileIcon = getFileIcon(file.name);
+        const isSelected = index === 0 ? "selected" : "";
+        
+        html += `
+            <div class="quick-switcher-item ${isSelected}" data-index="${index}" data-path="${file.path}">
+                <span class="material-icons ${fileIcon.class}">${fileIcon.icon}</span>
+                <span class="quick-switcher-name">${file.name}</span>
+                <span class="quick-switcher-path">${file.path}</span>
+            </div>
+        `;
+    });
+
+    if (matches.length === 0) {
+        html = `<div style="padding: 16px; text-align: center; color: var(--text-secondary);">No files found</div>`;
+    }
+
+    elements.quickSwitcherResults.innerHTML = html;
+  }
+
+  // ============================================
   // Sidebar Management
   // ============================================
 
@@ -1663,19 +1743,18 @@
     }
   }
 
-  async function handleFileUpload(event) {
-    const files = event.target.files;
+  async function processUploads(files, targetFolder = null) {
     if (!files || files.length === 0) return;
 
-    const basePath = state.currentFolderPath || "";
+    const basePath = targetFolder || state.currentFolderPath || "";
     let uploadedCount = 0;
     const totalFiles = files.length;
 
-    showGlobalLoading(`Uploading 0 of ${totalFiles} file(s)...`); // Initial message
+    showGlobalLoading(`Uploading 0 of ${totalFiles} file(s)...`); 
 
     for (const file of files) {
       uploadedCount++;
-      showGlobalLoading(`Uploading ${uploadedCount} of ${totalFiles} file(s): ${file.name}...`); // Update for current file
+      showGlobalLoading(`Uploading ${uploadedCount} of ${totalFiles} file(s): ${file.name}...`); 
 
       try {
         const isBinaryFile = !isTextFile(file.name);
@@ -1691,37 +1770,34 @@
         // Check if file exists
         const existingFile = state.files.find(f => f.path === filePath);
         if (existingFile) {
-          // Changed native confirm to showConfirmDialog for consistency
           const overwrite = await showConfirmDialog({
             title: "File Already Exists",
-            message: `File "${file.name}" already exists.<br><br>Do you want to overwrite it?`,
+            message: `File "${file.name}" already exists in ${basePath || "root"}.<br><br>Do you want to overwrite it?`,
             confirmText: "Overwrite",
             cancelText: "Cancel",
             isDanger: true
           });
 
           if (!overwrite) {
-            continue; // Skip this file
+            continue; 
           }
-          // The showGlobalLoading will be updated by the loop's next iteration or after this if it's the last.
-          // No need to restore it here as it will be updated right away or hidden.
-          await uploadFile(filePath, content, true, isBinaryFile); // Pass isBinaryFile as is_base64
+          await uploadFile(filePath, content, true, isBinaryFile); 
         } else {
-          await uploadFile(filePath, content, false, isBinaryFile); // Pass isBinaryFile as is_base64
+          await uploadFile(filePath, content, false, isBinaryFile); 
         }
-
-        // Open the uploaded file only if it was successfully uploaded (not skipped due to overwrite=false)
-        // Note: uploadFile already calls loadFiles and gitStatus
       } catch (error) {
-        showGlobalLoading(`Uploading ${uploadedCount} of ${totalFiles} file(s): ${file.name}...`); // Restore message after error toast
+        showGlobalLoading(`Uploading ${uploadedCount} of ${totalFiles} file(s): ${file.name}...`);
         showToast(`Failed to upload ${file.name}: ${error.message}`, "error");
-        // Continue to the next file if an error occurs for one file
       }
     }
 
     hideGlobalLoading();
-    showToast(`Successfully uploaded ${totalFiles} file(s).`, "success"); // Final success toast
+    showToast(`Successfully uploaded ${totalFiles} file(s).`, "success");
+  }
 
+  async function handleFileUpload(event) {
+    const files = event.target.files;
+    await processUploads(files);
     // Reset input so same file can be uploaded again
     event.target.value = "";
   }
@@ -4180,11 +4256,23 @@
   async function promptCopy(path, isFolder) {
     const currentName = path.split("/").pop();
     const parentPath = path.split("/").slice(0, -1).join("/");
+    
+    let defaultName = `${currentName}_copy`;
+    
+    // If it's a file with an extension, insert _copy before the extension
+    if (!isFolder && currentName.includes(".")) {
+        const parts = currentName.split(".");
+        const ext = parts.pop();
+        const name = parts.join(".");
+        if (name) { // Ensure it's not just ".gitignore" (empty name)
+            defaultName = `${name}_copy.${ext}`;
+        }
+    }
 
     const result = await showModal({
       title: isFolder ? "Copy Folder" : "Copy File",
       placeholder: "New name",
-      value: `${currentName}_copy`,
+      value: defaultName,
       hint: "Enter the name for the copy",
     });
 
@@ -4301,6 +4389,65 @@
     });
   }
 
+  async function handleFileDrop(sourcePath, targetFolder) {
+    if (sourcePath === targetFolder) return;
+
+    const fileName = sourcePath.split("/").pop();
+    // If target is root (null or empty string), new path is just filename
+    // targetFolder might be null for root drop
+    const newPath = targetFolder ? `${targetFolder}/${fileName}` : fileName;
+
+    // Check if moving into itself (for folders)
+    if (targetFolder && targetFolder.startsWith(sourcePath + "/")) {
+        showToast("Cannot move a folder into itself", "warning");
+        return;
+    }
+
+    // Check if moving to same location
+    // sourcePath "folder/file.yaml" -> currentFolder "folder"
+    // sourcePath "file.yaml" -> currentFolder ""
+    const lastSlashIndex = sourcePath.lastIndexOf("/");
+    const currentFolder = lastSlashIndex === -1 ? "" : sourcePath.substring(0, lastSlashIndex);
+    
+    // Normalize null target to empty string for comparison
+    const targetFolderNormalized = targetFolder || "";
+
+    if (currentFolder === targetFolderNormalized) return;
+
+    const confirmed = await showConfirmDialog({
+        title: "Move Item?",
+        message: `Move <b>${fileName}</b> to <b>${targetFolderNormalized || "root"}</b>?`,
+        confirmText: "Move",
+        cancelText: "Cancel"
+    });
+
+    if (confirmed) {
+        try {
+            showGlobalLoading("Moving...");
+            const data = await fetchWithAuth(API_BASE, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    action: "rename", 
+                    source: sourcePath, 
+                    destination: newPath 
+                }),
+            });
+
+            if (data.success) {
+                showToast("Moved successfully", "success");
+                await loadFiles();
+            } else {
+                showToast("Move failed: " + data.message, "error");
+            }
+        } catch (error) {
+            showToast("Move error: " + error.message, "error");
+        } finally {
+            hideGlobalLoading();
+        }
+    }
+  }
+
   function folderMatchesSearch(folder, query) {
     if (folder._files) {
       if (folder._files.some((f) => f.name.toLowerCase().includes(query))) {
@@ -4321,8 +4468,52 @@
     const item = document.createElement("div");
     item.className = "tree-item";
     item.style.setProperty("--depth", depth);
-    // Optimize touch behavior on mobile devices
     item.style.touchAction = "manipulation";
+    
+    // Drag & Drop
+    if (itemPath) {
+        item.draggable = true;
+        
+        item.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", itemPath);
+            e.dataTransfer.effectAllowed = "move";
+            item.classList.add("dragging");
+        });
+
+        item.addEventListener("dragend", () => {
+            item.classList.remove("dragging");
+        });
+
+        // Only folders can be drop targets
+        if (isFolder) {
+            item.addEventListener("dragover", (e) => {
+                e.preventDefault(); // Allow drop
+                e.dataTransfer.dropEffect = "move";
+                item.classList.add("drag-over");
+            });
+
+            item.addEventListener("dragleave", () => {
+                item.classList.remove("drag-over");
+            });
+
+            item.addEventListener("drop", async (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent bubbling to root container
+                item.classList.remove("drag-over");
+                
+                // Check for external files
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    await processUploads(e.dataTransfer.files, itemPath);
+                    return;
+                }
+
+                const sourcePath = e.dataTransfer.getData("text/plain");
+                if (sourcePath) {
+                    await handleFileDrop(sourcePath, itemPath);
+                }
+            });
+        }
+    }
 
     const chevron = document.createElement("div");
     chevron.className = `tree-chevron ${isFolder ? (isExpanded ? "expanded" : "") : "hidden"}`;
@@ -5572,6 +5763,12 @@
         }
       }
 
+      // Ctrl/Cmd + P - Quick Switcher
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+        e.preventDefault();
+        showQuickSwitcher();
+      }
+
       // Ctrl/Cmd + S
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
@@ -5590,10 +5787,49 @@
         }
       }
 
+      // Ctrl + Tab (Next) / Ctrl + Shift + Tab (Prev)
+      // Note: Browser might intercept this. Added PageUp/Down as alternative.
+      if (e.ctrlKey && !e.metaKey && e.key === "Tab") {
+        e.preventDefault();
+        if (state.openTabs.length > 1) {
+            const currentIndex = state.openTabs.indexOf(state.activeTab);
+            let nextIndex;
+            if (e.shiftKey) {
+                nextIndex = (currentIndex - 1 + state.openTabs.length) % state.openTabs.length;
+            } else {
+                nextIndex = (currentIndex + 1) % state.openTabs.length;
+            }
+            activateTab(state.openTabs[nextIndex]);
+        }
+      }
+
+      // Ctrl + PageUp (Prev) / Ctrl + PageDown (Next)
+      if (e.ctrlKey && (e.key === "PageUp" || e.key === "PageDown")) {
+        e.preventDefault();
+        if (state.openTabs.length > 1) {
+            const currentIndex = state.openTabs.indexOf(state.activeTab);
+            let nextIndex;
+            if (e.key === "PageUp") {
+                nextIndex = (currentIndex - 1 + state.openTabs.length) % state.openTabs.length;
+            } else {
+                nextIndex = (currentIndex + 1) % state.openTabs.length;
+            }
+            activateTab(state.openTabs[nextIndex]);
+        }
+      }
+
+      // Ctrl/Cmd + B - Toggle Sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      }
+
       // Escape - close sidebar on mobile, hide modals/menus
       if (e.key === "Escape") {
         if (elements.shortcutsOverlay.classList.contains("visible")) {
           hideShortcuts();
+        } else if (elements.quickSwitcherOverlay && elements.quickSwitcherOverlay.classList.contains("visible")) {
+          hideQuickSwitcher();
         } else if (elements.modalOverlay.classList.contains("visible")) {
           hideModal();
         } else if (elements.contextMenu.classList.contains("visible")) {
@@ -5605,6 +5841,88 @@
         }
       }
     });
+
+    // Quick Switcher Events
+    if (elements.quickSwitcherInput) {
+      elements.quickSwitcherInput.addEventListener("input", (e) => {
+        updateQuickSwitcherResults(e.target.value);
+      });
+
+      elements.quickSwitcherInput.addEventListener("keydown", (e) => {
+        const items = elements.quickSwitcherResults.querySelectorAll(".quick-switcher-item");
+        if (items.length === 0) return;
+
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          items[quickSwitcherSelectedIndex].classList.remove("selected");
+          quickSwitcherSelectedIndex = (quickSwitcherSelectedIndex + 1) % items.length;
+          items[quickSwitcherSelectedIndex].classList.add("selected");
+          items[quickSwitcherSelectedIndex].scrollIntoView({ block: "nearest" });
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          items[quickSwitcherSelectedIndex].classList.remove("selected");
+          quickSwitcherSelectedIndex = (quickSwitcherSelectedIndex - 1 + items.length) % items.length;
+          items[quickSwitcherSelectedIndex].classList.add("selected");
+          items[quickSwitcherSelectedIndex].scrollIntoView({ block: "nearest" });
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          const path = items[quickSwitcherSelectedIndex].dataset.path;
+          openFile(path);
+          hideQuickSwitcher();
+        }
+      });
+    }
+
+    if (elements.quickSwitcherOverlay) {
+      elements.quickSwitcherOverlay.addEventListener("click", (e) => {
+        if (e.target === elements.quickSwitcherOverlay) {
+          hideQuickSwitcher();
+        }
+      });
+    }
+
+    if (elements.quickSwitcherResults) {
+      elements.quickSwitcherResults.addEventListener("click", (e) => {
+        const item = e.target.closest(".quick-switcher-item");
+        if (item) {
+          openFile(item.dataset.path);
+          hideQuickSwitcher();
+        }
+      });
+    }
+
+    // File Tree Drag & Drop (Root)
+    if (elements.fileTree) {
+      elements.fileTree.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        elements.fileTree.classList.add("drag-over-root");
+      });
+
+      elements.fileTree.addEventListener("dragleave", (e) => {
+        // Only remove if leaving the tree entirely
+        if (e.relatedTarget && !elements.fileTree.contains(e.relatedTarget)) {
+             elements.fileTree.classList.remove("drag-over-root");
+        }
+      });
+
+      elements.fileTree.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        elements.fileTree.classList.remove("drag-over-root");
+        
+        // Check for external files
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            await processUploads(e.dataTransfer.files, null); // Upload to root
+            return;
+        }
+
+        const sourcePath = e.dataTransfer.getData("text/plain");
+        // Target is null (root)
+        if (sourcePath) {
+            await handleFileDrop(sourcePath, null);
+        }
+      });
+    }
 
     // Window resize
     window.addEventListener("resize", () => {
