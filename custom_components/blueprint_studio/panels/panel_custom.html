@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/merge/merge.min.css">
 
   <!-- Themes -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
@@ -24,6 +25,9 @@
 
   <!-- GitHub Octicons (for Git features) -->
   <link href="https://unpkg.com/@primer/octicons@19.8.0/dist/octicons.css" rel="stylesheet">
+
+  <!-- Diff Match Patch (Required for CodeMirror Merge) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
@@ -48,6 +52,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/merge/merge.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/overlay.min.js"></script>
 
@@ -450,6 +455,47 @@
       color: var(--text-muted);
     }
 
+    .selection-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: var(--bg-tertiary);
+        border-bottom: 1px solid var(--border-color);
+        font-size: 12px;
+    }
+
+    .selection-count {
+        font-weight: 500;
+        color: var(--accent-color);
+    }
+
+    .selection-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .selection-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+
+    .selection-btn:hover {
+        background: var(--bg-hover);
+    }
+
+    .selection-btn .material-icons {
+        font-size: 16px;
+    }
+
     .file-tree {
       flex: 1;
       overflow-y: auto;
@@ -476,7 +522,6 @@
 
     /* Recent Files panel */
     .recent-files-panel {
-      border-bottom: 1px solid var(--border-color);
       background: var(--bg-secondary);
     }
 
@@ -487,6 +532,26 @@
       letter-spacing: 0.5px;
       color: var(--text-secondary);
       padding: 8px 12px 4px 12px;
+    }
+
+    .recent-files-list {
+      max-height: 120px; /* Show approx 3 items (40px each) */
+      overflow-y: auto;
+      border-bottom: 1px solid var(--border-color);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .recent-files-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .recent-files-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .recent-files-list::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
     }
 
     .favorite-item {
@@ -513,6 +578,18 @@
 
     .tree-item:hover, .tree-item:active {
       background: var(--bg-hover);
+    }
+
+    .tree-item-checkbox {
+        margin-right: 8px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        display: none; /* Hidden by default */
+    }
+
+    .tree-item-checkbox.visible {
+        display: block;
     }
 
     .tree-item.active {
@@ -752,6 +829,45 @@
 
     .CodeMirror-activeline-background {
       background: rgba(128, 128, 128, 0.1);
+    }
+
+    /* Enhanced Selection Highlighting */
+    .CodeMirror-selected {
+      background: rgba(58, 134, 255, 0.3) !important;
+    }
+    .CodeMirror-focused .CodeMirror-selected {
+      background: rgba(58, 134, 255, 0.5) !important;
+    }
+    
+    [data-theme="light"] .CodeMirror-selected {
+      background: rgba(0, 96, 192, 0.2) !important;
+    }
+    [data-theme="light"] .CodeMirror-focused .CodeMirror-selected {
+      background: rgba(0, 96, 192, 0.4) !important;
+    }
+
+    /* Search Highlight Overlay */
+    .cm-search-match {
+        background-color: rgba(255, 255, 0, 0.4);
+        border-bottom: 2px solid rgba(255, 255, 0, 0.8);
+    }
+    [data-theme="dark"] .cm-search-match {
+        background-color: rgba(255, 215, 0, 0.2);
+        border-bottom: 2px solid rgba(255, 215, 0, 0.6);
+    }
+
+    /* Active (Selected) Search Match */
+    .cm-search-active {
+        background-color: rgba(255, 152, 0, 0.8) !important; /* Vivid Orange */
+        border: 1px solid #ff9100 !important;
+        color: #000000 !important; /* Black text for high contrast on orange */
+        font-weight: bold !important;
+    }
+    [data-theme="light"] .cm-search-active {
+        background-color: rgba(255, 140, 0, 0.6) !important;
+        border: 1px solid #e65100 !important;
+        color: #000000 !important;
+        font-weight: bold !important;
     }
 
     /* Autocomplete hints styling */
@@ -1383,7 +1499,7 @@
 
       /* Git panel mobile styles */
       .git-panel {
-        max-height: 50vh;
+        max-height: 45vh; /* Reduced slightly to account for keyboard */
       }
 
       .git-panel-header {
@@ -1416,14 +1532,17 @@
 
       .git-panel-footer {
         padding: 12px;
-        gap: 12px;
+        gap: 8px;
+        flex-wrap: wrap; /* Allow wrapping on very small screens */
       }
 
       .git-panel-footer button {
         padding: 12px 16px;
         font-size: 14px;
-        min-height: 44px;
+        min-height: 48px; /* Standard touch target */
         touch-action: manipulation;
+        flex: 1; /* Distribute space evenly */
+        white-space: nowrap;
       }
 
       /* Git settings modal on mobile */
@@ -1436,7 +1555,7 @@
       .git-settings-buttons button {
         padding: 12px 16px;
         font-size: 14px;
-        min-height: 44px;
+        min-height: 48px;
         touch-action: manipulation;
       }
 
@@ -1459,25 +1578,36 @@
 
       /* Modal mobile optimization */
       .modal {
-        max-width: 95vw;
+        width: 95%; /* Use percentage instead of vw for better centering */
+        max-width: 95%;
         max-height: 85vh;
-        margin: 0 10px;
+        margin: 0 auto; /* Center horizontally */
       }
 
       .modal-body {
         padding: 16px;
+        -webkit-overflow-scrolling: touch;
       }
 
       .modal-header {
         padding: 12px 16px;
+        min-height: 50px;
       }
 
       .modal-footer {
         padding: 12px 16px;
+        gap: 12px;
+      }
+
+      .modal-btn {
+        padding: 12px 20px; /* Larger touch area */
+        font-size: 15px;
+        min-height: 44px;
       }
 
       .modal-overlay {
         padding: 10px;
+        align-items: center; /* Ensure vertical centering */
       }
     }
 
@@ -2392,6 +2522,147 @@
       padding: 1px 4px;
       font-family: monospace;
     }
+
+    /* Merge View Styles */
+    .CodeMirror-merge {
+        height: 100%;
+        border: none;
+    }
+    .CodeMirror-merge-pane {
+        height: 100%;
+    }
+    .CodeMirror-merge .CodeMirror {
+        height: 100%;
+    }
+    /* Hide the "connect" arrows/canvas if they are distracting or broken layout */
+    /* .CodeMirror-merge-gap canvas { display: none; } */
+
+    /* Dark Mode Merge View Contrast Fixes */
+    body[data-theme='dark'] .CodeMirror-merge-l-chunk { background: rgba(255, 80, 80, 0.2); }
+    body[data-theme='dark'] .CodeMirror-merge-l-chunk-start { border-top: 1px solid rgba(255, 80, 80, 0.4); }
+    body[data-theme='dark'] .CodeMirror-merge-l-chunk-end { border-bottom: 1px solid rgba(255, 80, 80, 0.4); }
+    
+    body[data-theme='dark'] .CodeMirror-merge-r-chunk { background: rgba(80, 255, 80, 0.2); }
+    body[data-theme='dark'] .CodeMirror-merge-r-chunk-start { border-top: 1px solid rgba(80, 255, 80, 0.4); }
+    body[data-theme='dark'] .CodeMirror-merge-r-chunk-end { border-bottom: 1px solid rgba(80, 255, 80, 0.4); }
+    
+    body[data-theme='dark'] .CodeMirror-merge-l-connect { fill: rgba(255, 80, 80, 0.2); stroke: rgba(255, 80, 80, 0.4); }
+    body[data-theme='dark'] .CodeMirror-merge-r-connect { fill: rgba(80, 255, 80, 0.2); stroke: rgba(80, 255, 80, 0.4); }
+
+    /* Merge Gap Dark Mode */
+    body[data-theme='dark'] .CodeMirror-merge-gap {
+        background-color: var(--bg-primary);
+        border-left: 1px solid var(--border-color);
+        border-right: 1px solid var(--border-color);
+    }
+
+    /* Scroll Lock Icon Size */
+    .CodeMirror-merge-scrolllock {
+        font-size: 20px !important;
+        width: 24px !important;
+        height: 24px !important;
+        cursor: pointer;
+    }
+
+    /* Search Widget */
+    .search-widget {
+        display: none;
+        position: absolute;
+        top: 0;
+        right: 20px;
+        background: var(--bg-secondary);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        z-index: 20; /* Above CodeMirror */
+        width: 350px;
+        padding: 4px;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .search-widget.visible {
+        display: flex;
+    }
+
+    .search-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .search-toggle-icon {
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-size: 18px;
+        user-select: none;
+        width: 20px;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    
+    .search-widget.replace-mode .search-toggle-icon {
+        transform: rotate(-180deg);
+    }
+
+    .search-input-wrapper {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-widget input {
+        width: 100%;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 4px 8px;
+        font-size: 13px;
+        border-radius: 2px;
+        outline: none;
+    }
+
+    .search-widget input:focus {
+        border-color: var(--accent-color);
+    }
+
+    .search-count {
+        position: absolute;
+        right: 8px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        pointer-events: none;
+    }
+
+    .search-actions {
+        display: flex;
+        gap: 2px;
+    }
+
+    .search-actions button {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 2px;
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+    }
+
+    .search-actions button:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    .search-spacer {
+        width: 20px;
+    }
   </style>
 </head>
 <body>
@@ -2490,6 +2761,9 @@
     <div class="toolbar-spacer"></div>
 
     <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-shortcuts-help" title="Keyboard Shortcuts (?)">
+        <span class="material-icons">keyboard</span>
+      </button>
       <button class="toolbar-btn" id="btn-restart-ha" title="Restart Home Assistant">
         <span class="material-icons" style="color: #3ea589;">restart_alt</span>
       </button>
@@ -2526,6 +2800,9 @@
           <button class="sidebar-header-btn" id="btn-show-hidden" title="Show hidden folders">
             <span class="material-icons">visibility_off</span>
           </button>
+          <button class="sidebar-header-btn" id="btn-toggle-select" title="Select Files">
+            <span class="material-icons">checklist</span>
+          </button>
           <button class="sidebar-header-btn" id="btn-toggle-all" title="Expand All">
             <span class="material-icons">unfold_more</span>
           </button>
@@ -2536,6 +2813,17 @@
       </div>
       <div class="search-container">
         <input type="text" class="search-input" id="file-search" placeholder="Search files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="selection-toolbar" id="selection-toolbar" style="display: none;">
+        <span class="selection-count" id="selection-count">0 selected</span>
+        <div class="selection-actions">
+            <button class="selection-btn" id="btn-download-selected" title="Download Selected">
+                <span class="material-icons">download</span>
+            </button>
+            <button class="selection-btn" id="btn-cancel-selection" title="Cancel Selection">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
       </div>
 
       <!-- Git Changes Panel -->
@@ -2589,6 +2877,35 @@
     <div class="editor-area">
       <div class="tabs-container" id="tabs-container"></div>
       <div class="editor-container" id="editor-container">
+        <div class="search-widget" id="search-widget">
+            <div class="search-row">
+                <span class="material-icons search-toggle-icon" id="search-toggle-replace" title="Toggle Replace">expand_more</span>
+                <div class="search-input-wrapper">
+                    <input type="text" id="search-find-input" placeholder="Find">
+                    <span id="search-results-count" class="search-count"></span>
+                </div>
+                <div class="search-actions">
+                    <button id="search-prev" title="Previous Match (Shift+Enter)"><span class="material-icons">arrow_upward</span></button>
+                    <button id="search-next" title="Next Match (Enter)"><span class="material-icons">arrow_downward</span></button>
+                    <button id="search-close" title="Close (Esc)"><span class="material-icons">close</span></button>
+                </div>
+            </div>
+            <div class="search-row replace-row" id="search-replace-row" style="display: none;">
+                <span class="material-icons search-spacer"></span>
+                <div class="search-input-wrapper">
+                    <input type="text" id="search-replace-input" placeholder="Replace">
+                </div>
+                <div class="search-actions">
+                    <button id="search-replace" title="Replace">
+                        <span class="material-icons" style="font-size: 16px;">find_replace</span>
+                    </button>
+                    <button id="search-replace-all" title="Replace All">
+                        <span class="material-icons" style="font-size: 16px;">done_all</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="welcome-screen" id="welcome-screen">
           <span class="material-icons">edit_note</span>
           <h2>Blueprint Studio</h2>
@@ -2735,15 +3052,15 @@
         <div class="shortcuts-section">
           <h3>File Operations</h3>
           <div class="shortcut-item">
-            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>S</kbd></span>
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>S</kbd></span>
             <span class="shortcut-desc">Save current file</span>
           </div>
           <div class="shortcut-item">
-            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd></span>
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd></span>
             <span class="shortcut-desc">Save all files</span>
           </div>
           <div class="shortcut-item">
-            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>W</kbd></span>
+            <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>W</kbd></span>
             <span class="shortcut-desc">Close current tab</span>
           </div>
         </div>
@@ -2751,25 +3068,49 @@
         <div class="shortcuts-section">
           <h3>Editor</h3>
           <div class="shortcut-item">
-            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Z</kbd></span>
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Z</kbd></span>
             <span class="shortcut-desc">Undo</span>
           </div>
           <div class="shortcut-item">
-            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Y</kbd></span>
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Y</kbd></span>
             <span class="shortcut-desc">Redo</span>
           </div>
           <div class="shortcut-item">
-            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>F</kbd></span>
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>F</kbd></span>
             <span class="shortcut-desc">Search in file</span>
           </div>
           <div class="shortcut-item">
-            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>H</kbd></span>
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>H</kbd></span>
             <span class="shortcut-desc">Find and replace</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>G</kbd></span>
+            <span class="shortcut-desc">Jump to line</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>/</kbd></span>
+            <span class="shortcut-desc">Toggle comment</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Space</kbd></span>
+            <span class="shortcut-desc">Autocomplete</span>
           </div>
         </div>
 
         <div class="shortcuts-section">
           <h3>Navigation</h3>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>E</kbd></span>
+            <span class="shortcut-desc">Quick File Switcher</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>B</kbd></span>
+            <span class="shortcut-desc">Toggle Sidebar</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd>/<kbd>]</kbd></span>
+            <span class="shortcut-desc">Prev/Next Tab</span>
+          </div>
           <div class="shortcut-item">
             <span class="shortcut-keys"><kbd>Esc</kbd></span>
             <span class="shortcut-desc">Close modal/menu or hide sidebar (mobile)</span>
@@ -2780,15 +3121,9 @@
           </div>
         </div>
       </div>
-      <div class="shortcuts-footer">
-        <div class="shortcuts-hint">
-          <span class="material-icons">info</span>
-          On Mac, use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>
-        </div>
-      </div>
     </div>
   </div>
 
-  <script src="/local/blueprint_studio/www/blueprint_studio.js?v=1.2.2"></script>
+  <script src="/local/blueprint_studio/www/blueprint_studio.js?v=1.3.2"></script>
 </body>
 </html>

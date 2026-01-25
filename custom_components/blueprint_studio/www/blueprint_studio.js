@@ -525,6 +525,8 @@
     currentFolderPath: "",
     editor: null,  // Single shared editor instance
     gitConfig: null,  // Git configuration
+    selectionMode: false,
+    selectedItems: new Set(),
   };
 
   // ============================================
@@ -555,6 +557,7 @@
     elements.btnMenu = document.getElementById("btn-menu");
     elements.btnSearch = document.getElementById("btn-search");
     elements.btnRefresh = document.getElementById("btn-refresh");
+    elements.btnShortcutsHelp = document.getElementById("btn-shortcuts-help");
     elements.btnRestartHa = document.getElementById("btn-restart-ha");
     elements.btnAppSettings = document.getElementById("btn-app-settings");
     elements.btnValidate = document.getElementById("btn-validate");
@@ -565,6 +568,11 @@
     elements.btnNewFolder = document.getElementById("btn-new-folder");
     elements.btnNewFileSidebar = document.getElementById("btn-new-file-sidebar");
     elements.btnNewFolderSidebar = document.getElementById("btn-new-folder-sidebar");
+    elements.btnToggleSelect = document.getElementById("btn-toggle-select"); // New selection toggle
+    elements.selectionToolbar = document.getElementById("selection-toolbar"); // New toolbar
+    elements.selectionCount = document.getElementById("selection-count");
+    elements.btnDownloadSelected = document.getElementById("btn-download-selected");
+    elements.btnCancelSelection = document.getElementById("btn-cancel-selection");
     elements.themeToggle = document.getElementById("theme-toggle");
     elements.themeMenu = document.getElementById("theme-menu");
     elements.themeIcon = document.getElementById("theme-icon");
@@ -606,6 +614,19 @@
     elements.quickSwitcherOverlay = document.getElementById("quick-switcher-overlay");
     elements.quickSwitcherInput = document.getElementById("quick-switcher-input");
     elements.quickSwitcherResults = document.getElementById("quick-switcher-results");
+
+    // Search Widget
+    elements.searchWidget = document.getElementById("search-widget");
+    elements.searchToggle = document.getElementById("search-toggle-replace");
+    elements.searchFindInput = document.getElementById("search-find-input");
+    elements.searchReplaceInput = document.getElementById("search-replace-input");
+    elements.searchPrev = document.getElementById("search-prev");
+    elements.searchNext = document.getElementById("search-next");
+    elements.searchClose = document.getElementById("search-close");
+    elements.searchReplaceRow = document.getElementById("search-replace-row");
+    elements.searchReplaceBtn = document.getElementById("search-replace");
+    elements.searchReplaceAllBtn = document.getElementById("search-replace-all");
+    elements.searchCount = document.getElementById("search-results-count");
   }
 
   // ============================================
@@ -1026,19 +1047,21 @@
       return;
     }
 
-    if (state.recentFiles.length === 0) {
+    // Filter existing files
+    const existingRecentFiles = state.recentFiles.filter(filePath => 
+      state.files.some(f => f.path === filePath)
+    );
+
+    if (existingRecentFiles.length === 0) {
       recentFilesContainer.style.display = "none";
       return;
     }
 
     recentFilesContainer.style.display = "block";
-    recentFilesContainer.innerHTML = '<div class="recent-files-header">Recent Files</div>';
+    recentFilesContainer.innerHTML = '<div class="recent-files-header">Recent Files</div><div class="recent-files-list" id="recent-files-list"></div>';
+    const listContainer = document.getElementById("recent-files-list");
 
-    state.recentFiles.forEach((filePath) => {
-      // Check if file still exists
-      const fileExists = state.files.some(f => f.path === filePath);
-      if (!fileExists) return;
-
+    existingRecentFiles.forEach((filePath) => {
       const fileName = filePath.split("/").pop();
       const item = document.createElement("div");
       item.className = "tree-item recent-item";
@@ -1075,7 +1098,7 @@
         showContextMenu(e.clientX, e.clientY, { path: filePath, isFolder: false });
       });
 
-      recentFilesContainer.appendChild(item);
+      listContainer.appendChild(item);
     });
   }
 
@@ -1317,6 +1340,229 @@
   }
 
   // ============================================
+  // Search Implementation
+  // ============================================
+
+  function updateSearchHighlights(query) {
+    if (!state.editor) return;
+    
+    // Remove existing overlay if any
+    if (state.searchOverlay) {
+      state.editor.removeOverlay(state.searchOverlay);
+      state.searchOverlay = null;
+    }
+    
+    if (!query) return;
+
+    // Create a new overlay for all matches
+    state.searchOverlay = {
+      token: function(stream) {
+        if (stream.match(query, true, true)) {
+          return "search-match";
+        }
+        while (stream.next() != null && !stream.match(query, false, true)) {}
+        return null;
+      }
+    };
+    
+    state.editor.addOverlay(state.searchOverlay);
+  }
+
+  function updateMatchStatus(query) {
+      if (!state.editor || !query) {
+          if (elements.searchCount) elements.searchCount.textContent = "";
+          if (state.activeMatchMark) {
+             state.activeMatchMark.clear();
+             state.activeMatchMark = null;
+          }
+          return;
+      }
+
+      const cursor = state.editor.getSearchCursor(query, null, { caseFold: true });
+      let count = 0;
+      let currentIdx = -1;
+      
+      const selFrom = state.editor.getCursor("from");
+      const selTo = state.editor.getCursor("to");
+      
+      // Clear previous active mark
+      if (state.activeMatchMark) {
+          state.activeMatchMark.clear();
+          state.activeMatchMark = null;
+      }
+
+      while (cursor.findNext()) {
+          count++;
+          // Check if this match is the selected one
+          // We check if the match range equals the selection range
+          if (cursor.from().line === selFrom.line && cursor.from().ch === selFrom.ch &&
+              cursor.to().line === selTo.line && cursor.to().ch === selTo.ch) {
+              currentIdx = count;
+              
+              // Highlight this specific match as active
+              state.activeMatchMark = state.editor.markText(
+                  cursor.from(), 
+                  cursor.to(), 
+                  { className: "cm-search-active" }
+              );
+          }
+      }
+      
+      if (elements.searchCount) {
+          if (count > 0) {
+              if (currentIdx > 0) {
+                  elements.searchCount.textContent = `${currentIdx} of ${count}`;
+              } else {
+                  elements.searchCount.textContent = `${count} found`;
+              }
+          } else {
+              elements.searchCount.textContent = "No results";
+          }
+      }
+  }
+
+  function openSearchWidget(replaceMode = false) {
+    if (!elements.searchWidget) return;
+    elements.searchWidget.classList.add("visible");
+    
+    if (replaceMode) {
+        elements.searchWidget.classList.add("replace-mode");
+        elements.searchReplaceRow.style.display = "flex";
+    } else {
+        elements.searchWidget.classList.remove("replace-mode");
+        elements.searchReplaceRow.style.display = "none";
+    }
+
+    if (state.editor) {
+        const selection = state.editor.getSelection();
+        if (selection) {
+            elements.searchFindInput.value = selection;
+            updateSearchHighlights(selection);
+            updateMatchStatus(selection);
+        } else if (elements.searchFindInput.value) {
+            updateSearchHighlights(elements.searchFindInput.value);
+            updateMatchStatus(elements.searchFindInput.value);
+        }
+    }
+    
+    elements.searchFindInput.focus();
+    elements.searchFindInput.select();
+  }
+
+  function closeSearchWidget() {
+    if (!elements.searchWidget) return;
+    elements.searchWidget.classList.remove("visible");
+    
+    // Clear highlights
+    if (state.editor && state.searchOverlay) {
+        state.editor.removeOverlay(state.searchOverlay);
+        state.searchOverlay = null;
+    }
+    // Clear active mark
+    if (state.activeMatchMark) {
+        state.activeMatchMark.clear();
+        state.activeMatchMark = null;
+    }
+    
+    if (elements.searchCount) elements.searchCount.textContent = "";
+
+    if (state.editor) state.editor.focus();
+  }
+
+  function doFind(reverse = false) {
+    if (!state.editor) return;
+    const query = elements.searchFindInput.value;
+    
+    // Update highlights
+    updateSearchHighlights(query);
+    
+    if (!query) {
+        updateMatchStatus(""); // Clear status
+        return;
+    }
+
+    // Determine start position based on direction and current selection
+    const startPos = state.editor.getCursor(reverse ? "from" : "to");
+    
+    let cursor = state.editor.getSearchCursor(query, startPos, { caseFold: true });
+    
+    let found = false;
+    
+    if (reverse) {
+        found = cursor.findPrevious();
+    } else {
+        found = cursor.findNext();
+    }
+    
+    // Handle wrapping if not found
+    if (!found) {
+        const wrapStart = reverse 
+            ? { line: state.editor.lineCount(), ch: 0 } 
+            : { line: 0, ch: 0 };                       
+            
+        cursor = state.editor.getSearchCursor(query, wrapStart, { caseFold: true });
+        
+        if (reverse) {
+            found = cursor.findPrevious();
+        } else {
+            found = cursor.findNext();
+        }
+        
+        if (found) {
+            showToast("Search wrapped", "info", 1000);
+        }
+    }
+
+    if (found) {
+        state.editor.setSelection(cursor.from(), cursor.to());
+        state.editor.scrollIntoView({from: cursor.from(), to: cursor.to()}, 20);
+    } else {
+        showToast("No match found", "info", 1500);
+    }
+    
+    // Update status/count AFTER selection is set, so we can identify current match
+    updateMatchStatus(query);
+  }
+
+  function doReplace() {
+    if (!state.editor) return;
+    const query = elements.searchFindInput.value;
+    const replacement = elements.searchReplaceInput.value;
+    if (!query) return;
+
+    // Check if current selection matches query
+    const selection = state.editor.getSelection();
+    if (selection && selection.toLowerCase() === query.toLowerCase()) {
+        state.editor.replaceSelection(replacement);
+        doFind(); // Find next
+    } else {
+        doFind(); // Find first
+    }
+    // Update count after replace
+    updateMatchStatus(query);
+  }
+
+  function doReplaceAll() {
+    if (!state.editor) return;
+    const query = elements.searchFindInput.value;
+    const replacement = elements.searchReplaceInput.value;
+    if (!query) return;
+
+    const cursor = state.editor.getSearchCursor(query, null, { caseFold: true });
+    state.editor.operation(() => {
+        let count = 0;
+        while (cursor.findNext()) {
+            cursor.replace(replacement);
+            count++;
+        }
+        showToast(`Replaced ${count} occurrences`, "success");
+        // Clear highlights/count since they are gone/changed
+        updateSearchHighlights(query);
+        updateMatchStatus(query);
+    });
+  }
+
+  // ============================================
   // Quick Switcher
   // ============================================
 
@@ -1424,30 +1670,150 @@
   }
 
   // ============================================
+  // Bulk Selection Functions
+  // ============================================
+
+  function toggleSelectionMode() {
+    state.selectionMode = !state.selectionMode;
+    if (!state.selectionMode) {
+        state.selectedItems.clear();
+    }
+    
+    // Update toolbar visibility
+    if (elements.selectionToolbar) {
+        elements.selectionToolbar.style.display = state.selectionMode ? "flex" : "none";
+    }
+    
+    // Update button active state
+    if (elements.btnToggleSelect) {
+        elements.btnToggleSelect.classList.toggle("active", state.selectionMode);
+    }
+    
+    updateSelectionCount();
+    renderFileTree();
+  }
+
+  function handleSelectionChange(path, isSelected) {
+    if (isSelected) {
+        state.selectedItems.add(path);
+    } else {
+        state.selectedItems.delete(path);
+    }
+    updateSelectionCount();
+  }
+
+  function updateSelectionCount() {
+    if (elements.selectionCount) {
+        const count = state.selectedItems.size;
+        elements.selectionCount.textContent = `${count} selected`;
+        
+        if (elements.btnDownloadSelected) {
+            elements.btnDownloadSelected.disabled = count === 0;
+        }
+    }
+  }
+
+  async function downloadSelectedItems() {
+    if (state.selectedItems.size === 0) return;
+
+    const paths = Array.from(state.selectedItems);
+    
+    // If only one item is selected, check if it's a file or folder
+    if (paths.length === 1) {
+        const path = paths[0];
+        const isFolder = state.folders.some(f => f.path === path);
+        
+        if (!isFolder) {
+            // Single file selected - download directly
+            await downloadFileByPath(path);
+            toggleSelectionMode(); // Exit selection mode
+            return;
+        }
+        // Single folder selected - will be zipped by the logic below
+    }
+
+    try {
+      showGlobalLoading("Preparing bulk download...");
+
+      const response = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "download_multi", paths }),
+      });
+
+      hideGlobalLoading();
+
+      if (response.success && response.data) {
+        downloadContent(response.filename, response.data, true, "application/zip");
+        showToast(`Downloaded ${paths.length} items`, "success");
+        
+        // Exit selection mode after download
+        toggleSelectionMode();
+      }
+    } catch (error) {
+      hideGlobalLoading();
+      showToast("Failed to download items: " + error.message, "error");
+    }
+  }
+
+  // ============================================
   // API Functions
   // ============================================
 
   async function fetchWithAuth(url, options = {}) {
     let headers = { ...options.headers };
 
-    // Try to get auth token from Home Assistant
-    try {
-      if (window.parent && window.parent.hassConnection) {
-        const conn = await window.parent.hassConnection;
-        if (conn && conn.auth && conn.auth.accessToken) {
-          headers["Authorization"] = `Bearer ${conn.auth.accessToken}`;
+    // Helper to get fresh token
+    const getAuthToken = async () => {
+        try {
+          if (window.parent && window.parent.hassConnection) {
+            const conn = await window.parent.hassConnection;
+            if (conn && conn.auth) {
+                return conn.auth.accessToken;
+            }
+          }
+        } catch (e) {
+          // Continue without auth header - the session cookie should work
+          console.log("Using session authentication");
         }
-      }
-    } catch (e) {
-      // Continue without auth header - the session cookie should work
-      console.log("Using session authentication");
+        return null;
+    };
+
+    let token = await getAuthToken();
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       ...options,
       headers,
       credentials: "same-origin",
     });
+
+    // Handle 401 - Token might have expired during request or wasn't refreshed
+    if (response.status === 401) {
+        console.log("Received 401, attempting to refresh token...");
+        try {
+            if (window.parent && window.parent.hassConnection) {
+                const conn = await window.parent.hassConnection;
+                if (conn && conn.auth) {
+                    await conn.auth.refreshAccessToken();
+                    token = conn.auth.accessToken;
+                    if (token) {
+                        headers["Authorization"] = `Bearer ${token}`;
+                        // Retry request
+                        response = await fetch(url, {
+                            ...options,
+                            headers,
+                            credentials: "same-origin",
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Failed to refresh token:", e);
+        }
+    }
 
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}`;
@@ -1514,7 +1880,7 @@
       showToast(`Saved ${path.split("/").pop()}${fileSize}`, "success");
 
       // Auto-refresh git status after saving to show changes immediately
-      await gitStatus();
+      await checkGitStatusIfEnabled();
 
       return true;
     } catch (error) {
@@ -1535,7 +1901,7 @@
       openFile(path);
 
       // Auto-refresh git status after creating file
-      await gitStatus();
+      await checkGitStatusIfEnabled();
 
       return true;
     } catch (error) {
@@ -1557,7 +1923,7 @@
       renderFileTree();
 
       // Auto-refresh git status after creating folder
-      await gitStatus();
+      await checkGitStatusIfEnabled();
 
       return true;
     } catch (error) {
@@ -1584,7 +1950,7 @@
       await loadFiles();
 
       // Auto-refresh git status after deleting file
-      await gitStatus();
+      await checkGitStatusIfEnabled();
 
       return true;
     } catch (error) {
@@ -1604,7 +1970,7 @@
       await loadFiles();
 
       // Auto-refresh git status after copying file
-      await gitStatus();
+      await checkGitStatusIfEnabled();
 
       return true;
     } catch (error) {
@@ -1632,7 +1998,7 @@
       await loadFiles();
 
       // Auto-refresh git status after renaming file
-      await gitStatus();
+      await checkGitStatusIfEnabled();
 
       return true;
     } catch (error) {
@@ -1665,7 +2031,7 @@
       await loadFiles();
 
       // Auto-refresh git status after uploading file
-      await gitStatus();
+      await checkGitStatusIfEnabled();
 
       return true;
     } catch (error) {
@@ -1926,7 +2292,7 @@
         renderFileTree();
 
         // Auto-refresh git status after uploading folder
-        await gitStatus();
+        await checkGitStatusIfEnabled();
       }
     } catch (error) {
       hideGlobalLoading();
@@ -1958,7 +2324,120 @@
     totalChanges: 0
   };
 
+  function isGitEnabled() {
+    return localStorage.getItem("gitIntegrationEnabled") !== "false";
+  }
+
+  async function checkGitStatusIfEnabled(shouldFetch = false) {
+    if (isGitEnabled()) {
+        await gitStatus(shouldFetch);
+    }
+  }
+
+  async function showDiffModal(path) {
+    showGlobalLoading("Loading diff...");
+    try {
+        // 1. Get HEAD content (Old)
+        const headData = await fetchWithAuth(API_BASE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "git_show", path: path }),
+        });
+        
+        let oldContent = "";
+        if (headData.success) {
+            oldContent = headData.content;
+        }
+
+        // 2. Get Current Content (New)
+        let newContent = "";
+        const tab = state.openTabs.find(t => t.path === path);
+        if (tab) {
+            newContent = tab.content;
+        } else {
+            const diskData = await loadFile(path);
+            newContent = diskData.content;
+        }
+
+        hideGlobalLoading();
+
+        // 3. Setup Modal
+        const modalOverlay = document.getElementById("modal-overlay");
+        const modal = document.getElementById("modal");
+        const modalTitle = document.getElementById("modal-title");
+        const modalBody = document.getElementById("modal-body");
+        const modalFooter = document.querySelector(".modal-footer");
+
+        resetModalToDefault();
+        modal.style.maxWidth = "95vw";
+        modal.style.width = "95vw";
+        modal.style.height = "85vh";
+        modal.style.display = "flex";
+        modal.style.flexDirection = "column";
+        
+        modalTitle.textContent = `Diff: ${path}`;
+        modalFooter.style.display = "none";
+        
+        // Use flex column for body to let MergeView fill it
+        modalBody.innerHTML = `<div id="diff-view" style="height: 100%; width: 100%;"></div>`;
+        modalBody.style.padding = "0";
+        modalBody.style.flex = "1";
+        modalBody.style.display = "flex";
+        modalBody.style.flexDirection = "column";
+        modalBody.style.overflow = "hidden"; // Let CodeMirror handle scroll
+
+        modalOverlay.classList.add("visible");
+
+        // 4. Initialize CodeMirror Merge View
+        const target = document.getElementById("diff-view");
+        const mode = getEditorMode(path); 
+
+        // Old on Left (origLeft), New on Right (value/main)
+        const mergeView = CodeMirror.MergeView(target, {
+            value: newContent,
+            origLeft: oldContent,
+            lineNumbers: true,
+            mode: mode,
+            theme: state.theme === "light" ? "default" : "material-darker",
+            highlightDifferences: true,
+            connect: "align",
+            collapseIdentical: false,
+            readOnly: true,
+            revertButtons: false 
+        });
+
+        // Cleanup handler
+        const closeHandler = () => {
+            modalOverlay.classList.remove("visible");
+            modalOverlay.removeEventListener("click", overlayClickHandler);
+            // Clean up modal styles
+            resetModalToDefault();
+            modal.style.width = "";
+            modal.style.height = "";
+            modal.style.display = "";
+            modal.style.flexDirection = "";
+            modalBody.style.padding = "";
+            modalBody.style.flex = "";
+            modalBody.style.display = "";
+            modalBody.style.overflow = "";
+        };
+        
+        const overlayClickHandler = (e) => {
+            if (e.target === modalOverlay) closeHandler();
+        };
+        modalOverlay.addEventListener("click", overlayClickHandler);
+        document.getElementById("modal-close").onclick = closeHandler;
+
+    } catch (error) {
+        hideGlobalLoading();
+        showToast("Diff failed: " + error.message, "error");
+    }
+  }
+
   async function gitStatus(shouldFetch = false) {
+    // Double check enabled state (redundant but safe)
+    if (!isGitEnabled()) return;
+
     try {
       setButtonLoading(elements.btnGitStatus, true);
 
@@ -2012,16 +2491,18 @@
     }
   }
 
-  async function gitInit() {
-    const confirmed = await showConfirmDialog({
-      title: "Initialize Git Repository",
-      message: "Are you sure you want to initialize a new Git repository in the config directory?",
-      confirmText: "Initialize",
-      cancelText: "Cancel"
-    });
+  async function gitInit(skipConfirm = false) {
+    if (!skipConfirm) {
+        const confirmed = await showConfirmDialog({
+          title: "Initialize Git Repository",
+          message: "Are you sure you want to initialize a new Git repository in the config directory?",
+          confirmText: "Initialize",
+          cancelText: "Cancel"
+        });
 
-    if (!confirmed) {
-      return;
+        if (!confirmed) {
+          return false;
+        }
     }
 
     try {
@@ -2034,10 +2515,18 @@
 
       if (data.success) {
         showToast("Git repository initialized successfully", "success");
+        // Update state
+        gitState.isInitialized = true;
+        // Refresh status to be sure
+        await gitStatus(); 
+        return true;
+      } else {
+        showToast("Failed to init: " + (data.message || "Unknown error"), "error");
       }
     } catch (error) {
       showToast("Git init failed: " + error.message, "error");
     }
+    return false;
   }
 
   async function gitAddRemote(name, url) {
@@ -2222,231 +2711,189 @@
   }
 
   async function showGithubDeviceFlowLogin() {
-    // Ensure any previous polling timer is stopped before starting a new one
-    if (activePollTimer) {
-      clearInterval(activePollTimer);
-      activePollTimer = null;
-    }
-    // Shared Blueprint Studio OAuth Client ID
-    // This is public and safe to share - all users can use it
-    const SHARED_CLIENT_ID = "Ov23liKHRfvPI4p0eN2f";
-
-    // Load custom Client ID from localStorage (for advanced users who want their own)
-    const customClientId = localStorage.getItem("githubOAuthClientId") || "";
-
-    // Use custom if provided, otherwise use shared
-    const finalClientId = customClientId || SHARED_CLIENT_ID;
-
-    // Start device flow immediately (no prompt needed!)
-    showToast("Starting GitHub login...", "success");
-    const flowData = await githubDeviceFlowStart(finalClientId);
-
-    if (!flowData.success) {
-      showToast("Failed to start GitHub login: " + (flowData.error || "Unknown error"), "error");
-      return;
-    }
-
-    // Show device code modal
-    const modalOverlay = document.getElementById("modal-overlay");
-    const modal = document.getElementById("modal");
-    const modalTitle = document.getElementById("modal-title");
-    const modalBody = document.getElementById("modal-body");
-    const modalFooter = document.querySelector(".modal-footer");
-
-    modalTitle.textContent = "Login with GitHub";
-
-    modalBody.innerHTML = `
-      <div style="text-align: center; padding: 20px;">
-        <div style="margin-bottom: 20px;">
-          <span class="material-icons" style="font-size: 48px; color: #4caf50;">verified_user</span>
-        </div>
-        <h3>Authenticate with GitHub</h3>
-        <p>Visit this URL in your browser:</p>
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;">
-          <a href="${flowData.verificationUri}" target="_blank" style="color: #2196f3; font-size: 18px; text-decoration: none;">
-            ${flowData.verificationUri}
-          </a>
-        </div>
-        <p>Enter this code:</p>
-        <div style="background: #2196f3; color: white; padding: 20px; border-radius: 8px; margin: 15px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
-          ${flowData.userCode}
-        </div>
-        <div id="device-flow-status" style="margin-top: 20px; color: #666;">
-          <span class="material-icons" style="animation: spin 1s linear infinite;">sync</span>
-          <p>Waiting for authorization...</p>
-        </div>
-        <button class="btn-primary" id="btn-check-auth-now" style="width: 100%; padding: 10px; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px;">
-            <span class="material-icons">refresh</span>
-            Check Now
-        </button>
-      </div>
-    `;
-
-    modalOverlay.classList.add("visible");
-    modal.style.maxWidth = "500px";
-
-    // Hide default modal buttons
-    if (modalFooter) {
-      modalFooter.style.display = "none";
-    }
-
-    // Function to clean up and close the Device Flow modal
-    const closeDeviceFlow = () => {
-      if (activePollTimer) {
-        clearInterval(activePollTimer);
-        activePollTimer = null;
-      }
-      modalOverlay.classList.remove("visible");
-
-      // Reset modal to default state (don't try to restore saved state)
-      resetModalToDefault();
-
-      // Remove this specific overlay click handler
-      modalOverlay.removeEventListener("click", overlayClickHandler);
-    };
-
-    // Start polling
-    let pollInterval = flowData.interval * 1000;
-    const maxPolls = Math.floor(flowData.expiresIn / flowData.interval);
-    let pollCount = 0;
-
-    activePollTimer = setInterval(async () => {
-      pollCount++;
-
-      if (pollCount > maxPolls) {
-        const statusDiv = document.getElementById("device-flow-status");
-        if (statusDiv) {
-          statusDiv.innerHTML = `
-            <span class="material-icons" style="color: #f44336;">error</span>
-            <p style="color: #f44336;">Login expired. Please try again.</p>
-          `;
+    return new Promise(async (resolve) => {
+        // Ensure any previous polling timer is stopped before starting a new one
+        if (activePollTimer) {
+          clearInterval(activePollTimer);
+          activePollTimer = null;
         }
-        showToast("GitHub login expired", "error");
-        // The timer will be cleared inside closeDeviceFlow
-        setTimeout(() => closeDeviceFlow(), 2000);
-        return;
-      }
+        // Shared Blueprint Studio OAuth Client ID
+        const SHARED_CLIENT_ID = "Ov23liKHRfvPI4p0eN2f";
 
-      const result = await githubDeviceFlowPoll(finalClientId, flowData.deviceCode);
+        const customClientId = localStorage.getItem("githubOAuthClientId") || "";
+        const finalClientId = customClientId || SHARED_CLIENT_ID;
 
-      if (result.success && result.status === "authorized") {
-        const statusDiv = document.getElementById("device-flow-status");
-        if (statusDiv) {
-          statusDiv.innerHTML = `
-            <span class="material-icons" style="color: #4caf50;">check_circle</span>
-            <p style="color: #4caf50;">Successfully logged in as ${result.username}!</p>
-          `;
-        }
-        showToast(`Successfully logged in as ${result.username}!`, "success");
+        showToast("Starting GitHub login...", "success");
+        const flowData = await githubDeviceFlowStart(finalClientId);
 
-        // The timer will be cleared inside closeDeviceFlow
-        setTimeout(() => {
-          closeDeviceFlow();
-        }, 2000);
-      } else if (result.status === "expired") {
-        showToast("GitHub login expired", "error");
-        setTimeout(() => closeDeviceFlow(), 1000);
-      } else if (result.status === "denied") {
-        showToast("GitHub login denied", "error");
-        setTimeout(() => closeDeviceFlow(), 1000);
-      } else if (result.status === "slow_down") {
-        // Increase polling interval
-        pollInterval = pollInterval * 1.5;
-      }
-      // If pending, just continue polling
-    }, pollInterval);
-
-    // Overlay click handler (defined separately so we can remove it)
-    const overlayClickHandler = (e) => {
-      if (e.target === modalOverlay) {
-        closeDeviceFlow();
-      }
-    };
-
-    modalOverlay.addEventListener("click", overlayClickHandler);
-
-    const btnCheckAuthNow = document.getElementById("btn-check-auth-now");
-    if (btnCheckAuthNow) {
-      btnCheckAuthNow.addEventListener("click", async () => {
-        btnCheckAuthNow.disabled = true; // Disable to prevent spamming
-        const btnTextSpan = btnCheckAuthNow.querySelector('span:not(.material-icons)');
-        if (btnTextSpan) btnTextSpan.textContent = "Checking...";
-        const btnIcon = btnCheckAuthNow.querySelector('.material-icons');
-        if (btnIcon) btnIcon.classList.add('spinning');
-
-        const statusDiv = document.getElementById("device-flow-status");
-        if (statusDiv) {
-            statusDiv.querySelector('p').textContent = "Checking status...";
+        if (!flowData.success) {
+          showToast("Failed to start GitHub login: " + (flowData.error || "Unknown error"), "error");
+          resolve(false);
+          return;
         }
 
+        // Show device code modal
+        const modalOverlay = document.getElementById("modal-overlay");
+        const modal = document.getElementById("modal");
+        const modalTitle = document.getElementById("modal-title");
+        const modalBody = document.getElementById("modal-body");
+        const modalFooter = document.querySelector(".modal-footer");
 
-        const result = await githubDeviceFlowPoll(finalClientId, flowData.deviceCode);
+        modalTitle.textContent = "Login with GitHub";
 
-        if (btnIcon) btnIcon.classList.remove('spinning');
+        modalBody.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <div style="margin-bottom: 20px;">
+              <span class="material-icons" style="font-size: 48px; color: #4caf50;">verified_user</span>
+            </div>
+            <h3>Authenticate with GitHub</h3>
+            <p>Visit this URL in your browser:</p>
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <a href="${flowData.verificationUri}" target="_blank" style="color: #2196f3; font-size: 18px; text-decoration: none;">
+                ${flowData.verificationUri}
+              </a>
+            </div>
+            <p>Enter this code:</p>
+            <div style="background: #2196f3; color: white; padding: 20px; border-radius: 8px; margin: 15px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
+              ${flowData.userCode}
+            </div>
+            <div id="device-flow-status" style="margin-top: 20px; color: #666;">
+              <span class="material-icons" style="animation: spin 1s linear infinite;">sync</span>
+              <p>Waiting for authorization...</p>
+            </div>
+            <button class="btn-primary" id="btn-check-auth-now" style="width: 100%; padding: 10px; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px;">
+                <span class="material-icons">refresh</span>
+                Check Now
+            </button>
+          </div>
+        `;
 
-        if (result.success && result.status === "authorized") {
-          if (statusDiv) {
-            statusDiv.innerHTML = `
-              <span class="material-icons" style="color: #4caf50;">check_circle</span>
-              <p style="color: #4caf50;">Successfully logged in as ${result.username}!</p>
-            `;
-          }
-          showToast(`Successfully logged in as ${result.username}!`, "success");
+        modalOverlay.classList.add("visible");
+        modal.style.maxWidth = "500px";
+
+        if (modalFooter) {
+          modalFooter.style.display = "none";
+        }
+
+        // Function to clean up and close
+        const closeDeviceFlow = (result) => {
           if (activePollTimer) {
             clearInterval(activePollTimer);
             activePollTimer = null;
           }
-          setTimeout(() => {
-            closeDeviceFlow();
-          }, 2000);
-        } else if (result.status === "pending") {
-          if (statusDiv) {
-            statusDiv.querySelector('p').textContent = "Still waiting for authorization...";
-          }
-          showToast("Still waiting for authorization. Please complete login on GitHub.", "info", 3000);
-        } else if (result.status === "slow_down") {
-          if (statusDiv) {
-            statusDiv.querySelector('p').textContent = "GitHub requests slower polling. Waiting...";
-          }
-          showToast("GitHub requests slower polling. Automatic check interval increased.", "warning", 3000);
-          pollInterval = pollInterval * 1.5; // Update pollInterval for auto-polling
-        } else if (result.status === "expired") {
-          if (statusDiv) {
-            statusDiv.innerHTML = `
-              <span class="material-icons" style="color: #f44336;">error</span>
-              <p style="color: #f44336;">Login expired. Please try again.</p>
-            `;
-          }
-          showToast("GitHub login expired", "error");
-          if (activePollTimer) {
-            clearInterval(activePollTimer);
-            activePollTimer = null;
-          }
-          setTimeout(() => closeDeviceFlow(), 2000);
-        } else if (result.status === "denied") {
-          if (statusDiv) {
-            statusDiv.innerHTML = `
-              <span class="material-icons" style="color: #f44336;">error</span>
-              <p style="color: #f44336;">Login denied by user.</p>
-            `;
-          }
-          showToast("GitHub login denied", "error");
-          if (activePollTimer) {
-            clearInterval(activePollTimer);
-            activePollTimer = null;
-          }
-          setTimeout(() => closeDeviceFlow(), 2000);
-        } else {
-            // Generic error or other unexpected status
-            showToast("Error checking status: " + (result.message || "Unknown error"), "error");
+          modalOverlay.classList.remove("visible");
+          resetModalToDefault();
+          modalOverlay.removeEventListener("click", overlayClickHandler);
+          resolve(result);
+        };
+
+        // Start polling
+        let pollInterval = (flowData.interval || 5) * 1000;
+        if (pollInterval < 5000) pollInterval = 5000; // Safety minimum
+        const maxPolls = Math.floor(flowData.expiresIn / (pollInterval / 1000)) || 180; // Default ~15 mins
+        let pollCount = 0;
+
+        activePollTimer = setInterval(async () => {
+          pollCount++;
+
+          if (pollCount > maxPolls) {
+            const statusDiv = document.getElementById("device-flow-status");
             if (statusDiv) {
-                statusDiv.querySelector('p').textContent = "Error checking status. Waiting...";
+              statusDiv.innerHTML = `
+                <span class="material-icons" style="color: #f44336;">error</span>
+                <p style="color: #f44336;">Login expired. Please try again.</p>
+              `;
             }
+            showToast("GitHub login expired", "error");
+            setTimeout(() => closeDeviceFlow(false), 2000);
+            return;
+          }
+
+          const result = await githubDeviceFlowPoll(finalClientId, flowData.deviceCode);
+
+          if (result.success && result.status === "authorized") {
+            const statusDiv = document.getElementById("device-flow-status");
+            if (statusDiv) {
+              statusDiv.innerHTML = `
+                <span class="material-icons" style="color: #4caf50;">check_circle</span>
+                <p style="color: #4caf50;">Successfully logged in as ${result.username}!</p>
+              `;
+            }
+            showToast(`Successfully logged in as ${result.username}!`, "success");
+            setTimeout(() => closeDeviceFlow(true), 2000);
+          } else if (result.status === "expired") {
+            showToast("GitHub login expired", "error");
+            setTimeout(() => closeDeviceFlow(false), 1000);
+          } else if (result.status === "denied") {
+            showToast("GitHub login denied", "error");
+            setTimeout(() => closeDeviceFlow(false), 1000);
+          } else if (result.status === "slow_down") {
+            pollInterval = pollInterval * 1.5;
+          }
+        }, pollInterval);
+
+        const overlayClickHandler = (e) => {
+          if (e.target === modalOverlay) {
+            closeDeviceFlow(false);
+          }
+        };
+
+        // Delay adding listener to prevent immediate closing from bubbling events
+        setTimeout(() => {
+            modalOverlay.addEventListener("click", overlayClickHandler);
+        }, 300);
+
+        const btnCheckAuthNow = document.getElementById("btn-check-auth-now");
+        if (btnCheckAuthNow) {
+          btnCheckAuthNow.addEventListener("click", async () => {
+            btnCheckAuthNow.disabled = true;
+            const btnTextSpan = btnCheckAuthNow.querySelector('span:not(.material-icons)');
+            if (btnTextSpan) btnTextSpan.textContent = "Checking...";
+            const btnIcon = btnCheckAuthNow.querySelector('.material-icons');
+            if (btnIcon) btnIcon.classList.add('spinning');
+
+            const statusDiv = document.getElementById("device-flow-status");
+            if (statusDiv) {
+                statusDiv.querySelector('p').textContent = "Checking status...";
+            }
+
+            const result = await githubDeviceFlowPoll(finalClientId, flowData.deviceCode);
+
+            if (btnIcon) btnIcon.classList.remove('spinning');
+
+            if (result.success && result.status === "authorized") {
+              if (statusDiv) {
+                statusDiv.innerHTML = `
+                  <span class="material-icons" style="color: #4caf50;">check_circle</span>
+                  <p style="color: #4caf50;">Successfully logged in as ${result.username}!</p>
+                `;
+              }
+              showToast(`Successfully logged in as ${result.username}!`, "success");
+              setTimeout(() => closeDeviceFlow(true), 2000);
+            } else if (result.status === "pending") {
+              if (statusDiv) statusDiv.querySelector('p').textContent = "Still waiting for authorization...";
+              showToast("Still waiting for authorization...", "info", 3000);
+            } else if (result.status === "slow_down") {
+              if (statusDiv) statusDiv.querySelector('p').textContent = "GitHub requests slower polling. Waiting...";
+              showToast("GitHub requests slower polling...", "warning", 3000);
+              pollInterval = pollInterval * 1.5;
+            } else if (result.status === "expired") {
+              if (statusDiv) statusDiv.innerHTML = `<span class="material-icons" style="color: #f44336;">error</span><p style="color: #f44336;">Login expired.</p>`;
+              showToast("GitHub login expired", "error");
+              setTimeout(() => closeDeviceFlow(false), 2000);
+            } else if (result.status === "denied") {
+              if (statusDiv) statusDiv.innerHTML = `<span class="material-icons" style="color: #f44336;">error</span><p style="color: #f44336;">Login denied.</p>`;
+              showToast("GitHub login denied", "error");
+              setTimeout(() => closeDeviceFlow(false), 2000);
+            } else {
+                showToast("Error checking status: " + (result.message || "Unknown error"), "error");
+                if (statusDiv) statusDiv.querySelector('p').textContent = "Error checking status. Waiting...";
+            }
+            btnCheckAuthNow.disabled = false;
+            if (btnTextSpan) btnTextSpan.textContent = "Check Now";
+          });
         }
-        btnCheckAuthNow.disabled = false; // Re-enable button
-        if (btnTextSpan) btnTextSpan.textContent = "Check Now";
-      });
-    }
+    });
   }
 
   async function gitStage(files) {
@@ -2690,7 +3137,7 @@
         showToast("Successfully pulled from remote", "success");
         // Reload files to show changes
         await loadFiles();
-        await gitStatus();
+        await checkGitStatusIfEnabled();
         
         // Reload active tab content to reflect changes
         if (state.activeTab) {
@@ -2699,7 +3146,33 @@
       }
     } catch (error) {
       setButtonLoading(elements.btnGitPull, false);
-      showToast("Git pull failed: " + error.message, "error");
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("rebase-merge") || errorMsg.includes("rebase-apply")) {
+          showToast("Stale rebase detected. Would you like to abort it?", "error", 0, {
+              text: "Abort & Retry",
+              callback: async () => {
+                  showGlobalLoading("Aborting rebase...");
+                  try {
+                      await fetchWithAuth(API_BASE, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "git_abort" }),
+                      });
+                      // Also clean locks just in case
+                      await gitCleanLocks();
+                      hideGlobalLoading();
+                      // Retry the pull
+                      await gitPull();
+                  } catch (e) {
+                      hideGlobalLoading();
+                      showToast("Failed to abort rebase: " + e.message, "error");
+                  }
+              }
+          });
+      } else {
+          showToast("Git pull failed: " + errorMsg, "error");
+      }
     }
   }
 
@@ -2993,14 +3466,25 @@
         const isStaged = gitState.files.staged.includes(file);
         const isUnstaged = gitState.files.unstaged.includes(file);
         const checked = gitState.selectedFiles.has(file) ? 'checked' : '';
+        
+        let diffButton = "";
+        // Show diff for Modified or Staged files (not Added/Deleted/Untracked which have no history)
+        if ((group.key === "modified" || group.key === "staged") && isTextFile(file)) {
+            diffButton = `
+                <button class="btn-icon-only btn-git-diff" data-path="${file}" title="View Diff" style="background: transparent; border: none; cursor: pointer; color: var(--text-secondary); margin-left: auto; padding: 4px;">
+                    <span class="material-icons" style="font-size: 16px;">difference</span>
+                </button>
+            `;
+        }
 
         html += `
           <div class="git-file-item" data-file="${file}">
             <input type="checkbox" class="git-file-checkbox" ${checked} data-file-path="${file}" />
             <span class="git-file-icon ${group.color}">${group.icon}</span>
-            <span class="git-file-name" title="${file}">${file}</span>
-            ${isStaged ? '<span class="git-file-status staged">Staged</span>' : ''}
-            ${isUnstaged && !isStaged ? '<span class="git-file-status unstaged">Unstaged</span>' : ''}
+            <span class="git-file-name" title="${file}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file}</span>
+            ${diffButton}
+            ${isStaged ? '<span class="git-file-status staged" style="margin-left: 4px;">Staged</span>' : ''}
+            ${isUnstaged && !isStaged ? '<span class="git-file-status unstaged" style="margin-left: 4px;">Unstaged</span>' : ''}
           </div>
         `;
       }
@@ -3307,10 +3791,10 @@
 
   // Show Git Exclusions modal
   async function showGitExclusions() {
+    return new Promise(async (resolve) => {
     showGlobalLoading("Loading file list...");
 
     try {
-      // 1. Fetch all files/folders (including hidden) - Use specialized git list to see ALL files
       const items = await fetchWithAuth(`${API_BASE}?action=list_git_files`);
       
       // Build tree structure
@@ -3354,6 +3838,18 @@
 
       modalTitle.textContent = "Manage Git Exclusions";
 
+      // Helper to check if a path or any of its parents are ignored
+      function isPathIgnored(path) {
+        if (ignoredLines.has(path) || ignoredLines.has(path + "/")) return true;
+        
+        const parts = path.split("/");
+        for (let i = 1; i < parts.length; i++) {
+            const parentPath = parts.slice(0, i).join("/");
+            if (ignoredLines.has(parentPath) || ignoredLines.has(parentPath + "/")) return true;
+        }
+        return false;
+      }
+
       // Helper to render tree recursively
       function renderExclusionTreeHtml(treeNode, depth = 0) {
         let html = "";
@@ -3368,7 +3864,7 @@
             const folderData = treeNode[folderName];
             const folderPath = folderData._path;
             
-            const isIgnored = ignoredLines.has(folderPath) || ignoredLines.has(folderPath + "/");
+            const isIgnored = isPathIgnored(folderPath);
             const isChecked = !isIgnored;
             const isDisabled = folderPath === ".git";
             const forcedState = folderPath === ".git" ? "" : (isChecked ? "checked" : "");
@@ -3398,7 +3894,7 @@
 
         // Render files
         files.forEach(file => {
-            const isIgnored = ignoredLines.has(file.path);
+            const isIgnored = isPathIgnored(file.path);
             const isChecked = !isIgnored;
             const isDisabled = file.path === ".gitignore"; 
             const forcedState = isDisabled ? "checked" : (isChecked ? "checked" : "");
@@ -3601,34 +4097,75 @@
       // Handle Save
       const saveHandler = async () => {
         const checkboxes = modalBody.querySelectorAll(".exclusion-checkbox");
-        const itemsToIgnore = new Set();
+        const rawIgnoreList = new Set();
         const itemsToInclude = new Set();
 
         checkboxes.forEach(cb => {
           if (!cb.disabled) {
               if (!cb.checked) {
-                itemsToIgnore.add(cb.dataset.path);
+                rawIgnoreList.add(cb.dataset.path);
               } else {
                 itemsToInclude.add(cb.dataset.path);
               }
           }
         });
 
-        // Update .gitignore logic...
+        // Optimization: Filter out redundant paths from ignore list
+        // If a parent folder is ignored, we don't need to list its children
+        const sortedIgnoreList = Array.from(rawIgnoreList).sort();
+        const optimizedIgnoreList = [];
+        
+        for (const path of sortedIgnoreList) {
+            let covered = false;
+            for (const existing of optimizedIgnoreList) {
+                if (path.startsWith(existing + "/") || path === existing) {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered) {
+                optimizedIgnoreList.push(path);
+            }
+        }
+
+        // Update .gitignore logic
         let newContentLines = gitignoreContent.split("\n").filter(line => {
             const trimmed = line.trim();
+            // Keep comments and empty lines
             if (!trimmed || trimmed.startsWith("#")) return true;
+            
+            // Clean the line from trailing slashes for comparison
             const path = trimmed.replace(/\/$/, "");
+            
+            // 1. Remove if specifically included now
             if (itemsToInclude.has(path)) return false;
+            
+            // 2. Remove if already covered by an optimized ignore path
+            for (const optimized of optimizedIgnoreList) {
+                if (path.startsWith(optimized + "/") || path === optimized) {
+                    return false;
+                }
+            }
+            
             return true;
         });
 
-        if (itemsToIgnore.size > 0) {
-            newContentLines.push("");
-            newContentLines.push("# Exclusions via Blueprint Studio");
-            itemsToIgnore.forEach(path => {
-                if (!newContentLines.includes(path) && !newContentLines.includes(path + "/")) {
-                    newContentLines.push(path);
+        // Append new optimized exclusions
+        if (optimizedIgnoreList.length > 0) {
+            // Find if our section already exists
+            const sectionHeader = "# Exclusions via Blueprint Studio";
+            if (!newContentLines.includes(sectionHeader)) {
+                newContentLines.push("");
+                newContentLines.push(sectionHeader);
+            }
+            
+            optimizedIgnoreList.forEach(path => {
+                // Determine if it's a folder to add trailing slash
+                const isFolder = items.find(item => item.path === path && item.type === "folder");
+                const entry = isFolder ? `${path}/` : path;
+                
+                if (!newContentLines.includes(entry)) {
+                    newContentLines.push(entry);
                 }
             });
         }
@@ -3639,7 +4176,7 @@
         const success = await saveFile(".gitignore", newContent);
         
         if (success) {
-            if (itemsToIgnore.size > 0) {
+            if (optimizedIgnoreList.length > 0) {
                 showGlobalLoading("Updating git index...");
                 try {
                     await fetchWithAuth(API_BASE, {
@@ -3647,7 +4184,7 @@
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ 
                             action: "git_stop_tracking", 
-                            files: Array.from(itemsToIgnore) 
+                            files: optimizedIgnoreList 
                         }),
                     });
                 } catch (e) {
@@ -3658,24 +4195,24 @@
             hideGlobalLoading();
             modalOverlay.classList.remove("visible");
             await gitStatus();
+            cleanup(true);
         } else {
             hideGlobalLoading();
         }
-        
-        cleanup();
       };
 
       const cancelHandler = () => {
         modalOverlay.classList.remove("visible");
-        cleanup();
+        cleanup(false);
       };
 
-      const cleanup = () => {
+      const cleanup = (result) => {
         btnConfirm.removeEventListener("click", saveHandler);
         btnCancel.removeEventListener("click", cancelHandler);
         container.removeEventListener("change", updateTotalSize);
         resetModalToDefault(); 
         modal.style.maxWidth = ""; 
+        resolve(result);
       };
 
       btnConfirm.addEventListener("click", saveHandler);
@@ -3684,7 +4221,9 @@
     } catch (error) {
       hideGlobalLoading();
       showToast("Failed to load file list: " + error.message, "error");
+      resolve(false);
     }
+    });
   }
 
   // Apply Git visibility based on localStorage setting
@@ -4032,136 +4571,152 @@
   }
 
   async function showCreateGithubRepoDialog() {
-    // Check if logged in
-    const credentialsData = await fetchWithAuth(API_BASE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "git_get_credentials" }),
-    });
+    return new Promise(async (resolve) => {
+        // Check if logged in
+        const credentialsData = await fetchWithAuth(API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "git_get_credentials" }),
+        });
 
-    if (!credentialsData.has_credentials) {
-      showToast("Please login with GitHub first", "error");
-      return;
-    }
+        if (!credentialsData.has_credentials) {
+          showToast("Please login with GitHub first", "error");
+          resolve(false);
+          return;
+        }
 
-    // Create modal content
-    const modalOverlay = document.getElementById("modal-overlay");
-    const modal = document.getElementById("modal");
-    const modalTitle = document.getElementById("modal-title");
-    const modalBody = document.getElementById("modal-body");
-    const modalFooter = document.querySelector(".modal-footer");
+        // Create modal content
+        const modalOverlay = document.getElementById("modal-overlay");
+        const modal = document.getElementById("modal");
+        const modalTitle = document.getElementById("modal-title");
+        const modalBody = document.getElementById("modal-body");
+        const modalFooter = document.querySelector(".modal-footer");
 
-    modalTitle.textContent = "Create GitHub Repository";
+        modalTitle.textContent = "Create GitHub Repository";
 
-    modalBody.innerHTML = `
-      <div class="git-settings-content">
-        <div class="git-settings-section">
-          <div class="git-settings-label">Repository Name *</div>
-          <input type="text" class="git-settings-input" id="new-repo-name"
-                 placeholder="home-assistant-config"
-                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-          <div class="git-settings-info" style="font-size: 12px; margin-top: 4px;">
-            Will be created as: ${credentialsData.username}/<span id="repo-name-preview">repository-name</span>
+        modalBody.innerHTML = `
+          <div class="git-settings-content">
+            <div class="git-settings-section">
+              <div class="git-settings-label">Repository Name *</div>
+              <input type="text" class="git-settings-input" id="new-repo-name"
+                     placeholder="home-assistant-config"
+                     autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <div class="git-settings-info" style="font-size: 12px; margin-top: 4px;">
+                Will be created as: ${credentialsData.username}/<span id="repo-name-preview">repository-name</span>
+              </div>
+            </div>
+
+            <div class="git-settings-section">
+              <div class="git-settings-label">Description (Optional)</div>
+              <input type="text" class="git-settings-input" id="new-repo-description"
+                     placeholder="My Home Assistant configuration"
+                     autocomplete="off" />
+            </div>
+
+            <div class="git-settings-section">
+              <div class="git-settings-label">Visibility</div>
+              <label style="display: flex; align-items: center; cursor: pointer; padding: 8px;">
+                <input type="radio" name="repo-visibility" value="private" checked style="margin-right: 8px;">
+                <div>
+                  <div style="font-weight: 500;">Private (Recommended)</div>
+                  <div style="font-size: 12px; color: #666;">Only you can see this repository</div>
+                </div>
+              </label>
+              <label style="display: flex; align-items: center; cursor: pointer; padding: 8px;">
+                <input type="radio" name="repo-visibility" value="public" style="margin-right: 8px;">
+                <div>
+                  <div style="font-weight: 500;">Public</div>
+                  <div style="font-size: 12px; color: #666;">Anyone can see this repository</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="git-settings-buttons">
+              <button class="btn-secondary" id="btn-cancel-create-repo">Cancel</button>
+              <button class="btn-primary" id="btn-confirm-create-repo">
+                <span class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">add</span>
+                Create Repository
+              </button>
+            </div>
           </div>
-        </div>
+        `;
 
-        <div class="git-settings-section">
-          <div class="git-settings-label">Description (Optional)</div>
-          <input type="text" class="git-settings-input" id="new-repo-description"
-                 placeholder="My Home Assistant configuration"
-                 autocomplete="off" />
-        </div>
+        modalOverlay.classList.add("visible");
+        modal.style.maxWidth = "500px";
 
-        <div class="git-settings-section">
-          <div class="git-settings-label">Visibility</div>
-          <label style="display: flex; align-items: center; cursor: pointer; padding: 8px;">
-            <input type="radio" name="repo-visibility" value="private" checked style="margin-right: 8px;">
-            <div>
-              <div style="font-weight: 500;">Private (Recommended)</div>
-              <div style="font-size: 12px; color: #666;">Only you can see this repository</div>
-            </div>
-          </label>
-          <label style="display: flex; align-items: center; cursor: pointer; padding: 8px;">
-            <input type="radio" name="repo-visibility" value="public" style="margin-right: 8px;">
-            <div>
-              <div style="font-weight: 500;">Public</div>
-              <div style="font-size: 12px; color: #666;">Anyone can see this repository</div>
-            </div>
-          </label>
-        </div>
+        if (modalFooter) {
+          modalFooter.style.display = "none";
+        }
 
-        <div class="git-settings-buttons">
-          <button class="btn-secondary" id="btn-cancel-create-repo">Cancel</button>
-          <button class="btn-primary" id="btn-confirm-create-repo">
-            <span class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">add</span>
-            Create Repository
-          </button>
-        </div>
-      </div>
-    `;
+        // Cleanup function
+        const closeDialog = (result) => {
+          modalOverlay.classList.remove("visible");
+          resetModalToDefault();
+          modalOverlay.removeEventListener("click", overlayClickHandler);
+          resolve(result);
+        };
 
-    modalOverlay.classList.add("visible");
-    modal.style.maxWidth = "500px";
+        // Overlay click handler
+        const overlayClickHandler = (e) => {
+          if (e.target === modalOverlay) {
+            closeDialog(false);
+          }
+        };
+        modalOverlay.addEventListener("click", overlayClickHandler);
 
-    if (modalFooter) {
-      modalFooter.style.display = "none";
-    }
+        // Update preview as user types
+        const repoNameInput = document.getElementById("new-repo-name");
+        const repoNamePreview = document.getElementById("repo-name-preview");
+        if (repoNameInput && repoNamePreview) {
+            repoNameInput.addEventListener("input", () => {
+              repoNamePreview.textContent = repoNameInput.value || "repository-name";
+            });
+        }
 
-    // Cleanup function
-    const closeDialog = () => {
-      modalOverlay.classList.remove("visible");
+        // Cancel button
+        document.getElementById("btn-cancel-create-repo").addEventListener("click", () => {
+          closeDialog(false);
+        }, { once: true });
 
-      // Reset modal to default state (don't try to restore saved state)
-      resetModalToDefault();
+        // Create button
+        document.getElementById("btn-confirm-create-repo").addEventListener("click", async () => {
+          const repoName = repoNameInput.value.trim();
+          const description = document.getElementById("new-repo-description").value.trim();
+          const isPrivate = document.querySelector('input[name="repo-visibility"]:checked').value === "private";
 
-      modalOverlay.removeEventListener("click", overlayClickHandler);
-    };
+          if (!repoName) {
+            showToast("Repository name is required", "error");
+            return;
+          }
 
-    // Overlay click handler
-    const overlayClickHandler = (e) => {
-      if (e.target === modalOverlay) {
-        closeDialog();
-      }
-    };
-    modalOverlay.addEventListener("click", overlayClickHandler);
+          if (!/^[a-zA-Z0-9._-]+$/.test(repoName)) {
+            showToast("Repository name can only contain letters, numbers, dots, hyphens, and underscores", "error");
+            return;
+          }
 
-    // Update preview as user types
-    const repoNameInput = document.getElementById("new-repo-name");
-    const repoNamePreview = document.getElementById("repo-name-preview");
-    repoNameInput.addEventListener("input", () => {
-      repoNamePreview.textContent = repoNameInput.value || "repository-name";
+          // Don't close yet, wait for creation result? 
+          // Ideally we show loading state. 
+          // Current logic closes dialog then creates.
+          // Let's stick to current logic but resolve true.
+          
+          closeDialog(true); // Assume intention to proceed.
+          // Actually, we should await the creation to know if it succeeded?
+          // The previous code closed dialog THEN awaited creation.
+          // If we resolve(true) here, the caller proceeds.
+          
+          // Let's modify slightly: await creation, THEN close and resolve(true).
+          
+          showToast("Creating repository...", "info");
+          // Re-implement the creation call here or just call it after close?
+          // If we close, the modal is gone.
+          // Let's keep it simple: Resolve(true) means "User submitted valid form".
+          // The actual creation happens inside here.
+          
+          await githubCreateRepo(repoName, description, isPrivate);
+          await gitStatus();
+          
+        }, { once: true });
     });
-
-    // Cancel button
-    document.getElementById("btn-cancel-create-repo").addEventListener("click", () => {
-      closeDialog();
-    }, { once: true });
-
-    // Create button
-    document.getElementById("btn-confirm-create-repo").addEventListener("click", async () => {
-      const repoName = repoNameInput.value.trim();
-      const description = document.getElementById("new-repo-description").value.trim();
-      const isPrivate = document.querySelector('input[name="repo-visibility"]:checked').value === "private";
-
-      if (!repoName) {
-        showToast("Repository name is required", "error");
-        return;
-      }
-
-      // Validate repo name format
-      if (!/^[a-zA-Z0-9._-]+$/.test(repoName)) {
-        showToast("Repository name can only contain letters, numbers, dots, hyphens, and underscores", "error");
-        return;
-      }
-
-      closeDialog();
-
-      // Create the repo
-      await githubCreateRepo(repoName, description, isPrivate);
-
-      // Refresh git status to show the new repo is ready
-      await gitStatus();
-    }, { once: true });
   }
 
   // Save git remote
@@ -4468,145 +5023,181 @@
     const item = document.createElement("div");
     item.className = "tree-item";
     item.style.setProperty("--depth", depth);
-    item.style.touchAction = "manipulation";
+    item.draggable = true; // Make items draggable
+    item.dataset.path = itemPath; // Store path for drag/drop logic
+
+    // Checkbox for selection mode
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "tree-item-checkbox";
+    if (state.selectionMode) {
+        checkbox.classList.add("visible");
+        checkbox.checked = state.selectedItems.has(itemPath);
+    }
     
-    // Drag & Drop
-    if (itemPath) {
-        item.draggable = true;
-        
-        item.addEventListener("dragstart", (e) => {
-            e.dataTransfer.setData("text/plain", itemPath);
-            e.dataTransfer.effectAllowed = "move";
-            item.classList.add("dragging");
-        });
+    // Prevent item click when clicking checkbox
+    checkbox.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handleSelectionChange(itemPath, e.target.checked);
+    });
+    item.appendChild(checkbox);
 
-        item.addEventListener("dragend", () => {
-            item.classList.remove("dragging");
-        });
+    if (isFolder) {
+      const chevron = document.createElement("div");
+      chevron.className = `tree-chevron ${isExpanded ? "expanded" : ""}`;
+      chevron.innerHTML = '<span class="material-icons">chevron_right</span>';
+      item.appendChild(chevron);
+    } else {
+        // Spacer for alignment if not a folder (to match chevron width)
+        const spacer = document.createElement("div");
+        spacer.className = "tree-chevron hidden"; // reuse class for size
+        item.appendChild(spacer);
+    }
 
-        // Only folders can be drop targets
-        if (isFolder) {
-            item.addEventListener("dragover", (e) => {
-                e.preventDefault(); // Allow drop
-                e.dataTransfer.dropEffect = "move";
-                item.classList.add("drag-over");
-            });
+    const fileIcon = getFileIcon(name);
+    const icon = document.createElement("div");
+    icon.className = `tree-icon ${isFolder ? "folder" : fileIcon.class}`;
+    icon.innerHTML = `<span class="material-icons">${
+      isFolder ? (isExpanded ? "folder_open" : "folder") : fileIcon.icon
+    }</span>`;
+    item.appendChild(icon);
 
-            item.addEventListener("dragleave", () => {
-                item.classList.remove("drag-over");
-            });
+    const label = document.createElement("span");
+    label.className = "tree-name";
+    label.textContent = name;
+    item.appendChild(label);
 
-            item.addEventListener("drop", async (e) => {
-                e.preventDefault();
-                e.stopPropagation(); // Prevent bubbling to root container
-                item.classList.remove("drag-over");
-                
-                // Check for external files
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                    await processUploads(e.dataTransfer.files, itemPath);
-                    return;
-                }
-
-                const sourcePath = e.dataTransfer.getData("text/plain");
-                if (sourcePath) {
-                    await handleFileDrop(sourcePath, itemPath);
-                }
-            });
+    // File Size (if available in state.files)
+    if (!isFolder && itemPath) {
+        const fileData = state.files.find(f => f.path === itemPath);
+        if (fileData && typeof fileData.size === 'number') {
+            const sizeLabel = document.createElement("span");
+            sizeLabel.className = "tree-file-size";
+            sizeLabel.textContent = formatBytes(fileData.size, 0); // 0 decimals for compactness
+            sizeLabel.style.fontSize = "11px";
+            sizeLabel.style.color = "var(--text-muted)";
+            sizeLabel.style.marginLeft = "8px";
+            sizeLabel.style.flexShrink = "0";
+            item.appendChild(sizeLabel);
         }
     }
 
-    const chevron = document.createElement("div");
-    chevron.className = `tree-chevron ${isFolder ? (isExpanded ? "expanded" : "") : "hidden"}`;
-    chevron.innerHTML = '<span class="material-icons">chevron_right</span>';
-
-    const icon = document.createElement("div");
-    if (isFolder) {
-      icon.className = "tree-icon folder";
-      icon.innerHTML = `<span class="material-icons">${isExpanded ? "folder_open" : "folder"}</span>`;
-    } else {
-      const fileIcon = getFileIcon(name);
-      icon.className = `tree-icon ${fileIcon.class}`;
-      icon.innerHTML = `<span class="material-icons">${fileIcon.icon}</span>`;
-    }
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "tree-name";
-    nameSpan.textContent = name;
-
-    // Action buttons
+    // Actions
     const actions = document.createElement("div");
     actions.className = "tree-item-actions";
 
-    item.appendChild(chevron);
-    item.appendChild(icon);
-    item.appendChild(nameSpan);
-
-    // Add size if available (for both files and folders)
-    if (itemPath) {
-      let itemData;
-      if (isFolder) {
-          // state.folders is populated in loadFiles
-          if (state.folders) {
-            itemData = state.folders.find(f => f.path === itemPath);
-          }
-      } else {
-          itemData = state.files.find(f => f.path === itemPath);
-      }
-
-      if (itemData && typeof itemData.size === 'number') {
-        const sizeSpan = document.createElement("span");
-        sizeSpan.className = "tree-file-size";
-        sizeSpan.textContent = formatBytes(itemData.size);
-        sizeSpan.style.marginLeft = "auto"; // Push to the right
-        sizeSpan.style.marginRight = "10px"; // Some spacing
-        sizeSpan.style.fontSize = "0.75em"; // Smaller font
-        sizeSpan.style.color = "var(--text-secondary)"; // Muted color
-        item.appendChild(sizeSpan);
-      }
+    // Pin Button (Favorites) - Only show if not selected
+    if (!state.selectionMode) {
+        const isPinned = state.favoriteFiles.includes(itemPath);
+        const pinBtn = document.createElement("button");
+        pinBtn.className = "tree-action-btn";
+        pinBtn.title = isPinned ? "Unpin" : "Pin to top";
+        pinBtn.innerHTML = `<span class="material-icons" style="font-size: 16px; ${isPinned ? 'color: var(--accent-color);' : ''}">push_pin</span>`;
+        pinBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleFavorite(itemPath);
+        });
+        actions.appendChild(pinBtn);
     }
 
-    // Add pin button for files only
-    if (!isFolder && itemPath) {
-      const pinBtn = document.createElement("button");
-      pinBtn.className = "tree-action-btn";
-      pinBtn.title = isFavorite(itemPath) ? "Unpin from favorites" : "Pin to favorites";
-      pinBtn.innerHTML = `<span class="material-icons">${isFavorite(itemPath) ? 'push_pin' : 'push_pin'}</span>`;
-      pinBtn.style.color = isFavorite(itemPath) ? 'var(--warning-color)' : '';
-      pinBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggleFavorite(itemPath);
-      });
-      actions.appendChild(pinBtn);
+    // Diff Button - Only for modified files and when not a folder
+    if (!isFolder && gitState.files.modified.includes(itemPath)) {
+        const diffBtn = document.createElement("button");
+        diffBtn.className = "tree-action-btn";
+        diffBtn.title = "View Diff";
+        diffBtn.innerHTML = '<span class="octicon" style="color: var(--warning-color);"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M13 1H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 12H3V3h10v10zM8 4h2v2H8V4zM6 8h2v2H6V8zm0 4h2v2H6v-2z"/></svg></span>';
+        // Simpler diff icon:
+        diffBtn.innerHTML = '<span class="material-icons" style="font-size: 16px; color: var(--warning-color);">difference</span>';
+        
+        diffBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            showDiffModal(itemPath);
+        });
+        actions.appendChild(diffBtn);
     }
-
-    const renameBtn = document.createElement("button");
-    renameBtn.className = "tree-action-btn";
-    renameBtn.title = "Rename";
-    renameBtn.innerHTML = '<span class="material-icons">edit</span>';
-    renameBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      promptRename(itemPath, isFolder);
-    });
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "tree-action-btn";
-    deleteBtn.title = "Delete";
-    deleteBtn.innerHTML = '<span class="material-icons">delete</span>';
-    deleteBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      promptDelete(itemPath, isFolder);
-    });
-
-    actions.appendChild(renameBtn);
-    actions.appendChild(deleteBtn);
 
     item.appendChild(actions);
 
-    if (itemPath) {
-      item.dataset.path = itemPath;
-    }
+    // Drag events
+    item.addEventListener("dragstart", handleDragStart);
+    item.addEventListener("dragover", handleDragOver);
+    item.addEventListener("dragleave", handleDragLeave);
+    item.addEventListener("drop", handleDrop);
 
     return item;
+  }
+
+  // ============================================
+  // Drag & Drop Handlers
+  // ============================================
+
+  function handleDragStart(e) {
+    const path = e.currentTarget.dataset.path;
+    if (!path || path === ".git" || path === ".gitignore") {
+        e.preventDefault();
+        return;
+    }
+    e.dataTransfer.setData("text/plain", path);
+    e.dataTransfer.effectAllowed = "move";
+    e.currentTarget.classList.add("dragging");
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    
+    const item = e.currentTarget.closest(".tree-item");
+    if (item) {
+        item.classList.add("drag-over");
+    } else if (e.currentTarget === elements.fileTree) {
+        elements.fileTree.classList.add("drag-over-root");
+    }
+  }
+
+  function handleDragLeave(e) {
+    const item = e.currentTarget.closest(".tree-item");
+    if (item) {
+        item.classList.remove("drag-over");
+    } else if (e.currentTarget === elements.fileTree) {
+        elements.fileTree.classList.remove("drag-over-root");
+    }
+  }
+
+  async function handleDrop(e) {
+    e.preventDefault();
+    
+    const item = e.currentTarget.closest(".tree-item");
+    if (item) {
+        item.classList.remove("drag-over");
+    }
+    elements.fileTree.classList.remove("drag-over-root");
+
+    const sourcePath = e.dataTransfer.getData("text/plain");
+    const itemPath = item ? item.dataset.path : null; // null means root
+    
+    // Determine target folder
+    let targetFolder = null;
+    if (item) {
+        const isFolder = state.folders.some(f => f.path === itemPath);
+        if (isFolder) {
+            targetFolder = itemPath;
+        } else {
+            // Drop onto a file - target its parent folder
+            const lastSlash = itemPath.lastIndexOf("/");
+            targetFolder = lastSlash === -1 ? null : itemPath.substring(0, lastSlash);
+        }
+    }
+
+    // Case 1: External File Upload
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        await processUploads(e.dataTransfer.files, targetFolder);
+        return;
+    }
+
+    // Case 2: Internal Move
+    if (sourcePath) {
+        await handleFileDrop(sourcePath, targetFolder);
+    }
   }
 
   function toggleFolder(path) {
@@ -4921,10 +5512,10 @@
       extraKeys: {
         "Ctrl-S": () => saveCurrentFile(),
         "Cmd-S": () => saveCurrentFile(),
-        "Ctrl-F": () => state.editor.execCommand("find"),
-        "Cmd-F": () => state.editor.execCommand("find"),
-        "Ctrl-H": () => state.editor.execCommand("replace"),
-        "Cmd-Option-F": () => state.editor.execCommand("replace"),
+        "Ctrl-F": () => openSearchWidget(false),
+        "Cmd-F": () => openSearchWidget(false),
+        "Ctrl-H": () => openSearchWidget(true),
+        "Cmd-Option-F": () => openSearchWidget(true),
         "Ctrl-G": () => state.editor.execCommand("jumpToLine"),
         "Cmd-G": () => state.editor.execCommand("jumpToLine"),
         "Ctrl-/": () => state.editor.execCommand("toggleComment"),
@@ -5298,9 +5889,37 @@
     if (elements.btnSearch) {
       elements.btnSearch.addEventListener("click", () => {
         if (state.editor) {
-          state.editor.execCommand("find");
+          openSearchWidget(false);
         }
       });
+    }
+
+    // Search Input Listener
+    if (elements.searchFindInput) {
+      elements.searchFindInput.addEventListener("input", (e) => {
+        const query = e.target.value;
+        if (state.editor) {
+            updateSearchHighlights(query);
+            updateMatchStatus(query);
+        }
+      });
+    }
+
+    // Shortcuts Help
+    if (elements.btnShortcutsHelp) {
+      elements.btnShortcutsHelp.addEventListener("click", showShortcuts);
+    }
+
+    if (elements.btnToggleSelect) {
+      elements.btnToggleSelect.addEventListener("click", toggleSelectionMode);
+    }
+
+    if (elements.btnDownloadSelected) {
+      elements.btnDownloadSelected.addEventListener("click", downloadSelectedItems);
+    }
+
+    if (elements.btnCancelSelection) {
+      elements.btnCancelSelection.addEventListener("click", toggleSelectionMode);
     }
 
     // Refresh
@@ -5550,6 +6169,14 @@
           }
         }
 
+        // Handle Diff Button
+        const diffBtn = e.target.closest(".btn-git-diff");
+        if (diffBtn) {
+            const path = diffBtn.dataset.path;
+            showDiffModal(path);
+            return;
+        }
+
         // Handle empty state buttons
         const target = e.target.closest('button'); // Get the button itself if clicked on icon/span inside
         if (target) {
@@ -5763,8 +6390,8 @@
         }
       }
 
-      // Ctrl/Cmd + P - Quick Switcher
-      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+      // Ctrl/Cmd + E - Quick Switcher
+      if ((e.ctrlKey || e.metaKey) && e.key === "e") {
         e.preventDefault();
         showQuickSwitcher();
       }
@@ -5779,37 +6406,23 @@
         }
       }
 
-      // Ctrl/Cmd + W - close tab
-      if ((e.ctrlKey || e.metaKey) && e.key === "w") {
+      // Alt + W - close tab (Ctrl/Cmd + W closes browser tab)
+      if (e.altKey && e.key === "w") {
         e.preventDefault();
         if (state.activeTab) {
           closeTab(state.activeTab);
         }
       }
 
-      // Ctrl + Tab (Next) / Ctrl + Shift + Tab (Prev)
-      // Note: Browser might intercept this. Added PageUp/Down as alternative.
-      if (e.ctrlKey && !e.metaKey && e.key === "Tab") {
+      // Ctrl/Cmd + Shift + ] (Next) / [ (Prev) - Tab Navigation
+      // Matches }/{ as well since Shift is held
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "}" || e.key === "]" || e.key === "{" || e.key === "[")) {
         e.preventDefault();
         if (state.openTabs.length > 1) {
             const currentIndex = state.openTabs.indexOf(state.activeTab);
             let nextIndex;
-            if (e.shiftKey) {
-                nextIndex = (currentIndex - 1 + state.openTabs.length) % state.openTabs.length;
-            } else {
-                nextIndex = (currentIndex + 1) % state.openTabs.length;
-            }
-            activateTab(state.openTabs[nextIndex]);
-        }
-      }
-
-      // Ctrl + PageUp (Prev) / Ctrl + PageDown (Next)
-      if (e.ctrlKey && (e.key === "PageUp" || e.key === "PageDown")) {
-        e.preventDefault();
-        if (state.openTabs.length > 1) {
-            const currentIndex = state.openTabs.indexOf(state.activeTab);
-            let nextIndex;
-            if (e.key === "PageUp") {
+            // { or [ is Prev
+            if (e.key === "{" || e.key === "[") {
                 nextIndex = (currentIndex - 1 + state.openTabs.length) % state.openTabs.length;
             } else {
                 nextIndex = (currentIndex + 1) % state.openTabs.length;
@@ -5824,10 +6437,24 @@
         toggleSidebar();
       }
 
+      // Ctrl/Cmd + F - Find
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        openSearchWidget(false);
+      }
+
+      // Ctrl/Cmd + H - Replace
+      if ((e.ctrlKey || e.metaKey) && e.key === "h") {
+        e.preventDefault();
+        openSearchWidget(true);
+      }
+
       // Escape - close sidebar on mobile, hide modals/menus
       if (e.key === "Escape") {
         if (elements.shortcutsOverlay.classList.contains("visible")) {
           hideShortcuts();
+        } else if (elements.searchWidget && elements.searchWidget.classList.contains("visible")) {
+          closeSearchWidget();
         } else if (elements.quickSwitcherOverlay && elements.quickSwitcherOverlay.classList.contains("visible")) {
           hideQuickSwitcher();
         } else if (elements.modalOverlay.classList.contains("visible")) {
@@ -5841,6 +6468,50 @@
         }
       }
     });
+
+    // Search Widget Events
+    if (elements.searchWidget) {
+      elements.searchToggle.addEventListener("click", () => {
+        elements.searchWidget.classList.toggle("replace-mode");
+        if (elements.searchWidget.classList.contains("replace-mode")) {
+            elements.searchReplaceRow.style.display = "flex";
+            elements.searchReplaceInput.focus();
+        } else {
+            elements.searchReplaceRow.style.display = "none";
+            elements.searchFindInput.focus();
+        }
+      });
+
+      elements.searchFindInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            doFind(e.shiftKey); // Shift+Enter = Prev
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            closeSearchWidget();
+        }
+      });
+
+      elements.searchReplaceInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (e.ctrlKey || e.altKey) {
+                doReplaceAll();
+            } else {
+                doReplace();
+            }
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            closeSearchWidget();
+        }
+      });
+
+      elements.searchNext.addEventListener("click", () => doFind(false));
+      elements.searchPrev.addEventListener("click", () => doFind(true));
+      elements.searchClose.addEventListener("click", closeSearchWidget);
+      elements.searchReplaceBtn.addEventListener("click", doReplace);
+      elements.searchReplaceAllBtn.addEventListener("click", doReplaceAll);
+    }
 
     // Quick Switcher Events
     if (elements.quickSwitcherInput) {
@@ -6085,98 +6756,134 @@
   async function startOnboarding() {
     if (localStorage.getItem("onboardingCompleted")) return;
 
-    // Step 1: Welcome
-    await showModal({
-      title: "Welcome to Blueprint Studio! 🚀",
-      message: `
-        <div style="text-align: center;">
-          <p>The modern, Git-powered file editor for Home Assistant.</p>
-          <br>
-          <p>Let's get you set up in just a few steps.</p>
-        </div>
-      `,
-      confirmText: "Get Started"
+    let shouldOpenSettings = false;
+
+    // Step 1: Welcome & Git Choice
+    const useGit = await showConfirmDialog({
+        title: "Welcome to Blueprint Studio! 🚀",
+        message: `
+            <div style="text-align: center;">
+                <p>The modern, Git-powered file editor for Home Assistant.</p>
+                <br>
+                <div style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; margin: 16px 0;">
+                    <div style="font-weight: 600; margin-bottom: 8px;">Would you like to enable Git integration?</div>
+                    <ul style="text-align: left; display: inline-block; font-size: 13px; color: var(--text-secondary); margin: 0; padding-left: 20px;">
+                        <li>Track file changes & revert mistakes</li>
+                        <li>Backup configuration to GitHub</li>
+                        <li>Manage version history visually</li>
+                    </ul>
+                </div>
+                <p style="font-size: 12px; color: var(--text-secondary);">You can always change this later in Settings.</p>
+            </div>
+        `,
+        confirmText: "Enable Git Features",
+        cancelText: "Disable Git Features"
     });
 
-    // Step 2: Initialize Git (if needed)
-    if (!gitState.isInitialized) {
-      const initResult = await showConfirmDialog({
-        title: "Step 1: Track Your Changes",
-        message: `
-          <div style="text-align: center;">
-            <span class="material-icons" style="font-size: 48px; color: var(--accent-color);">source</span>
-            <p>First, we need to initialize a Git repository to track your file changes.</p>
-            <p style="font-size: 12px; color: var(--text-secondary);">This creates a hidden .git folder in your config directory.</p>
-          </div>
-        `,
-        confirmText: "Initialize Repo",
-        cancelText: "Skip"
-      });
+    if (useGit) {
+        // User chose to enable (default)
+        localStorage.setItem("gitIntegrationEnabled", "true");
+        applyGitVisibility();
 
-      if (initResult) {
-        await gitInit();
-        gitState.isInitialized = true; // Assume success for flow
-      }
-    }
-
-    // Step 2: Git Ignore (New)
-    if (gitState.isInitialized) {
-        const ignoreResult = await showConfirmDialog({
-            title: "Step 2: Ignore Files",
+        // Step 3: Initialize Git (if needed)
+        if (!gitState.isInitialized) {
+          const initResult = await showConfirmDialog({
+            title: "Step 1: Track Your Changes",
             message: `
-                <div style="text-align: center;">
-                    <span class="material-icons" style="font-size: 48px; color: var(--text-secondary); margin-bottom: 10px;">visibility_off</span>
-                    <p style="margin-bottom: 10px;">Configure which files to hide from GitHub (like passwords or temp files).</p>
-                    <p style="font-size: 12px; color: var(--text-secondary);">We've already configured safe defaults for you.</p>
-                </div>
+              <div style="text-align: center;">
+                <span class="material-icons" style="font-size: 48px; color: var(--accent-color);">source</span>
+                <p>First, we need to initialize a Git repository to track your file changes.</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">This creates a hidden .git folder in your config directory.</p>
+              </div>
             `,
-            confirmText: "Manage Exclusions",
-            cancelText: "Use Defaults"
-        });
+            confirmText: "Initialize Repo",
+            cancelText: "Skip"
+          });
 
-        if (ignoreResult) {
-            await showGitExclusions();
-            localStorage.setItem("onboardingCompleted", "true");
-            return;
+          if (initResult) {
+            const success = await gitInit(true); // Skip prompt
+            if (success) {
+                gitState.isInitialized = true;
+            }
+          }
         }
+
+        // Step 4: Git Ignore
+        if (gitState.isInitialized) {
+            const ignoreResult = await showConfirmDialog({
+                title: "Step 2: Ignore Files",
+                message: `
+                    <div style="text-align: center;">
+                        <span class="material-icons" style="font-size: 48px; color: var(--text-secondary); margin-bottom: 10px;">visibility_off</span>
+                        <p style="margin-bottom: 10px;">Configure which files to hide from GitHub (like passwords or temp files).</p>
+                        <p style="font-size: 12px; color: var(--text-secondary);">We've already configured safe defaults for you.</p>
+                    </div>
+                `,
+                confirmText: "Manage Exclusions",
+                cancelText: "Use Defaults"
+            });
+
+            if (ignoreResult) {
+                await showGitExclusions();
+            }
+        }
+
+        // Step 5: Connect to GitHub (if needed)
+        if (gitState.isInitialized && !gitState.hasRemote) {
+          const connectResult = await showConfirmDialog({
+            title: "Step 3: Connect to Cloud",
+            message: `
+              <div style="text-align: center;">
+                <span class="material-icons" style="font-size: 48px; color: var(--text-secondary);">cloud_upload</span>
+                <p>Connect to GitHub to backup your configuration and track history.</p>
+              </div>
+            `,
+            confirmText: "Connect GitHub",
+            cancelText: "Skip"
+          });
+
+          if (connectResult) {
+            shouldOpenSettings = true;
+          }
+        }
+    } else {
+        // User chose to disable
+        localStorage.setItem("gitIntegrationEnabled", "false");
+        applyGitVisibility();
     }
 
-    // Step 3: Connect to GitHub (if needed)
-    if (gitState.isInitialized && !gitState.hasRemote) {
-      const connectResult = await showConfirmDialog({
-        title: "Step 2: Connect to Cloud",
-        message: `
-          <div style="text-align: center;">
-            <span class="material-icons" style="font-size: 48px; color: var(--text-secondary);">cloud_upload</span>
-            <p>Connect to GitHub to backup your configuration and track history.</p>
-          </div>
-        `,
-        confirmText: "Connect GitHub",
-        cancelText: "Skip"
-      });
-
-      if (connectResult) {
-        await showGitSettings();
-        // If they go to settings, we consider onboarding "interrupted" but effectively done for the wizard part.
-        localStorage.setItem("onboardingCompleted", "true");
-        return;
-      }
-    }
-
-    // Step 4: Finish
-    await showModal({
-      title: "You're All Set! 🎉",
-      message: `
+    // Final Step: Finish
+    const finishMessage = useGit 
+        ? `
         <div style="text-align: center;">
           <p>Explore your files on the left.</p>
           <p>Use the <b>Git Panel</b> to stage, commit, and push changes.</p>
           <br>
           <p style="font-size: 12px;">Need help? Click the <span class="material-icons" style="font-size: 14px; vertical-align: middle;">help_outline</span> icon in the Git panel.</p>
         </div>
-      `,
+      `
+        : `
+        <div style="text-align: center;">
+          <p>You're good to go! 🚀</p>
+          <br>
+          <p>Explore your files on the left and start editing.</p>
+          <br>
+          <p style="font-size: 12px; color: var(--text-secondary);">If you change your mind, you can enable Git integration in <b>Settings</b>.</p>
+        </div>
+      `;
+
+    await showModal({
+      title: "You're All Set! 🎉",
+      message: finishMessage,
       confirmText: "Start Editing"
     });
+
     localStorage.setItem("onboardingCompleted", "true");
+
+    // If they chose to connect GitHub, open the settings modal now
+    if (shouldOpenSettings) {
+        showGitSettings();
+    }
   }
 
   // Periodic git status polling
@@ -6191,8 +6898,8 @@
     // Poll every 30 seconds
     gitStatusPollingInterval = setInterval(async () => {
       try {
-        // Only poll if git is visible and initialized
-        if (!settings.showGit) {
+        // Only poll if git is visible and enabled
+        if (!isGitEnabled()) {
           return;
         }
 

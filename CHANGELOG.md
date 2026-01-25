@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-01-22
+## [1.3.2] - 2026-01-25
+
+### ✨ New Features
+*   **Onboarding Wizard**: A guided tour for new users to initialize their repo, configure ignores, and connect to GitHub.
+*   **Git Integration Choice**: The onboarding wizard now asks if you want to enable Git integration upfront, allowing users to opt-out if they don't need version control.
+*   **Bulk File Operations**: New selection mode allows you to pick multiple files and folders to download as a single, compressed ZIP archive.
+*   **Explorer-Integrated Diff**: Modified files now feature a "Difference" icon directly in the file tree, allowing for instant side-by-side code reviews without leaving the explorer.
+*   **Visual Diff Viewer**: Powerful side-by-side comparison of local changes versus the last Git commit with color-coded highlighting.
+*   **Enhanced Search Experience**: 
+    *   **Live Match Counting**: Instantly see "X of Y" matches as you navigate.
+    *   **Distinct Active Highlight**: The current match stands out in vivid orange for maximum visibility.
+    *   **Smart Search Wrapping**: Navigation now loops between the top and bottom of files with helpful feedback.
+*   **Professional Search & Replace**: A new floating search widget with dedicated Next/Prev and Replace/All functionality (`Ctrl+F`, `Ctrl+H`).
+*   **Optimized .gitignore Manager**: Intelligence added to filter redundant paths (e.g., ignoring a folder automatically prunes individual file rules), keeping your configuration clean.
+*   **Intelligent Git Integration**: UI feedback and background tasks now fully respect the "Enable Git Integration" setting, ensuring a silent experience when disabled.
+*   **Performance & UI Polish**: Optimized diff scrolling, enhanced checkbox logic for cascading selections, and refined theme colors for better readability.
+
+## [1.3.1] - 2026-01-24
 
 ### ✨ New Features
 *   **Drag & Drop Reorganization**: Move files and folders by dragging them in the file tree. Supports dropping into folders and back to the root directory, with visual feedback and safety confirmations.
@@ -15,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 *   **Quick File Switcher**: Press `Ctrl+P` (or `Cmd+P`) to instantly search and open files by name using fuzzy matching.
 *   **Toggle Sidebar Shortcut**: Use `Ctrl+B` (or `Cmd+B`) to quickly show/hide the file explorer sidebar.
 *   **Tab Switching Shortcuts**: Navigate open tabs with `Ctrl+Tab` (Next) and `Ctrl+Shift+Tab` (Previous).
+
+### 🐞 Bug Fixes
+*   **Copy Naming**: Fixed auto-naming when copying files to preserve the extension (e.g., `file_copy.yaml`).
+*   **macOS App Compatibility**: Resolved an issue where file clicks were unresponsive in the Home Assistant macOS app due to conflicting touch event handlers.
 
 ## [1.3.0] - 2026-01-22
 

@@ -219,6 +219,12 @@ class BlueprintStudioApiView(HomeAssistantView):
 
         hass = request.app["hass"]
 
+        if action == "download_multi":
+            paths = data.get("paths", [])
+            if not paths:
+                return self.json_message("Missing paths", status_code=400)
+            return await self._download_multi(hass, paths)
+
         if action == "write_file":
             path = data.get("path")
             content = data.get("content")
@@ -299,6 +305,12 @@ class BlueprintStudioApiView(HomeAssistantView):
         if action == "git_commit":
             commit_message = data.get("commit_message", "Update via Blueprint Studio")
             return await self._git_commit(hass, commit_message)
+
+        if action == "git_show":
+            path = data.get("path")
+            if not path:
+                return self.json_message("Missing path", status_code=400)
+            return await self._git_show(hass, path)
 
         if action == "git_init":
             return await self._git_init(hass)
@@ -825,6 +837,62 @@ class BlueprintStudioApiView(HomeAssistantView):
             _LOGGER.error("Error creating zip for %s: %s", safe_path, err)
             return self.json_message("Error creating zip", status_code=500)
 
+    async def _download_multi(
+        self, hass: HomeAssistant, paths: list[str]
+    ) -> web.Response:
+        """Download multiple files/folders as a ZIP file (base64 encoded)."""
+        try:
+            zip_data = await hass.async_add_executor_job(
+                self._create_multi_zip, paths
+            )
+            return self.json({
+                "success": True,
+                "filename": "download.zip",
+                "data": zip_data
+            })
+        except OSError as err:
+            _LOGGER.error("Error creating zip: %s", err)
+            return self.json_message("Error creating zip", status_code=500)
+
+    def _create_multi_zip(self, paths: list[str]) -> str:
+        """Create a ZIP file from multiple paths and return base64 encoded data."""
+        buffer = io.BytesIO()
+
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for path_str in paths:
+                safe_path = self._get_safe_path(path_str)
+                if not safe_path or not safe_path.exists():
+                    continue
+
+                if safe_path.is_file():
+                    if self._is_file_allowed(safe_path):
+                        zf.write(safe_path, safe_path.name)
+                elif safe_path.is_dir():
+                    for root, dirs, files in os.walk(safe_path):
+                        # Filter excluded directories
+                        dirs[:] = [
+                            d for d in dirs
+                            if d not in self.EXCLUDED_PATTERNS and not d.startswith(".")
+                        ]
+
+                        for file in files:
+                            if file.startswith("."):
+                                continue
+
+                            file_path = Path(root) / file
+
+                            # Only include allowed extensions
+                            if not self._is_file_allowed(file_path):
+                                continue
+
+                            # Calculate archive name relative to the parent of the selected folder
+                            # ensuring the folder itself is the root in the zip
+                            arc_name = file_path.relative_to(safe_path.parent)
+                            zf.write(file_path, arc_name)
+
+        buffer.seek(0)
+        return base64.b64encode(buffer.read()).decode("utf-8")
+
     def _create_zip(self, folder_path: Path, rel_base: str) -> str:
         """Create a ZIP file from a folder and return base64 encoded data."""
         buffer = io.BytesIO()
@@ -1055,17 +1123,55 @@ class BlueprintStudioApiView(HomeAssistantView):
             _LOGGER.error("Error getting git status: %s", err)
             return self.json_message(str(err), status_code=500)
 
+    async def _git_show(self, hass: HomeAssistant, path: str) -> web.Response:
+        """Get file content from HEAD."""
+        try:
+            # Validate path safety
+            if not self._is_path_safe(path):
+                 return self.json_message(f"Invalid path: {path}", status_code=403)
+
+            result = await hass.async_add_executor_job(
+                self._run_git_command, ["show", f"HEAD:{path}"]
+            )
+
+            if result["success"]:
+                return self.json({
+                    "success": True,
+                    "content": result["output"]
+                })
+            else:
+                return self.json_message(result["error"], status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error showing git file: %s", err)
+            return self.json_message(str(err), status_code=500)
+
     async def _git_pull(self, hass: HomeAssistant) -> web.Response:
         """Pull changes from git remote."""
         try:
-            # Determine current branch or default to main
+            # 1. Determine local branch
             branch_result = await hass.async_add_executor_job(
                 self._run_git_command, ["symbolic-ref", "--short", "HEAD"]
             )
             
-            target_branch = "main"
+            target_branch = None
             if branch_result["success"]:
                 target_branch = branch_result["output"].strip()
+
+            # 2. If not on a branch (e.g. fresh repo), try to find remote default
+            if not target_branch:
+                remote_head = await hass.async_add_executor_job(
+                    self._run_git_command, ["remote", "show", "origin"]
+                )
+                if remote_head["success"]:
+                    # Look for "HEAD branch: main" in output
+                    import re
+                    match = re.search(r"HEAD branch: (.+)", remote_head["output"])
+                    if match:
+                        target_branch = match.group(1).strip()
+
+            # 3. Final fallback
+            if not target_branch:
+                target_branch = "main"
 
             # Explicitly pull origin <branch> to avoid "no tracking info" errors
             result = await hass.async_add_executor_job(
@@ -1169,14 +1275,28 @@ class BlueprintStudioApiView(HomeAssistantView):
 
             # At this point, we have commits to push
             
-            # Determine current branch or default to main
+            # Determine target branch
             branch_result = await hass.async_add_executor_job(
                 self._run_git_command, ["symbolic-ref", "--short", "HEAD"]
             )
             
-            target_branch = "main"
+            target_branch = None
             if branch_result["success"]:
                 target_branch = branch_result["output"].strip()
+            
+            if not target_branch:
+                # Try to find default branch from origin
+                remote_head = await hass.async_add_executor_job(
+                    self._run_git_command, ["remote", "show", "origin"]
+                )
+                if remote_head["success"]:
+                    import re
+                    match = re.search(r"HEAD branch: (.+)", remote_head["output"])
+                    if match:
+                        target_branch = match.group(1).strip()
+            
+            if not target_branch:
+                target_branch = "main"
             
             # Push HEAD to the target branch on origin
             # We use HEAD:refs/heads/<branch> to force pushing local HEAD to the remote branch
@@ -1221,14 +1341,28 @@ class BlueprintStudioApiView(HomeAssistantView):
             if status_result["success"] and status_result["output"].strip():
                 return self.json_message("You have uncommitted changes. Please commit them first or use the regular Push button.", status_code=400)
 
-            # Determine current branch or default to main
+            # Determine target branch
             branch_result = await hass.async_add_executor_job(
                 self._run_git_command, ["symbolic-ref", "--short", "HEAD"]
             )
             
-            target_branch = "main"
+            target_branch = None
             if branch_result["success"]:
                 target_branch = branch_result["output"].strip()
+            
+            if not target_branch:
+                # Try to find default branch from origin
+                remote_head = await hass.async_add_executor_job(
+                    self._run_git_command, ["remote", "show", "origin"]
+                )
+                if remote_head["success"]:
+                    import re
+                    match = re.search(r"HEAD branch: (.+)", remote_head["output"])
+                    if match:
+                        target_branch = match.group(1).strip()
+            
+            if not target_branch:
+                target_branch = "main"
 
             # Push changes (with -u to set upstream automatically on first push)
             push_cmd = ["push", "-u", "origin", f"HEAD:refs/heads/{target_branch}"]
@@ -1344,9 +1478,31 @@ echo "password={token}"
     async def _git_init(self, hass: HomeAssistant) -> web.Response:
         """Initialize a git repository."""
         try:
+            # Check if .git already exists
+            git_dir = self.config_dir / ".git"
+            exists = git_dir.exists()
+
+            # Try to init with -b main (supported in Git 2.28+)
             result = await hass.async_add_executor_job(
-                self._run_git_command, ["init"]
+                self._run_git_command, ["init", "-b", "main"]
             )
+
+            # Fallback for older git versions if -b is not supported
+            if not result["success"]:
+                result = await hass.async_add_executor_job(
+                    self._run_git_command, ["init"]
+                )
+                # Only rename to main if this was a fresh initialization 
+                # and we ended up on 'master'
+                if result["success"] and not exists:
+                    # Check current branch
+                    branch_check = await hass.async_add_executor_job(
+                        self._run_git_command, ["symbolic-ref", "--short", "HEAD"]
+                    )
+                    if branch_check["success"] and branch_check["output"].strip() == "master":
+                        await hass.async_add_executor_job(
+                            self._run_git_command, ["branch", "-m", "main"]
+                        )
 
             if result["success"]:
                 # Create a sensible .gitignore file for Home Assistant
@@ -1969,6 +2125,38 @@ desktop.ini
             _LOGGER.error("Error resetting files: %s", err)
             return self.json_message(str(err), status_code=500)
 
+    async def _git_abort(self, hass: HomeAssistant) -> web.Response:
+        """Abort a rebase or merge operation."""
+        try:
+            # Try to abort rebase
+            rebase_result = await hass.async_add_executor_job(
+                self._run_git_command, ["rebase", "--abort"]
+            )
+            
+            # Try to abort merge
+            merge_result = await hass.async_add_executor_job(
+                self._run_git_command, ["merge", "--abort"]
+            )
+            
+            if rebase_result["success"] or merge_result["success"]:
+                return self.json({
+                    "success": True, 
+                    "message": "Git operation aborted successfully"
+                })
+            
+            # If both failed, check if it's because there was nothing to abort
+            if "no rebase in progress" in str(rebase_result.get("error")) and \
+               "There is no merge to abort" in str(merge_result.get("error")):
+                return self.json({
+                    "success": True,
+                    "message": "No rebase or merge was in progress"
+                })
+
+            return self.json_message("Failed to abort git operation", status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error aborting git operation: %s", err)
+            return self.json_message(str(err), status_code=500)
+
     async def _git_stop_tracking(self, hass: HomeAssistant, files: list[str]) -> web.Response:
         """Stop tracking specific files (remove from index but keep on disk)."""
         try:
@@ -2001,6 +2189,15 @@ desktop.ini
                 git_dir / "refs" / "heads" / "master.lock",
                 git_dir / "refs" / "heads" / "main.lock",
             ]
+            
+            # Stale rebase/merge directories
+            state_dirs = [
+                git_dir / "rebase-merge",
+                git_dir / "rebase-apply",
+                git_dir / "MERGE_HEAD",
+                git_dir / "CHERRY_PICK_HEAD",
+                git_dir / "REVERT_HEAD",
+            ]
 
             removed = []
             for lock_file in lock_files:
@@ -2010,6 +2207,17 @@ desktop.ini
                         removed.append(str(lock_file.relative_to(self.config_dir)))
                     except Exception as err:
                         _LOGGER.warning("Could not remove lock file %s: %s", lock_file, err)
+
+            for state_dir in state_dirs:
+                if state_dir.exists():
+                    try:
+                        if state_dir.is_dir():
+                            await hass.async_add_executor_job(shutil.rmtree, state_dir)
+                        else:
+                            await hass.async_add_executor_job(state_dir.unlink)
+                        removed.append(str(state_dir.relative_to(self.config_dir)))
+                    except Exception as err:
+                        _LOGGER.warning("Could not remove stale state %s: %s", state_dir, err)
 
             if removed:
                 return self.json({

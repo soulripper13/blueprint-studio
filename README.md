@@ -125,6 +125,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 - **Bracket Matching** - Automatic bracket highlighting 🧩
 - **Auto-close Brackets** - Automatic bracket completion ⌨️
 - **YAML Linting** - Real-time YAML syntax validation with error highlighting ❌
+- **Professional Search** - Floating Find/Replace widget with navigation controls (`Ctrl+F`, `Ctrl+H`) 🔎
 
 ### UI Features 🎨
 - **Dark Theme** - VS Code-inspired dark theme for eye-friendly editing 🌙
@@ -139,9 +140,10 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 
 ### File Management 📁
 - **Create Files & Folders** - Right-click context menu for creating new items ➕
+- **Bulk Operations** - New selection mode to pick multiple files and folders for batch actions 📦
 - **Drag & Drop Reorganization** - Move files and folders by dragging them 📦
 - **Upload Files** - Drag & drop files directly into the file tree or use the upload button ⬆️
-- **Download Files** - Download individual files or entire folders as ZIP ⬇️
+- **Download Files** - Download individual files, multiple selected items, or entire folders as ZIP ⬇️
 - **Copy & Paste** - Duplicate files and folders 📋
 - **Rename & Move** - Rename files or move them to different locations 🔄
 - **Delete** - Remove files and folders (with protection for critical files) 🗑️
@@ -156,9 +158,11 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 - **Stay Logged In** - Credentials persist across restarts ✨
 - **Push & Pull** - Sync your configs with GitHub 🔄
 - **Stage & Commit** - Manage changes with visual Git panel 📝
+- **Explorer-Integrated Diff** - Click the "Difference" icon in the file tree for instant side-by-side reviews 🔍
+- **Visual Diff Viewer** - Compare changes side-by-side before committing with color-coded highlighting 🌈
 - **Smart Commit Messages** - Auto-generates messages based on staged files (e.g., "Update config") 🧠
 - **Visual Sync Status** - Real-time arrows (↑/↓) showing commits ahead/behind remote 🔄
-- **Advanced .gitignore** - Manage exclusions with a full interactive tree, file sizes, and cascading selection 🛡️
+- **Advanced .gitignore** - Manage exclusions with a full interactive tree and automated redundancy filtering 🛡️
 - **Safety Checks** - Proactively prompts to commit unstated changes before pushing 🛡️
 - **Auto-Repair** - Detects and fixes "index.lock" and corrupt index errors with one click 🔧
 - **Manage Remotes** - Add or remove remote repositories from Settings 🗑️
@@ -177,6 +181,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 - Undo / Redo ↶↷
 - Cut / Copy / Paste ✂️📋
 - Search / Replace 🔍🔄
+- Bulk Select Mode ☑️
 - YAML Validation ✅
 - Restart Home Assistant 🔄
 - Refresh file list 🔄
@@ -187,19 +192,22 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 ### Keyboard Shortcuts ⌨️
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+P` / `Cmd+P` | Quick File Switcher 🔍 |
+| `Ctrl+E` / `Cmd+E` | Quick File Switcher 🔍 |
 | `Ctrl+B` / `Cmd+B` | Toggle Sidebar 📂 |
-| `Ctrl+Tab` | Next Tab ➡️ |
-| `Ctrl+Shift+Tab` | Previous Tab ⬅️ |
+| `Ctrl+Shift+]` | Next Tab ➡️ |
+| `Ctrl+Shift+[` | Previous Tab ⬅️ |
+| `Ctrl+F` / `Cmd+F` | Find in file 🔎 |
+| `Ctrl+H` / `Cmd+H` | Replace in file 🔄 |
 | `Ctrl+S` / `Cmd+S` | Save file 💾 |
 | `Ctrl+Shift+S` / `Cmd+Shift+S` | Save all files 💾📁 |
-| `Ctrl+F` / `Cmd+F` | Search in file 🔍 |
-| `Ctrl+H` / `Cmd+H` | Search and replace 🔄 |
 | `Ctrl+G` / `Cmd+G` | Go to line 📍 |
 | `Ctrl+/` / `Cmd+/` | Toggle comment 💬 |
-| `Ctrl+W` / `Cmd+W` | Close tab ❌ |
+| `Alt+W` | Close tab ❌ |
 | `Ctrl+Z` / `Cmd+Z` | Undo ↶ |
 | `Ctrl+Y` / `Cmd+Shift+Z` | Redo ↷ |
+| `Enter` | Next Search Match (when search open) ⬇️ |
+| `Shift+Enter` | Previous Search Match (when search open) ⬆️ |
+| `Esc` | Close Modal / Search / Quick Switcher ✖️ |
 
 ---
 
@@ -252,11 +260,11 @@ Blueprint Studio requires **no configuration**! After installation:
 ## 🚀 Usage
 
 ### Getting Started 🎓
-**New in v1.3.0!** First-time users are greeted with a guided tour to set up Git and connect to GitHub in seconds.
+**New in v1.3.0!** First-time users are greeted with a guided tour to set up the editor. You can choose to enable Git integration for version control or keep it simple with just the file editor.
 
 <div align="center">
   <img src="images/screenshot-onboarding.png" alt="Onboarding Wizard" width="600">
-  <p><em>Onboarding Wizard - Guided setup for your first run</em></p>
+  <p><em>Onboarding Wizard - Guided setup with optional Git integration</em></p>
 </div>
 
 ### Opening Files 📂
