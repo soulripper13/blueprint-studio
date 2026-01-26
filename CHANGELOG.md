@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-01-25
+
+### ✨ New Features
+*   **Smart Entity Autocomplete**: The editor now provides intelligent suggestions for Home Assistant entities (e.g., typing `light.` lists all your lights with icons and friendly names).
+*   **Global Search**: Search for text across all files in your configuration directory (`Ctrl+Shift+F`). View matches with context, jump to lines instantly, and filter by file type automatically.
+
+### 🐞 Bug Fixes
+*   **Log Suppression**: Fixed a "Login attempt or request with invalid authentication" warning in Home Assistant logs caused by background Git polling after session expiry. Requests are now strictly validated or aborted on the client side before being sent.
+
 ## [1.3.2] - 2026-01-25
 
 ### ✨ New Features
@@ -207,12 +216,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+- **1.4.0** - Smart Autocomplete, Global Search & Bug Fixes
+- **1.3.2** - Visual Diff, Bulk Download & UX Polish
 - **1.2.1** - Enhanced UX, YAML Validation & Bug Fixes
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 - **0.1.0** - Beta version
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v1.4.0
 [1.2.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v1.2.0
 [1.0.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v1.0.0
 [0.1.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v0.1.0

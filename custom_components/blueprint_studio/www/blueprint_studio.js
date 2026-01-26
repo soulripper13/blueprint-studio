@@ -18,6 +18,8 @@
   // ============================================
   // Home Assistant Autocomplete Schema
   // ============================================
+  let HA_ENTITIES = [];
+
   const HA_SCHEMA = {
     // Core configuration keys
     configuration: [
@@ -258,6 +260,50 @@
     const context = getYamlContext(editor, cursor.line);
 
     let suggestions = [];
+
+    // Entity autocompletion (e.g. light.kitchen)
+    // We check the raw text before cursor because CodeMirror tokenizes dots separately
+    const lineText = currentLine.slice(0, cursor.ch);
+    const entityMatch = lineText.match(/([a-z0-9_]+)\.([a-z0-9_]*)$/);
+
+    if (entityMatch) {
+      const fullMatch = entityMatch[0]; // e.g. "light.kit"
+      
+      // Calculate start position
+      const matchStart = cursor.ch - fullMatch.length;
+      
+      const matchedEntities = HA_ENTITIES.filter(e => e.entity_id.startsWith(fullMatch));
+      
+      if (matchedEntities.length > 0) {
+          suggestions = matchedEntities.map(e => ({
+              text: e.entity_id,
+              displayText: e.entity_id,
+              className: 'ha-hint-entity',
+              render: (elem, self, data) => {
+                  // Clean icon string
+                  const iconName = e.icon ? e.icon.replace('mdi:', '') : 'help-circle';
+                  const iconHtml = `<span class="mdi mdi-${iconName}" style="margin-right: 6px; vertical-align: middle;"></span>`;
+                  
+                  elem.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        ${iconHtml}
+                        <span>${data.text}</span>
+                        <span class="ha-hint-description" style="margin-left: auto; font-size: 0.8em; opacity: 0.7; padding-left: 10px;">${e.friendly_name || ''}</span>
+                    </div>
+                  `;
+              },
+              hint: (cm, self, data) => {
+                  cm.replaceRange(data.text, { line: cursor.line, ch: matchStart }, { line: cursor.line, ch: end });
+              }
+          }));
+          
+          return {
+              list: suggestions,
+              from: CodeMirror.Pos(cursor.line, matchStart),
+              to: CodeMirror.Pos(cursor.line, end)
+          };
+      }
+    }
 
     // Check if we're at the beginning of a line (after indentation)
     const trimmedLine = currentLine.trimStart();
@@ -636,7 +682,7 @@
   // List of extensions considered text files that CodeMirror can handle
   const TEXT_FILE_EXTENSIONS = new Set([
     "yaml", "yml", "json", "py", "js", "css", "html", "txt",
-    "md", "conf", "cfg", "ini", "sh", "log", "svg" // SVG is XML, hence text
+    "md", "conf", "cfg", "ini", "sh", "log", "svg", "jinja2" // SVG is XML, hence text
   ]);
 
   function isTextFile(filename) {
@@ -665,6 +711,7 @@
       conf: { icon: "settings", class: "default" },
       cfg: { icon: "settings", class: "default" },
       ini: { icon: "settings", class: "default" },
+      jinja2: { icon: "integration_instructions", class: "default" },
     };
     return iconMap[ext] || { icon: "insert_drive_file", class: "default" };
   }
@@ -691,6 +738,7 @@
       conf: yamlMode,
       cfg: yamlMode,
       ini: "yaml",
+      jinja2: yamlMode,
     };
     return modeMap[ext] || null;
   }
@@ -712,6 +760,7 @@
       conf: "Config",
       cfg: "Config",
       ini: "INI",
+      jinja2: "Jinja2", 
     };
     return nameMap[ext] || "Plain Text";
   }
@@ -856,27 +905,58 @@
   // Theme Management
   // ============================================
 
-  function loadSettings() {
+  async function loadSettings() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const settings = JSON.parse(stored);
-        state.theme = settings.theme || "dark";
-        state.showHidden = settings.showHidden || false;
-        state.showRecentFiles = settings.showRecentFiles !== false; // Default to true
-        state.favoriteFiles = settings.favoriteFiles || [];
-        state.recentFiles = settings.recentFiles || []; // Load recent files
-        state.gitConfig = settings.gitConfig || null;
-        // Store open tabs info for later restoration (after files are loaded)
-        state._savedOpenTabs = settings.openTabs || [];
-        state._savedActiveTabPath = settings.activeTabPath || null;
+      // 1. Fetch from server
+      let serverSettings = {};
+      try {
+          serverSettings = await fetchWithAuth(`${API_BASE}?action=get_settings`);
+      } catch (e) {
+          console.log("Failed to fetch settings from server, using local fallback");
       }
+
+      // 2. Fetch local (legacy/fallback)
+      const localStored = localStorage.getItem(STORAGE_KEY);
+      const localSettings = localStored ? JSON.parse(localStored) : {};
+      
+      // 3. Migration: If server is empty but local exists, migrate to server
+      let settings = serverSettings;
+      if (Object.keys(serverSettings).length === 0 && (Object.keys(localSettings).length > 0 || localStorage.getItem("onboardingCompleted"))) {
+          console.log("Migrating settings to server...");
+          settings = { ...localSettings };
+          // Migrate root keys
+          settings.onboardingCompleted = localStorage.getItem("onboardingCompleted") === "true";
+          settings.gitIntegrationEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false";
+          
+          // Save back to server immediately
+          await fetchWithAuth(API_BASE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "save_settings", settings: settings }),
+          });
+      }
+
+      // 4. Apply to State
+      state.theme = settings.theme || localSettings.theme || "dark";
+      state.showHidden = settings.showHidden || false;
+      state.showRecentFiles = settings.showRecentFiles !== false;
+      state.favoriteFiles = settings.favoriteFiles || [];
+      state.recentFiles = settings.recentFiles || [];
+      state.gitConfig = settings.gitConfig || null;
+      
+      // New state properties for sync
+      state.onboardingCompleted = settings.onboardingCompleted ?? (localStorage.getItem("onboardingCompleted") === "true");
+      state.gitIntegrationEnabled = settings.gitIntegrationEnabled ?? (localStorage.getItem("gitIntegrationEnabled") !== "false");
+
+      state._savedOpenTabs = settings.openTabs || localSettings.openTabs || [];
+      state._savedActiveTabPath = settings.activeTabPath || localSettings.activeTabPath || null;
+
     } catch (e) {
       console.log("Could not load settings:", e);
     }
   }
 
-  function saveSettings() {
+  async function saveSettings() {
     try {
       // Save open tabs state
       const openTabsState = state.openTabs.map(tab => ({
@@ -885,16 +965,33 @@
       }));
       const activeTabPath = state.activeTab ? state.activeTab.path : null;
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      const settings = {
         theme: state.theme,
         showHidden: state.showHidden,
-        showRecentFiles: state.showRecentFiles, // Save showRecentFiles
-        favoriteFiles: state.favoriteFiles, // Corrected to use state.favoriteFiles
-        recentFiles: state.recentFiles,     // Save recent files
+        showRecentFiles: state.showRecentFiles,
+        favoriteFiles: state.favoriteFiles,
+        recentFiles: state.recentFiles,
         openTabs: openTabsState,
         activeTabPath: activeTabPath,
-        gitConfig: state.gitConfig
-      }));
+        gitConfig: state.gitConfig,
+        onboardingCompleted: state.onboardingCompleted,
+        gitIntegrationEnabled: state.gitIntegrationEnabled
+      };
+
+      // Save to server
+      fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save_settings", settings: settings }),
+      }).catch(e => console.error("Failed to save settings to server:", e));
+
+      // Save to local storage (cache/fallback)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      
+      // Sync legacy keys
+      if (state.onboardingCompleted) localStorage.setItem("onboardingCompleted", "true");
+      localStorage.setItem("gitIntegrationEnabled", state.gitIntegrationEnabled);
+
     } catch (e) {
       console.log("Could not save settings:", e);
     }
@@ -1762,26 +1859,34 @@
 
   async function fetchWithAuth(url, options = {}) {
     let headers = { ...options.headers };
+    let token = null;
+    let isHassEnvironment = false;
 
     // Helper to get fresh token
-    const getAuthToken = async () => {
-        try {
-          if (window.parent && window.parent.hassConnection) {
-            const conn = await window.parent.hassConnection;
-            if (conn && conn.auth) {
-                return conn.auth.accessToken;
+    try {
+      if (window.parent && window.parent.hassConnection) {
+        isHassEnvironment = true;
+        const conn = await window.parent.hassConnection;
+        if (conn && conn.auth) {
+            if (conn.auth.expired) {
+                await conn.auth.refreshAccessToken();
             }
-          }
-        } catch (e) {
-          // Continue without auth header - the session cookie should work
-          console.log("Using session authentication");
+            token = conn.auth.accessToken;
         }
-        return null;
-    };
+      }
+    } catch (e) {
+      // If auth fails in HA environment, abort to prevent log spam/bans
+      if (isHassEnvironment) {
+          throw new Error("Auth refresh failed: " + e.message);
+      }
+      console.log("Using session authentication");
+    }
 
-    let token = await getAuthToken();
     if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+    } else if (isHassEnvironment) {
+        // Prevent fallback to cookies if we expect a token
+        throw new Error("No authentication token available");
     }
 
     let response = await fetch(url, {
@@ -1827,6 +1932,21 @@
     }
 
     return response.json();
+  }
+
+  async function loadEntities() {
+    try {
+      const data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "get_entities" }),
+      });
+      if (data.entities) {
+        HA_ENTITIES = data.entities;
+      }
+    } catch (e) {
+      console.log("Failed to load entities for autocomplete", e);
+    }
   }
 
   async function loadFiles() {
@@ -4719,6 +4839,115 @@
     });
   }
 
+  async function showGlobalSearchDialog() {
+    const modalOverlay = document.getElementById("modal-overlay");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalBody = document.getElementById("modal-body");
+    const modalFooter = document.querySelector(".modal-footer");
+
+    resetModalToDefault();
+    modalTitle.textContent = "Search in All Files";
+    
+    modalBody.innerHTML = `
+        <div style="display: flex; flex-direction: column; height: 60vh;">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <input type="text" id="global-search-input" class="modal-input" placeholder="Text to find..." style="flex: 1;">
+                <button id="btn-global-search" class="btn-primary" style="padding: 0 16px;">Search</button>
+            </div>
+            <div id="global-search-status" style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; min-height: 18px;"></div>
+            <div id="global-search-results" style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary);"></div>
+        </div>
+    `;
+    
+    modal.style.maxWidth = "700px";
+    if (modalFooter) modalFooter.style.display = "none";
+    modalOverlay.classList.add("visible");
+
+    const input = document.getElementById("global-search-input");
+    const btnSearch = document.getElementById("btn-global-search");
+    const resultsContainer = document.getElementById("global-search-results");
+    const statusDiv = document.getElementById("global-search-status");
+
+    const performSearch = async () => {
+        const query = input.value.trim();
+        if (!query) return;
+
+        statusDiv.textContent = "Searching...";
+        resultsContainer.innerHTML = "";
+        btnSearch.disabled = true;
+
+        try {
+            const results = await fetchWithAuth(API_BASE, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "global_search", query: query }),
+            });
+
+            if (results && Array.isArray(results)) {
+                statusDiv.textContent = `Found ${results.length} matches (limit 100)`;
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">No results found</div>`;
+                } else {
+                    results.forEach(res => {
+                        const item = document.createElement("div");
+                        item.style.padding = "8px 12px";
+                        item.style.borderBottom = "1px solid var(--border-color)";
+                        item.style.cursor = "pointer";
+                        item.style.fontSize = "13px";
+                        
+                        const safeContent = res.content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        
+                        item.innerHTML = `
+                            <div style="font-weight: 500; color: var(--accent-color); margin-bottom: 2px;">${res.path} <span style="color: var(--text-muted); font-weight: normal;">:${res.line}</span></div>
+                            <div style="font-family: monospace; white-space: pre-wrap; color: var(--text-primary); word-break: break-all;">${safeContent}</div>
+                        `;
+                        
+                        item.addEventListener("click", async () => {
+                            closeDialog();
+                            await openFile(res.path);
+                            if (state.editor) {
+                                state.editor.setCursor(res.line - 1, 0);
+                                state.editor.scrollIntoView({line: res.line - 1, ch: 0}, 200);
+                                state.editor.focus();
+                            }
+                        });
+                        
+                        item.addEventListener("mouseenter", () => { item.style.background = "var(--bg-tertiary)"; });
+                        item.addEventListener("mouseleave", () => { item.style.background = "transparent"; });
+
+                        resultsContainer.appendChild(item);
+                    });
+                }
+            } else {
+                statusDiv.textContent = "Error searching";
+            }
+        } catch (e) {
+            statusDiv.textContent = "Error: " + e.message;
+        } finally {
+            btnSearch.disabled = false;
+        }
+    };
+
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") performSearch();
+    });
+    btnSearch.addEventListener("click", performSearch);
+    
+    input.focus();
+
+    const closeDialog = () => {
+        modalOverlay.classList.remove("visible");
+        resetModalToDefault();
+        modalOverlay.removeEventListener("click", overlayClickHandler);
+    };
+
+    const overlayClickHandler = (e) => {
+        if (e.target === modalOverlay) closeDialog();
+    };
+    modalOverlay.addEventListener("click", overlayClickHandler);
+  }
+
   // Save git remote
   async function saveGitRemote() {
     const url = document.getElementById("git-repo-url")?.value;
@@ -5555,7 +5784,7 @@
       const text = changeObj.text[0];
 
       // Auto-trigger on certain characters
-      const autoTriggerChars = [':', ' ', '-', '!'];
+      const autoTriggerChars = [':', ' ', '-', '!', '.'];
       const lastChar = text[text.length - 1];
 
       // Auto-trigger after typing certain characters or when starting a new word
@@ -6437,6 +6666,12 @@
         toggleSidebar();
       }
 
+      // Ctrl/Cmd + Shift + F - Global Search
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        showGlobalSearchDialog();
+      }
+
       // Ctrl/Cmd + F - Find
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
@@ -6692,12 +6927,15 @@
 
   async function init() {
     initElements();
-    loadSettings();
+    await loadSettings();
     applyTheme();
     applyGitVisibility(); // Apply Git visibility setting
     updateShowHiddenButton();
     initEventListeners();
     initResizeHandle();
+
+    // Load entities for autocomplete
+    loadEntities();
 
     // Set initial sidebar state
     if (isMobile()) {
@@ -6754,7 +6992,7 @@
   }
 
   async function startOnboarding() {
-    if (localStorage.getItem("onboardingCompleted")) return;
+    if (state.onboardingCompleted) return;
 
     let shouldOpenSettings = false;
 
@@ -6773,7 +7011,7 @@
                         <li>Manage version history visually</li>
                     </ul>
                 </div>
-                <p style="font-size: 12px; color: var(--text-secondary);">You can always change this later in Settings.</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">You can change this later in Settings.</p>
             </div>
         `,
         confirmText: "Enable Git Features",
@@ -6782,7 +7020,8 @@
 
     if (useGit) {
         // User chose to enable (default)
-        localStorage.setItem("gitIntegrationEnabled", "true");
+        state.gitIntegrationEnabled = true;
+        saveSettings();
         applyGitVisibility();
 
         // Step 3: Initialize Git (if needed)
@@ -6828,27 +7067,58 @@
             }
         }
 
-        // Step 5: Connect to GitHub (if needed)
-        if (gitState.isInitialized && !gitState.hasRemote) {
-          const connectResult = await showConfirmDialog({
-            title: "Step 3: Connect to Cloud",
-            message: `
-              <div style="text-align: center;">
-                <span class="material-icons" style="font-size: 48px; color: var(--text-secondary);">cloud_upload</span>
-                <p>Connect to GitHub to backup your configuration and track history.</p>
-              </div>
-            `,
-            confirmText: "Connect GitHub",
-            cancelText: "Skip"
-          });
+        // Step 5: Connect to GitHub (Login)
+        let isLoggedIn = false;
+        try {
+            const creds = await fetchWithAuth(API_BASE, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "git_get_credentials" }),
+            });
+            isLoggedIn = creds.has_credentials;
+        } catch (e) {}
 
-          if (connectResult) {
-            shouldOpenSettings = true;
-          }
+        if (!isLoggedIn) {
+            const loginResult = await showConfirmDialog({
+                title: "Step 3: Login to GitHub",
+                message: `
+                    <div style="text-align: center;">
+                        <span class="material-icons" style="font-size: 48px; color: var(--text-secondary);">login</span>
+                        <p>Login to GitHub to sync your configuration to the cloud.</p>
+                    </div>
+                `,
+                confirmText: "Login",
+                cancelText: "Skip"
+            });
+
+            if (loginResult) {
+                const success = await showGithubDeviceFlowLogin();
+                if (success) isLoggedIn = true;
+            }
+        }
+
+        // Step 6: Create Repository (if logged in and no remote)
+        if (isLoggedIn && !gitState.hasRemote) {
+            const createResult = await showConfirmDialog({
+                title: "Step 4: Create Repository",
+                message: `
+                    <div style="text-align: center;">
+                        <span class="material-icons" style="font-size: 48px; color: var(--accent-color);">add_circle_outline</span>
+                        <p>Create a new private repository on GitHub to store your backups.</p>
+                    </div>
+                `,
+                confirmText: "Create Repo",
+                cancelText: "Skip"
+            });
+
+            if (createResult) {
+                await showCreateGithubRepoDialog();
+            }
         }
     } else {
         // User chose to disable
-        localStorage.setItem("gitIntegrationEnabled", "false");
+        state.gitIntegrationEnabled = false;
+        saveSettings();
         applyGitVisibility();
     }
 
@@ -6878,7 +7148,8 @@
       confirmText: "Start Editing"
     });
 
-    localStorage.setItem("onboardingCompleted", "true");
+    state.onboardingCompleted = true;
+    saveSettings();
 
     // If they chose to connect GitHub, open the settings modal now
     if (shouldOpenSettings) {

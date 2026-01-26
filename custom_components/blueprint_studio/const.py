@@ -2,4 +2,4 @@
 
 DOMAIN = "blueprint_studio"
 NAME = "Blueprint Studio"
-VERSION = "1.0.0"
+VERSION = "1.4.0"

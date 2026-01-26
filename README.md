@@ -124,8 +124,10 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 - **Active Line Highlighting** - See your cursor position clearly 🎯
 - **Bracket Matching** - Automatic bracket highlighting 🧩
 - **Auto-close Brackets** - Automatic bracket completion ⌨️
+- **Smart Autocomplete** - Intelligent suggestions for Home Assistant entities (type `light.` to see lights), keys, and values 🧠
 - **YAML Linting** - Real-time YAML syntax validation with error highlighting ❌
 - **Professional Search** - Floating Find/Replace widget with navigation controls (`Ctrl+F`, `Ctrl+H`) 🔎
+- **Global Search** - Search across all files in your configuration with `Ctrl+Shift+F` 🌐
 
 ### UI Features 🎨
 - **Dark Theme** - VS Code-inspired dark theme for eye-friendly editing 🌙
@@ -197,6 +199,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 | `Ctrl+Shift+]` | Next Tab ➡️ |
 | `Ctrl+Shift+[` | Previous Tab ⬅️ |
 | `Ctrl+F` / `Cmd+F` | Find in file 🔎 |
+| `Ctrl+Shift+F` / `Cmd+Shift+F` | Global Search 🌐 |
 | `Ctrl+H` / `Cmd+H` | Replace in file 🔄 |
 | `Ctrl+S` / `Cmd+S` | Save file 💾 |
 | `Ctrl+Shift+S` / `Cmd+Shift+S` | Save all files 💾📁 |

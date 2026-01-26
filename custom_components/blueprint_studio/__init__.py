@@ -54,10 +54,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Initialize credential storage
     store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    credentials = await store.async_load()
+    data = await store.async_load()
 
     config_dir = Path(hass.config.config_dir)
-    api_view = BlueprintStudioApiView(config_dir, store, credentials)
+    api_view = BlueprintStudioApiView(config_dir, store, data)
     hass.http.register_view(api_view)
 
     await hass.http.async_register_static_paths([
@@ -98,7 +98,7 @@ class BlueprintStudioApiView(HomeAssistantView):
     # File extensions allowed for editing
     ALLOWED_EXTENSIONS = {
         ".yaml", ".yml", ".json", ".py", ".js", ".css", ".html", ".txt",
-        ".md", ".conf", ".cfg", ".ini", ".sh", ".log", ".gitignore",
+        ".md", ".conf", ".cfg", ".ini", ".sh", ".log", ".gitignore", ".jinja2",
         # New image extensions
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp", ".ico",
         # New document/archive extensions
@@ -133,11 +133,21 @@ class BlueprintStudioApiView(HomeAssistantView):
         "custom_components",
     }
 
-    def __init__(self, config_dir: Path, store: Store, credentials: dict | None) -> None:
+    def __init__(self, config_dir: Path, store: Store, data: dict | None) -> None:
         """Initialize the view."""
         self.config_dir = config_dir.resolve()
         self.store = store
-        self.credentials = credentials or {}
+        self.data = data or {}
+        
+        # Migrate legacy credentials (flat structure -> nested)
+        if "username" in self.data and "credentials" not in self.data:
+            self.data = {
+                "credentials": {
+                    "username": self.data.pop("username"),
+                    "token": self.data.pop("token", None)
+                },
+                "settings": {}
+            }
 
     def _is_path_safe(self, path: str) -> bool:
         """Check if the path is safe (no path traversal)."""
@@ -201,7 +211,8 @@ class BlueprintStudioApiView(HomeAssistantView):
             path = params.get("path")
             if not path:
                 return self.json_message("Missing path", status_code=400)
-            return await self._download_folder(hass, path)
+        if action == "get_settings":
+            return self.json(self.data.get("settings", {}))
 
         return self.json_message("Unknown action", status_code=400)
 
@@ -218,6 +229,12 @@ class BlueprintStudioApiView(HomeAssistantView):
             return self.json_message("Missing action", status_code=400)
 
         hass = request.app["hass"]
+
+        if action == "save_settings":
+            settings = data.get("settings", {})
+            self.data["settings"] = settings
+            await self.store.async_save(self.data)
+            return self.json({"success": True})
 
         if action == "download_multi":
             paths = data.get("paths", [])
@@ -287,6 +304,23 @@ class BlueprintStudioApiView(HomeAssistantView):
             if not path or not zip_data:
                 return self.json_message("Missing path or zip_data", status_code=400)
             return await self._upload_folder(hass, path, zip_data)
+
+        if action == "get_entities":
+            states = hass.states.async_all()
+            entities = []
+            for state in states:
+                entities.append({
+                    "entity_id": state.entity_id,
+                    "friendly_name": state.attributes.get("friendly_name"),
+                    "icon": state.attributes.get("icon")
+                })
+            return self.json({"entities": entities})
+
+        if action == "global_search":
+            query = data.get("query")
+            case_sensitive = data.get("case_sensitive", False)
+            results = await hass.async_add_executor_job(self._global_search, query, case_sensitive)
+            return self.json(results)
 
         if action == "git_status":
             should_fetch = data.get("fetch", False)
@@ -429,6 +463,63 @@ class BlueprintStudioApiView(HomeAssistantView):
         except Exception:
             pass
         return total
+
+    def _global_search(self, query: str, case_sensitive: bool = False) -> list[dict[str, Any]]:
+        """Search for text in all allowed files."""
+        results = []
+        if not query:
+            return results
+
+        limit = 100 # Max results
+        count = 0
+
+        if not case_sensitive:
+            query = query.lower()
+
+        for root, dirs, files in os.walk(self.config_dir):
+            # Filter directories
+            dirs[:] = [
+                d for d in dirs
+                if d not in self.EXCLUDED_PATTERNS and not d.startswith(".")
+            ]
+
+            for name in files:
+                if name.startswith("."):
+                    continue
+                
+                file_path = Path(root) / name
+                
+                if not self._is_file_allowed(file_path):
+                    continue
+
+                if file_path.suffix.lower() in self.BINARY_EXTENSIONS:
+                    continue
+
+                try:
+                    rel_path = str(Path(root).relative_to(self.config_dir) / name)
+                    
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        for i, line in enumerate(f, 1):
+                            line_search = line if case_sensitive else line.lower()
+                            if query in line_search:
+                                results.append({
+                                    "path": rel_path,
+                                    "line": i,
+                                    "content": line.strip()
+                                })
+                                count += 1
+                                if count >= limit:
+                                    return results
+                except Exception:
+                    pass
+                
+                if count >= limit:
+                    break
+            
+            if count >= limit:
+                break
+
+        return results
 
     def _list_files(self, show_hidden: bool = False) -> list[dict[str, Any]]:
         """List files recursively."""
@@ -1404,11 +1495,12 @@ class BlueprintStudioApiView(HomeAssistantView):
             # If we have stored credentials and this is a push/pull/fetch command,
             # configure git to use our credentials
             needs_auth = any(cmd in args for cmd in ["push", "pull", "fetch", "clone"])
+            creds = self.data.get("credentials", {})
 
-            if needs_auth and self.credentials and "username" in self.credentials and "token" in self.credentials:
-                username = self.credentials["username"]
+            if needs_auth and creds and "username" in creds and "token" in creds:
+                username = creds["username"]
                 # Decode the base64-encoded token
-                token = base64.b64decode(self.credentials["token"]).decode()
+                token = base64.b64decode(creds["token"]).decode()
 
                 # Create a temporary credential helper script
                 helper_script = self.config_dir / ".git_credential_helper.sh"
@@ -1707,12 +1799,13 @@ desktop.ini
                 return self.json_message("Repository name is required", status_code=400)
 
             # Check if credentials exist
-            if not self.credentials or "token" not in self.credentials:
+            creds = self.data.get("credentials", {})
+            if not creds or "token" not in creds:
                 return self.json_message("Not authenticated. Please login first.", status_code=401)
 
             # Decode token
-            token = base64.b64decode(self.credentials["token"]).decode()
-            username = self.credentials.get("username", "")
+            token = base64.b64decode(creds["token"]).decode()
+            username = creds.get("username", "")
 
             # Create repository on GitHub
             async with aiohttp.ClientSession() as session:
@@ -1802,12 +1895,13 @@ desktop.ini
 
     def _git_get_credentials(self) -> web.Response:
         """Get saved git credentials (username only, token masked)."""
-        if self.credentials and "username" in self.credentials:
+        creds = self.data.get("credentials", {})
+        if creds and "username" in creds:
             # Decode token for use, but don't send it back to client
             return self.json({
                 "success": True,
                 "has_credentials": True,
-                "username": self.credentials.get("username", "")
+                "username": creds.get("username", "")
             })
         return self.json({
             "success": True,
@@ -1831,15 +1925,16 @@ desktop.ini
 
             # Store credentials persistently only if remember_me is True
             if remember_me:
-                self.credentials = {
+                self.data["credentials"] = {
                     "username": username,
                     "token": base64.b64encode(token.encode()).decode()  # Basic encoding
                 }
-                await self.store.async_save(self.credentials)
+                await self.store.async_save(self.data)
             else:
                 # Clear stored credentials if not remembering
-                self.credentials = {}
-                await self.store.async_save(self.credentials)
+                if "credentials" in self.data:
+                    del self.data["credentials"]
+                await self.store.async_save(self.data)
 
             # Always keep in memory for current session
             if DOMAIN not in hass.data:
@@ -1872,8 +1967,9 @@ desktop.ini
         """Clear git credentials and sign out."""
         try:
             # Clear stored credentials
-            self.credentials = {}
-            await self.store.async_save(self.credentials)
+            if "credentials" in self.data:
+                del self.data["credentials"]
+            await self.store.async_save(self.data)
 
             # Clear in-memory credentials
             if DOMAIN in hass.data and "git_credentials" in hass.data[DOMAIN]:
