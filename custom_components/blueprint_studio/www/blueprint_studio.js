@@ -682,7 +682,7 @@
   // List of extensions considered text files that CodeMirror can handle
   const TEXT_FILE_EXTENSIONS = new Set([
     "yaml", "yml", "json", "py", "js", "css", "html", "txt",
-    "md", "conf", "cfg", "ini", "sh", "log", "svg", "jinja2" // SVG is XML, hence text
+    "md", "conf", "cfg", "ini", "sh", "log", "svg", "jinja", "jinja2", "j2", 
   ]);
 
   function isTextFile(filename) {
@@ -712,6 +712,8 @@
       cfg: { icon: "settings", class: "default" },
       ini: { icon: "settings", class: "default" },
       jinja2: { icon: "integration_instructions", class: "default" },
+      jinja: { icon: "integration_instructions", class: "default" },  
+      j2: { icon: "integration_instructions", class: "default" },  
     };
     return iconMap[ext] || { icon: "insert_drive_file", class: "default" };
   }
@@ -739,6 +741,8 @@
       cfg: yamlMode,
       ini: "yaml",
       jinja2: yamlMode,
+      jinja: yamlMode,
+      j2: yamlMode,
     };
     return modeMap[ext] || null;
   }
@@ -760,7 +764,9 @@
       conf: "Config",
       cfg: "Config",
       ini: "INI",
-      jinja2: "Jinja2", 
+      jinja2: "Jinja2",
+      jinja: "Jinja",
+      j2: "J2",   
     };
     return nameMap[ext] || "Plain Text";
   }

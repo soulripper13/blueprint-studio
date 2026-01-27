@@ -98,7 +98,7 @@ class BlueprintStudioApiView(HomeAssistantView):
     # File extensions allowed for editing
     ALLOWED_EXTENSIONS = {
         ".yaml", ".yml", ".json", ".py", ".js", ".css", ".html", ".txt",
-        ".md", ".conf", ".cfg", ".ini", ".sh", ".log", ".gitignore", ".jinja2",
+        ".md", ".conf", ".cfg", ".ini", ".sh", ".log", ".gitignore", ".jinja2", ".jinja", ".j2", 
         # New image extensions
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp", ".ico",
         # New document/archive extensions
