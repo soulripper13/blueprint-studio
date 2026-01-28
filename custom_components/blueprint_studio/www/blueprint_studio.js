@@ -751,7 +751,7 @@
   // List of extensions considered text files that CodeMirror can handle
   const TEXT_FILE_EXTENSIONS = new Set([
     "yaml", "yml", "json", "py", "js", "css", "html", "txt",
-    "md", "conf", "cfg", "ini", "sh", "log", "svg", "jinja2", "jinja", "j2"
+    "md", "conf", "cfg", "ini", "sh", "log", "svg", "jinja2", "jinja", "j2",
     "pem", "crt", "key", "cpp", "h", "gitignore", "lock"
   ]);
 
