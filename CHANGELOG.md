@@ -7,257 +7,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.5.0] - 2026-01-28
+## [2.0.0] - 2026-01-30
 
 ### ✨ New Features
-*   **Command Palette**: Access all Blueprint Studio features instantly with `Ctrl+K`. Search for commands like "Save All", "New File", "Switch Theme", and more.
-*   **Commit History**: New panel to browse recent commits, view full color-coded diffs, and track your configuration changes over time.
-*   **YAML Snippets**: Intelligent templates for common Home Assistant patterns. Type `snip:` to see suggestions for Automations, Scripts, and Template Sensors.
-*   **Advanced Global Search**: Upgraded search with support for Regular Expressions and Case Sensitivity.
-*   **Expanded File Support**:
-    *   **Certificates**: Added support for `.pem`, `.crt`, `.key` (text) and `.der` (binary).
-    *   **C++**: Added syntax highlighting for `.cpp` and `.h` files (ESPHome).
-    *   **Databases**: Added safe handling for `.db` and `.sqlite` files.
-    *   **Firmware/Binary**: Added support for `.bin`, `.ota`, `.tar`, `.gz`.
-    *   **Templates**: Added dedicated support for `.jinja2` files.
-    *   **Protected Files**: `.ha_run.lock`, `.lock`, and `.gitignore` are now viewable in the editor but read-only to prevent accidental corruption.
-*   **Custom Editor Colors**:
-    *   **Syntax Highlighting**: New settings section to customize font colors for comments, keywords, strings, variables, and more.
-    *   **Theme Independent**: Custom colors apply to both Light and Dark themes.
-*   **Self-Healing Git Integration**:
-    *   **Sync Recovery**: Automatic detection of stuck syncs (rebasing/merging/unmerged) with a one-click "Abort & Reset" tool.
-    *   **Branch Repair**: Intelligent detection of local `master` vs GitHub `main` mismatches with an automated migration tool.
-    *   **Intelligent Default Branch Swap**: If a branch cannot be deleted because it is the "Default", Blueprint Studio can now automatically swap the default branch via the GitHub API.
-    *   **Remote Cleanup**: New tools to delete legacy branches from GitHub directly from the UI.
-    *   **Diverged History Resolution**: New "Force Push" and "Hard Reset" tools for resolving complex history conflicts.
-*   **Visual Polishing**:
-    *   **Loading Skeletons**: Replaced generic spinners with modern skeleton screens for the file explorer.
-    *   **Enhanced Loading States**: Better visual feedback on buttons and overlays during long-running operations.
 
-### 🐞 Bug Fixes
-*   **Auth Refresh Logic**: Hardened the authentication token refresh process to prevent session-related errors during long Git operations.
-*   **UI Resilience**: Fixed issues where file lists would overwrite warning messages in the Git panel.
+#### 🧠 AI Studio Copilot
+Bring AI intelligence directly into your Home Assistant workflow with flexible provider support and a powerful local logic engine.
+*   **Dual-Mode Intelligence**:
+    *   **Cloud Mode**: Native integration for **Gemini** (defaulting to `gemini-2.0-flash-exp`) and **OpenAI** GPT models. System prompts strictly enforce 2024+ Home Assistant best practices (e.g., plural `triggers:`, mandatory `id:` fields, `metadata: {}` blocks).
+    *   **Local Logic Engine**: A robust, privacy-first fallback that parses natural language locally to generate valid YAML without any external API calls.
+*   **Context-Aware Analysis**: The AI reads your currently active file to provide suggestions that match your specific configuration structure.
+*   **Smart Trigger Detection**: Local parser automatically extracts complex triggers from natural language:
+    *   **Time**: Handles AM/PM, "at 5pm", and multiple time slots.
+    *   **State**: Detects motion, door/window events, and generic on/off changes.
+    *   **Numeric**: Parses "above 25 degrees", "humidity under 50%", etc.
+*   **Real-time Structural Analysis**: The "Fix my error" feature uses a custom YAML loader to report exact line numbers for:
+    *   Legacy syntax (`service:` vs `action:`, `platform:` triggers).
+    *   Singular keys (`trigger:` vs `triggers:`).
+    *   Malformed entity IDs and missing automation IDs.
+
+#### 🎭 Intelligent Scene & Script Generation
+*   **7 Smart Scene Presets**:
+    *   **Morning**: 100% brightness, 4000K (Cool White), `mdi:weather-sunny`.
+    *   **Evening**: 40% brightness, 2700K (Warm White), `mdi:weather-night`.
+    *   **Movie**: 10% brightness, Deep Blue RGB, `mdi:movie`.
+    *   **Reading**: 80% brightness, 4000K, `mdi:book-open`.
+    *   **Romantic**: 20% brightness, Soft Pink/Red, `mdi:heart`.
+    *   **Party**: 100% brightness, Vibrant Magenta, `mdi:party-popper`.
+    *   **Relax**: 50% brightness, 2700K, `mdi:sofa`.
+*   **Multi-Step Script Logic**: Automatically detects sequences ("then", "after", "wait") to generate `sequence:` blocks with precise `delay:` actions (hours/minutes/seconds).
+*   **Parallel Execution Detection**: Phrases like "turn on all lights" trigger parallel execution mode for optimized performance.
+*   **Advanced Domain Support**:
+    *   **100+ Synonyms**: Maps terms like "chandelier" -> `light`, "roomba" -> `vacuum`, "deadbolt" -> `lock`.
+    *   **Area Awareness**: Entity scoring algorithm boosts matches found in the mentioned room (e.g., "kitchen lights" prioritizes `light.kitchen_main`).
+
+#### 📝 Jinja Template Support
+*   **Advanced Editor**: Full syntax highlighting for `.jinja`, `.jinja2`, and `.j2` files.
+*   **Distinct Syntax Coloring**: Brackets (`{{`, `{%`), keywords (`if`, `for`), variables, and operators are now colored distinctly from the surrounding YAML or text.
+*   **Intelligent Validation**: dedicated validator checks for:
+    *   Missing quotes in `states()` (e.g., `states(sensor.temp)` -> `states('sensor.temp')`).
+    *   Wrong bracket usage (`{{{` -> `{{`).
+    *   Missing filter pipes.
+*   **Smart Suggestions**: Context-aware autocomplete for loops (`{% for %}`), time functions (`now()`), and state attributes.
+
+#### 🎨 Professional UI Customization
+*   **6 Theme Presets**: Dark (VS Code style), Light, High Contrast, Solarized (Dark/Light), Ocean, and Dracula.
+*   **Custom Accent Colors**: 8 vibrant options (Blue, Purple, Pink, Cyan, etc.) with automatic hover color generation.
+*   **Editor Personalization**: Adjustable font size (10-24px), 7 programming font families (Fira Code, JetBrains Mono, etc.), word wrap toggle, and whitespace visibility.
+*   **File Tree Customization**: Compact mode for dense listings and toggleable file type icons.
+
+#### 💾 Advanced File Management
+*   **Configurable Auto-Save**: Automatically save files after typing stops (500ms - 5000ms delay).
+*   **Smart Settings Interface**: New tabbed modal for General, Appearance, Editor, and Feature settings.
+*   **Recent Files Limit**: Configurable history depth (5-30 files).
+*   **Entity Explorer Mode**: New "Search Entities" toggle in Global Search (`Ctrl+Shift+F`) to browse the Home Assistant entity registry, view states, and one-click copy IDs into your configuration.
+*   **UUID Generator**: Insert random UUIDs instantly with `Ctrl+Shift+U` or via the Command Palette.
+*   **Filter by Content**: New toggle in the File Explorer sidebar allows filtering the file tree by content (e.g., entity IDs) instead of just filenames.
+*   **Full Theme Selector**: The bottom toolbar theme menu now includes all presets (High Contrast, Solarized, Ocean, Dracula) for quick switching.
+*   **Custom Editor Colors**: Added ability to customize font colors for **Line Numbers** and **Fold Arrows** (collapsible indicators) in the editor.
+
+### 🚀 Improvements
+*   **Editor UX**: Fold icons are now 40% larger and scale proportionally with your chosen font size for better visibility and easier clicking.
+*   **Theme Synchronization**: The bottom toolbar theme selector is now fully synchronized with the main Settings presets, including correct icons and labels for all specific theme modes.
+*   **Slider Visibility**: Improved the visual contrast of settings sliders by updating track colors to ensure they are visible across all light and dark themes.
+*   **Global Search Performance**: Engineered a faster search engine that automatically excludes binary files (`.db`, `.sqlite`, `.zip`) and all hidden folders (starting with `.`), including `.storage` and `.git`.
+*   **Dynamic CSS Architecture**: All themes and accent colors applied via CSS variables for instant preview without reloading.
+*   **Robust Backend API**: New `check_yaml` and `check_jinja` endpoints provide instant feedback to the frontend.
+*   **Self-Healing Git**: Sync recovery tools and automated branch mismatch migration.
+*   **Entity Scoring Algorithm**: improved fuzzy matching logic considers friendly names, entity IDs, and area context for more accurate device selection.
+
+### 🐛 Bug Fixes
+*   **Robust Auto-Save**: Hardened the auto-save feature with background timer cleanup and execution guards to ensure it strictly respects the toggle state and prevents accidental saves after being disabled.
+*   **Real-time Color Updates**: Fixed an issue where changing custom line number or fold gutter colors required a page refresh to apply.
+*   **Double Save**: Resolved a conflict between editor and global keyboard shortcuts that caused files to be saved twice (and two toast notifications) when pressing Ctrl+S.
+*   **Git Toggle Robustness**: Ensured the Git Changes panel and all associated toolbar buttons are completely hidden when the GitHub integration is toggled off.
+*   **Drag-and-Drop Reliability**: Fixed an issue where moving files via drag-and-drop triggered duplicate API calls due to event bubbling, resulting in "Invalid path or exists" error toasts despite successful moves.
+*   **Zero External Dependencies**: Local mode now strictly keeps configuration 100% private.
+*   **Recent Files Logic**: Fixed limit enforcement and persistent storage issues.
+*   **Toast Layering**: Corrected an issue where toast notifications were hidden behind modals by moving them to the highest visual layer (z-index).
+*   **Editor Font Stability**: Corrected font loading race conditions on editor initialization.
+*   **YAML Analysis**: Fixed line/column reporting for complex nested structures.
+
+## [1.5.0] - 2026-01-25
+
+### ✨ New Features
+*   **Command Palette**: Access all Blueprint Studio features instantly with `Ctrl+K`.
+*   **Commit History**: New panel to browse recent commits with color-coded diffs.
+*   **YAML Snippets**: Intelligent templates for common Home Assistant patterns (`snip:`).
+*   **Advanced Global Search**: Support for Regular Expressions and Case Sensitivity.
 
 ## [1.4.0] - 2026-01-25
 
 ### ✨ New Features
-*   **Smart Entity Autocomplete**: The editor now provides intelligent suggestions for Home Assistant entities (e.g., typing `light.` lists all your lights with icons and friendly names).
-*   **Global Search**: Search for text across all files in your configuration directory (`Ctrl+Shift+F`). View matches with context, jump to lines instantly, and filter by file type automatically.
-
-### 🐞 Bug Fixes
-*   **Log Suppression**: Fixed a "Login attempt or request with invalid authentication" warning in Home Assistant logs caused by background Git polling after session expiry. Requests are now strictly validated or aborted on the client side before being sent.
-
-## [1.3.2] - 2026-01-25
-
-### ✨ New Features
-*   **Onboarding Wizard**: A guided tour for new users to initialize their repo, configure ignores, and connect to GitHub.
-*   **Git Integration Choice**: The onboarding wizard now asks if you want to enable Git integration upfront, allowing users to opt-out if they don't need version control.
-*   **Bulk File Operations**: New selection mode allows you to pick multiple files and folders to download as a single, compressed ZIP archive.
-*   **Explorer-Integrated Diff**: Modified files now feature a "Difference" icon directly in the file tree, allowing for instant side-by-side code reviews without leaving the explorer.
-*   **Visual Diff Viewer**: Powerful side-by-side comparison of local changes versus the last Git commit with color-coded highlighting.
-*   **Enhanced Search Experience**: 
-    *   **Live Match Counting**: Instantly see "X of Y" matches as you navigate.
-    *   **Distinct Active Highlight**: The current match stands out in vivid orange for maximum visibility.
-    *   **Smart Search Wrapping**: Navigation now loops between the top and bottom of files with helpful feedback.
-*   **Professional Search & Replace**: A new floating search widget with dedicated Next/Prev and Replace/All functionality (`Ctrl+F`, `Ctrl+H`).
-*   **Optimized .gitignore Manager**: Intelligence added to filter redundant paths (e.g., ignoring a folder automatically prunes individual file rules), keeping your configuration clean.
-*   **Intelligent Git Integration**: UI feedback and background tasks now fully respect the "Enable Git Integration" setting, ensuring a silent experience when disabled.
-*   **Performance & UI Polish**: Optimized diff scrolling, enhanced checkbox logic for cascading selections, and refined theme colors for better readability.
-
-## [1.3.1] - 2026-01-24
-
-### ✨ New Features
-*   **Drag & Drop Reorganization**: Move files and folders by dragging them in the file tree. Supports dropping into folders and back to the root directory, with visual feedback and safety confirmations.
-*   **Drag & Drop Upload**: Upload files from your computer by simply dragging them into the file explorer.
-*   **Quick File Switcher**: Press `Ctrl+P` (or `Cmd+P`) to instantly search and open files by name using fuzzy matching.
-*   **Toggle Sidebar Shortcut**: Use `Ctrl+B` (or `Cmd+B`) to quickly show/hide the file explorer sidebar.
-*   **Tab Switching Shortcuts**: Navigate open tabs with `Ctrl+Tab` (Next) and `Ctrl+Shift+Tab` (Previous).
-
-### 🐞 Bug Fixes
-*   **Copy Naming**: Fixed auto-naming when copying files to preserve the extension (e.g., `file_copy.yaml`).
-*   **macOS App Compatibility**: Resolved an issue where file clicks were unresponsive in the Home Assistant macOS app due to conflicting touch event handlers.
-
-## [1.3.0] - 2026-01-22
-
-### ✨ New Features
-*   **Onboarding Wizard**: A guided tour for new users to initialize their repo, configure ignores, and connect to GitHub.
-*   **Reset Application**: A "Danger Zone" option in Settings to reset app state, clear credentials, or delete the local repo.
-*   **Visual Sync Status**: Real-time arrows (↑/↓) in the Git panel header showing ahead/behind commit counts.
-*   **Advanced .gitignore Editor**: Full interactive tree view with collapsible folders, cascading selection, and file sizes.
-*   **Total Size Calculator**: Real-time calculation of selected files' size in the ignore manager, warning if >100MB.
-*   **Remove Remote**: Ability to delete configured remotes from the Settings UI.
-*   **Restart Home Assistant**: A dedicated button in the toolbar to restart HA with safety confirmation.
-*   **Smart Commit Messages**: Auto-generates default commit messages based on staged files.
-*   **Folder Sizes**: File explorer now displays the size of directories.
-
-### 🚀 Improvements
-*   **Robust Git Operations**: Fixed "not a full refname" and "no tracking info" errors by explicitly targeting branches.
-*   **Auto-Repair**: Detects "index.lock" and corrupt index errors, offering one-click "Clean" or "Repair" buttons.
-*   **Safety Checks**: Proactively prompts to commit staged changes before pushing.
-*   **Clearer Terminology**: Added beginner-friendly tooltips to all Git buttons.
-*   **Persistent Errors**: Error toasts now remain visible until dismissed.
-
-### 🐞 Bug Fixes
-*   **Ignore Manager**: Fixed "File type not allowed" and cascading checkbox logic.
-*   **Hidden Files**: Ensure `.ha_run.lock` and other hidden files are visible for ignoring.
-*   **Upload Z-Index**: Fixed confirmation dialog appearing behind loading overlay.
-
-## [1.2.1] - 2026-01-19
-
-### ✨ New Features
-*   **Pre-Save YAML Validation**: Blueprint Studio now automatically validates your YAML files when you click "Save". If an error is found, you'll be shown a confirmation dialog with the details and an option to "Save Anyway".
-*   **User-Friendly YAML Errors**: Technical YAML error messages are now translated into simple, helpful advice for common issues, improving clarity during validation checks.
-*   **Recent Files Panel**: A new section at the top of the file explorer provides quick access to recently opened files, with a toggle in settings to show/hide it.
-
-### 🚀 Improvements
-*   **File Size Display**: File sizes are now displayed next to filenames in the file explorer.
-*   **Smart "Toggle All" Button**: The "Collapse All" and "Expand All" buttons have been merged into a single dynamic toggle in the file tree header.
-*   **Enhanced Login Flow**: The GitHub login process is more responsive with a "Check Now" button added to the authorization popup.
-*   **Contextual Toast Actions**: Toast notifications now include action buttons (e.g., "Clean & Retry" for Git locks, "Open Git Panel" for no-commits warnings).
-*   **Improved Empty States**: Enhanced the welcome screen with "Create New File" and "Upload File" buttons, and the Git panel's empty state with "Pull" and "Refresh" actions.
-*   **Consistent Confirmation Dialogs**: Replaced native browser `confirm()` with styled modals for Git Reset, Init, and Pull actions.
-*   **Toggle Switch Visibility**: Improved the visibility of toggle switches in their "off" state.
-*   **Pixel-Perfect Icon Centering**: Adjusted CSS to ensure the 'x' icon in toast notifications is perfectly centered.
-*   **Modal Close Button Styling**: The close button in modal headers now blends with the modal background until hovered.
-*   **Toast Action Button Styling**: The background and text color of action buttons in toast notifications have been updated for better visibility and consistency.
-
-### 🐞 Bug Fixes
-*   **OAuth Background Polling**: Fixed a bug where OAuth polling could continue in the background, causing "slow down" errors, especially after navigating away from the panel.
-*   **"Unstage All" Crash**: Resolved an issue causing a crash when using "Unstage All" in new Git repositories without prior commits.
-*   **Cache Invalidation**: Implemented a cache-busting mechanism for `blueprint_studio.js` to ensure the latest updates are loaded.
+*   **Smart Entity Autocomplete**: Intelligent suggestions for Home Assistant entities with icons.
+*   **Global Search**: Cross-file text search with context and filtering.
 
 ## [1.2.0] - 2026-01-18
 
 ### 🌟 Added - GitHub Integration & Advanced Features
-
-- **Automatic Git Status Refresh** - Git panel updates automatically without manual refresh ⚡
-  - Auto-refresh after file save operations
-  - Auto-refresh after file create operations
-  - Auto-refresh after file delete operations
-  - Auto-refresh after file rename operations
-  - Auto-refresh after file copy operations
-  - Auto-refresh after file upload operations
-  - Auto-refresh after folder upload operations
-  - Git Changes panel appears/disappears automatically based on changes
-- **Periodic Git Polling** - Detects changes made outside Blueprint Studio 🔄
-  - Polls git status every 30 seconds automatically
-  - Catches changes from terminal, other editors, or Home Assistant
-  - Only runs when Git features are enabled
-  - Silent background operation with no UI interruption
-- **Pin Favorites** - Quick access to frequently used files 📌
-  - Pin any file to the top of the sidebar for instant access
-  - Click the pin icon next to any file to add/remove from favorites
-  - Favorites persist across restarts in localStorage
-  - Visual indicator with orange pin icon for pinned files
-  - Dedicated favorites panel at the top of the file tree
-- **Smart .gitignore Template** - Prevents large files from being committed 🛡️
-  - Automatically excludes `piper/` directory (TTS model files)
-  - Automatically excludes `*.onnx` files (large ML models)
-  - Automatically excludes `.ha_run.lock` (runtime lock file)
-  - Prevents GitHub file size limit errors (100 MB limit)
-  - Applied when initializing new git repositories
-- **Create GitHub Repository** - One-click repository creation directly from Blueprint Studio
-  - New "Create New GitHub Repository" button in Git Settings modal
-  - Modal dialog for entering repository name, description, and visibility
-  - Automatic repository creation on GitHub via API
-  - Auto-initialization of local git repository
-  - Auto-configuration of remote origin
-  - Input validation for repository names
-  - Error handling for existing repositories
-- **Smart Sidebar Resize** - Automatic sidebar width adjustment for Git integration
-  - Sidebar auto-resizes to 360px when Git panel becomes visible (if currently < 340px)
-  - Ensures stage buttons ("Stage Selected", "Stage All", "Unstage All", "Commit") fit cleanly
-  - Increased default sidebar width from 280px to 320px for better content display
-  - Only applies on desktop (respects mobile responsive behavior)
-  - Respects user's manual resize preferences (no auto-resize if already ≥ 340px)
-- **GitHub Logo Integration** - Professional GitHub branding in UI 🎨
-  - GitHub logo in Git Settings modal header
-  - GitHub logo on OAuth login button
-  - Consistent GitHub branding throughout Git features
-- **New API endpoint:** `github_create_repo` for repository creation
-- **New API endpoint:** `git_push_only` for pushing without committing
-- **Complete GitHub Integration** - Full push/pull/commit/stage workflow
-  - GitHub OAuth device flow authentication
-  - Personal Access Token (PAT) support
-  - Stage/unstage individual files or all changes
-  - Commit with custom messages
-  - Push to remote repositories
-  - Detailed error messages from GitHub API
-  - Real-time git status updates
-
-### 📚 Documentation
-
-- Updated README with Git Integration and Pin Favorites features
-- Updated CHANGELOG with comprehensive v1.2.0 release notes
-- Added details about periodic polling and smart .gitignore
-- Added comprehensive release notes (`RELEASE_NOTES_v1.2.0.md`)
-
-### Community Requests
-
-- ✅ GitHub integration for push/pull (Most requested feature)
-- ✅ Lightweight alternative to VSCode
-- ✅ Mobile-friendly interface
-- ✅ Pin frequently used files for quick access
+*   **GitHub Integration**: Full push/pull/commit/stage workflow with OAuth.
+*   **Pin Favorites**: Quick access to frequently used files in the sidebar.
+*   **Smart .gitignore**: Automatically excludes large models and lock files.
 
 ## [1.0.0] - 2024-12-05
 
 ### Added
-- Initial release
-- VS Code-like file editor interface
-- Multi-tab file editing
-- File tree explorer with expandable folders
-- Syntax highlighting for YAML, JSON, Python, JavaScript, HTML, CSS, Markdown, Shell
-- Real-time YAML validation and linting
-- File management operations (create, delete, rename, copy)
-- Upload and download files
-- Folder download as ZIP
-- Folder upload from ZIP
-- Search and replace functionality
-- Keyboard shortcuts (Ctrl+S, Ctrl+F, Ctrl+H, etc.)
-- Auto-close brackets
-- Code folding
-- Line numbers
-- Active line highlighting
-- Bracket matching
-- Dark theme
-- Status bar with cursor position and file type
-- Toast notifications
-- Resizable sidebar
-- File search in explorer
-- Path traversal protection
-- Admin-only access
-- Protected files feature
-- Allowed file extensions validation
-
-### Security
-- Path traversal protection
-- Admin authentication required
-- File extension whitelist
-- Protected paths for critical files
-- Directory exclusion for sensitive folders
-
-## [0.1.0] - Beta
-
-### Added
-- Beta testing version
-- Core editor functionality
-- Basic file operations
+- Initial release with VS Code-like interface and multi-tab editing.
+- Syntax highlighting and real-time YAML validation.
 
 ---
 
 ## Version History
 
+- **2.0.0** - AI Copilot, Intelligent Scenes, Advanced Scripts & UI Customization
 - **1.5.0** - Command Palette, Commit History & Regex Search
 - **1.4.0** - Smart Autocomplete, Global Search & Bug Fixes
-- **1.3.2** - Visual Diff, Bulk Download & UX Polish
-- **1.2.1** - Enhanced UX, YAML Validation & Bug Fixes
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
-- **0.1.0** - Beta version
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.0.0
 [1.5.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v1.5.0
 [1.4.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v1.4.0
 [1.2.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v1.2.0
 [1.0.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v1.0.0
-[0.1.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/0.1.0

@@ -16,6 +16,227 @@
   const MAX_RECENT_FILES = 10;
 
   // ============================================
+  // Theme Presets
+  // ============================================
+  const THEME_PRESETS = {
+    dark: {
+      name: "Dark (Default)",
+      colors: {
+        bgPrimary: "#1e1e1e",
+        bgSecondary: "#252526",
+        bgTertiary: "#2d2d30",
+        bgHover: "#3c3c3c",
+        bgActive: "#094771",
+        textPrimary: "#cccccc",
+        textSecondary: "#858585",
+        textMuted: "#6e6e6e",
+        borderColor: "#3c3c3c",
+        accentColor: "#0e639c",
+        accentHover: "#1177bb",
+        successColor: "#4ec9b0",
+        warningColor: "#dcdcaa",
+        errorColor: "#f14c4c",
+        iconFolder: "#dcb67a",
+        iconYaml: "#cb4b16",
+        iconJson: "#cbcb41",
+        iconPython: "#3572a5",
+        iconJs: "#f1e05a",
+        iconDefault: "#858585",
+        modalBg: "#2d2d30",
+        inputBg: "#3c3c3c",
+        shadowColor: "rgba(0, 0, 0, 0.5)",
+        cmTheme: "material-darker"
+      }
+    },
+    light: {
+      name: "Light",
+      colors: {
+        bgPrimary: "#ffffff",
+        bgSecondary: "#f3f3f3",
+        bgTertiary: "#e8e8e8",
+        bgHover: "#e0e0e0",
+        bgActive: "#0060c0",
+        textPrimary: "#1e1e1e",
+        textSecondary: "#616161",
+        textMuted: "#9e9e9e",
+        borderColor: "#d4d4d4",
+        accentColor: "#0066b8",
+        accentHover: "#0078d4",
+        successColor: "#16825d",
+        warningColor: "#bf8803",
+        errorColor: "#e51400",
+        iconFolder: "#c09553",
+        iconYaml: "#a83232",
+        iconJson: "#b89500",
+        iconPython: "#2b5b84",
+        iconJs: "#b8a000",
+        iconDefault: "#616161",
+        modalBg: "#ffffff",
+        inputBg: "#ffffff",
+        shadowColor: "rgba(0, 0, 0, 0.2)",
+        cmTheme: "default"
+      }
+    },
+    highContrast: {
+      name: "High Contrast",
+      colors: {
+        bgPrimary: "#000000",
+        bgSecondary: "#0c0c0c",
+        bgTertiary: "#1a1a1a",
+        bgHover: "#333333",
+        bgActive: "#ffff00",
+        textPrimary: "#ffffff",
+        textSecondary: "#cccccc",
+        textMuted: "#999999",
+        borderColor: "#ffffff",
+        accentColor: "#00ffff",
+        accentHover: "#66ffff",
+        successColor: "#00ff00",
+        warningColor: "#ffff00",
+        errorColor: "#ff0000",
+        iconFolder: "#ffff00",
+        iconYaml: "#ff9900",
+        iconJson: "#ffff00",
+        iconPython: "#00ff00",
+        iconJs: "#ffff00",
+        iconDefault: "#cccccc",
+        modalBg: "#0c0c0c",
+        inputBg: "#000000",
+        shadowColor: "rgba(255, 255, 255, 0.3)",
+        cmTheme: "default"
+      }
+    },
+    solarizedDark: {
+      name: "Solarized Dark",
+      colors: {
+        bgPrimary: "#002b36",
+        bgSecondary: "#073642",
+        bgTertiary: "#586e75",
+        bgHover: "#073642",
+        bgActive: "#268bd2",
+        textPrimary: "#839496",
+        textSecondary: "#93a1a1",
+        textMuted: "#586e75",
+        borderColor: "#073642",
+        accentColor: "#268bd2",
+        accentHover: "#2aa198",
+        successColor: "#859900",
+        warningColor: "#b58900",
+        errorColor: "#dc322f",
+        iconFolder: "#b58900",
+        iconYaml: "#cb4b16",
+        iconJson: "#b58900",
+        iconPython: "#2aa198",
+        iconJs: "#b58900",
+        iconDefault: "#93a1a1",
+        modalBg: "#073642",
+        inputBg: "#002b36",
+        shadowColor: "rgba(0, 0, 0, 0.5)",
+        cmTheme: "default"
+      }
+    },
+    solarizedLight: {
+      name: "Solarized Light",
+      colors: {
+        bgPrimary: "#fdf6e3",
+        bgSecondary: "#eee8d5",
+        bgTertiary: "#e8e0c8",
+        bgHover: "#d4ceb6",
+        bgActive: "#268bd2",
+        textPrimary: "#657b83",
+        textSecondary: "#586e75",
+        textMuted: "#93a1a1",
+        borderColor: "#e8e0c8",
+        accentColor: "#268bd2",
+        accentHover: "#2aa198",
+        successColor: "#859900",
+        warningColor: "#b58900",
+        errorColor: "#dc322f",
+        iconFolder: "#b58900",
+        iconYaml: "#cb4b16",
+        iconJson: "#b58900",
+        iconPython: "#2aa198",
+        iconJs: "#b58900",
+        iconDefault: "#586e75",
+        modalBg: "#eee8d5",
+        inputBg: "#fdf6e3",
+        shadowColor: "rgba(0, 0, 0, 0.2)",
+        cmTheme: "default"
+      }
+    },
+    ocean: {
+      name: "Ocean",
+      colors: {
+        bgPrimary: "#0f1419",
+        bgSecondary: "#131d27",
+        bgTertiary: "#1a2634",
+        bgHover: "#243447",
+        bgActive: "#1da1f2",
+        textPrimary: "#e6eef7",
+        textSecondary: "#8899a6",
+        textMuted: "#5b7083",
+        borderColor: "#243447",
+        accentColor: "#1da1f2",
+        accentHover: "#4db8ff",
+        successColor: "#17bf63",
+        warningColor: "#ffad1f",
+        errorColor: "#e0245e",
+        iconFolder: "#ffad1f",
+        iconYaml: "#f45d22",
+        iconJson: "#ffad1f",
+        iconPython: "#17bf63",
+        iconJs: "#ffad1f",
+        iconDefault: "#8899a6",
+        modalBg: "#1a2634",
+        inputBg: "#131d27",
+        shadowColor: "rgba(0, 0, 0, 0.5)",
+        cmTheme: "material-darker"
+      }
+    },
+    dracula: {
+      name: "Dracula",
+      colors: {
+        bgPrimary: "#282a36",
+        bgSecondary: "#44475a",
+        bgTertiary: "#6272a4",
+        bgHover: "#44475a",
+        bgActive: "#bd93f9",
+        textPrimary: "#f8f8f2",
+        textSecondary: "#bfbfbf",
+        textMuted: "#6272a4",
+        borderColor: "#44475a",
+        accentColor: "#bd93f9",
+        accentHover: "#ff79c6",
+        successColor: "#50fa7b",
+        warningColor: "#f1fa8c",
+        errorColor: "#ff5555",
+        iconFolder: "#ffb86c",
+        iconYaml: "#ff79c6",
+        iconJson: "#f1fa8c",
+        iconPython: "#50fa7b",
+        iconJs: "#f1fa8c",
+        iconDefault: "#bfbfbf",
+        modalBg: "#44475a",
+        inputBg: "#282a36",
+        shadowColor: "rgba(0, 0, 0, 0.5)",
+        cmTheme: "material-darker"
+      }
+    }
+  };
+
+  // Accent color options
+  const ACCENT_COLORS = [
+    { name: "Blue", value: "#0e639c", lightValue: "#0066b8" },
+    { name: "Purple", value: "#7c4dff", lightValue: "#651fff" },
+    { name: "Pink", value: "#ff4081", lightValue: "#c60055" },
+    { name: "Red", value: "#ff5252", lightValue: "#d32f2f" },
+    { name: "Orange", value: "#ff9100", lightValue: "#ef6c00" },
+    { name: "Green", value: "#4caf50", lightValue: "#2e7d32" },
+    { name: "Teal", value: "#00bfa5", lightValue: "#00897b" },
+    { name: "Cyan", value: "#00b8d4", lightValue: "#0097a7" }
+  ];
+
+  // ============================================
   // Home Assistant Autocomplete Schema
   // ============================================
   let HA_ENTITIES = [];
@@ -570,38 +791,116 @@
       CodeMirror.defineMode("ha-yaml", function(config) {
         const yamlMode = CodeMirror.getMode(config, "yaml");
 
-        return CodeMirror.overlayMode(yamlMode, {
+        return {
+          startState: function() {
+            return {
+              yamlState: CodeMirror.startState(yamlMode),
+              inJinja: false,
+              jinjaType: null
+            };
+          },
+          copyState: function(state) {
+            return {
+              yamlState: CodeMirror.copyState(yamlMode, state.yamlState),
+              inJinja: state.inJinja,
+              jinjaType: state.jinjaType
+            };
+          },
           token: function(stream, state) {
-            // Highlight Home Assistant YAML tags
-            if (stream.match(/!include(_dir_(list|named|merge_list|merge_named))?/)) {
-              return "tag ha-include-tag";
-            }
-            if (stream.match(/!secret/)) {
-              return "tag ha-secret-tag";
-            }
-            if (stream.match(/!env_var/)) {
-              return "tag ha-env-tag";
-            }
-            if (stream.match(/!input/)) {
-              return "tag ha-input-tag";
-            }
-
-            // Highlight common HA domain keywords at start of line
-            if (stream.sol()) {
-              if (stream.match(/\s*(automation|script|sensor|binary_sensor|template|input_boolean|input_number|input_select|input_text|input_datetime|light|switch|climate|cover|scene|group|zone|person):/)) {
-                return "keyword ha-domain";
+            // Check for Jinja start if not in Jinja mode
+            if (!state.inJinja) {
+              // We must check for Jinja BEFORE delegating to YAML, 
+              // but we must be careful not to break YAML strings.
+              // However, in HA, {{ usually starts a value or is part of a string.
+              
+              if (stream.match("{{")) {
+                state.inJinja = true;
+                state.jinjaType = "{{";
+                return "jinja-bracket"; 
               }
+              if (stream.match("{%")) {
+                state.inJinja = true;
+                state.jinjaType = "{%";
+                return "jinja-bracket";
+              }
+              if (stream.match("{#")) {
+                state.inJinja = true;
+                state.jinjaType = "{#";
+                return "comment";
+              }
+
+              // Delegate to YAML
+              const style = yamlMode.token(stream, state.yamlState);
+              
+              // Post-process for HA Overlay logic
+              // Highlight Home Assistant YAML tags
+              const current = stream.current();
+              if (current.match(/^!(include(_dir_(list|named|merge_list|merge_named))?|secret|env_var|input)/)) {
+                return "ha-include-tag";
+              }
+
+              // Highlight common HA domain keywords at start of line
+              if (style === "atom" || style === "tag" || !style) {
+                  if (current.match(/^\s*(automation|script|sensor|binary_sensor|template|input_boolean|input_number|input_select|input_text|input_datetime|light|switch|climate|cover|scene|group|zone|person):/)) {
+                    return style ? style + " ha-domain" : "ha-domain";
+                  }
+                  // Highlight trigger/condition/action keywords
+                  if (current.match(/^\s*(trigger|condition|action|service|entity_id|platform|device_id|area_id):/)) {
+                    return style ? style + " ha-key" : "ha-key";
+                  }
+              }
+              return style;
             }
 
-            // Highlight trigger/condition/action keywords
-            if (stream.match(/\s*(trigger|condition|action|service|entity_id|platform|device_id|area_id):/)) {
-              return "keyword ha-key";
+            // Inside Jinja Mode
+            if (state.inJinja) {
+              // Check for end
+              if ((state.jinjaType === "{{" && stream.match("}}")) ||
+                  (state.jinjaType === "{%" && stream.match("%}")) ||
+                  (state.jinjaType === "{#" && stream.match("#}"))) {
+                state.inJinja = false;
+                state.jinjaType = null;
+                return "jinja-bracket";
+              }
+              
+              if (state.jinjaType === "{#") {
+                stream.next();
+                return "comment";
+              }
+              
+              // Keywords
+              if (stream.match(/^(if|else|elif|endif|for|endfor|in|is|and|or|not|true|false|none|null|block|endblock|extends|include|import|macro|endmacro|call|endcall|filter|endfilter|set|ns|namespace)\b/)) {
+                return "jinja-keyword";
+              }
+              
+              // Atom (Booleans/None)
+              if (stream.match(/^(true|false|none|null)\b/)) {
+                return "jinja-atom";
+              }
+              
+              // Strings
+              if (stream.match(/^'([^']|\\')*'/)) return "string";
+              if (stream.match(/^"([^"]|\\")*"/)) return "string";
+              
+              // Numbers
+              if (stream.match(/^\d+(\.\d+)?/)) return "number";
+              
+              // Variables / Functions
+              if (stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/)) {
+                 return "variable"; 
+              }
+              
+              // Operators
+              if (stream.match(/^(\+|\-|\*|\/|%|==|!=|<=|>=|<|>|=|\||\(|\)|\[|\]|\.|,)/)) {
+                return "jinja-operator";
+              }
+              
+              // Whitespace or unknown char
+              stream.next();
+              return null;
             }
-
-            stream.next();
-            return null;
           }
-        });
+        };
       });
       console.log("HA YAML mode defined successfully");
     } catch (error) {
@@ -615,6 +914,10 @@
   // ============================================
   // State Management
   // ============================================
+  
+  // Auto-save timer reference
+  let autoSaveTimer = null;
+  
   const state = {
     files: [],
     fileTree: {},
@@ -624,6 +927,8 @@
     favoriteFiles: [],  // Array of favorite file paths
     recentFiles: [],    // Array of recently opened file paths
     searchQuery: "",
+    contentSearchEnabled: false,
+    contentSearchResults: null, // Set of matching file paths
     isMobile: window.innerWidth <= MOBILE_BREAKPOINT,
     sidebarVisible: window.innerWidth > MOBILE_BREAKPOINT,
     theme: "dark",
@@ -636,6 +941,28 @@
     selectionMode: false,
     selectedItems: new Set(),
     customColors: {},
+    aiIntegrationEnabled: false, // AI integration state
+    aiProvider: "local",         // AI Provider: local, gemini, openai
+    aiModel: "gemini-2.5-flash-lite", // Default model
+    geminiApiKey: "",
+    openaiApiKey: "",
+    // New UI customization settings
+    themePreset: "dark",         // Theme preset name
+    accentColor: null,           // Custom accent color (null = use preset)
+    fontSize: 14,                // Editor font size
+    fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace",
+    sidebarWidth: 320,           // Sidebar width in px
+    tabPosition: "top",          // Tab position: top, left, right
+    wordWrap: true,              // Word wrap in editor
+    showLineNumbers: true,       // Show line numbers
+    showMinimap: false,          // Show minimap
+    showWhitespace: false,       // Show whitespace characters
+    autoSave: false,             // Auto-save files
+    autoSaveDelay: 1000,         // Auto-save delay in ms
+    fileTreeCompact: false,      // Compact file tree mode
+    fileTreeShowIcons: true,     // Show file icons in tree
+    recentFilesLimit: 10,        // Number of recent files to show
+    breadcrumbStyle: "path",     // Breadcrumb style: path, filename
   };
 
   // ============================================
@@ -652,6 +979,7 @@
     elements.breadcrumb = document.getElementById("breadcrumb");
     elements.breadcrumbCopy = document.getElementById("breadcrumb-copy");
     elements.fileSearch = document.getElementById("file-search");
+    elements.btnContentSearch = document.getElementById("btn-content-search");
     elements.toastContainer = document.getElementById("toast-container");
     elements.sidebar = document.getElementById("sidebar");
     elements.sidebarOverlay = document.getElementById("sidebar-overlay");
@@ -751,7 +1079,7 @@
   // List of extensions considered text files that CodeMirror can handle
   const TEXT_FILE_EXTENSIONS = new Set([
     "yaml", "yml", "json", "py", "js", "css", "html", "txt",
-    "md", "conf", "cfg", "ini", "sh", "log", "svg", "jinja2", "jinja", "j2",
+    "md", "conf", "cfg", "ini", "sh", "log", "svg", "jinja", "jinja2", "j2",
     "pem", "crt", "key", "cpp", "h", "gitignore", "lock"
   ]);
 
@@ -785,8 +1113,8 @@
       conf: { icon: "settings", class: "default" },
       cfg: { icon: "settings", class: "default" },
       ini: { icon: "settings", class: "default" },
-      jinja2: { icon: "integration_instructions", class: "default" },
       jinja: { icon: "integration_instructions", class: "default" },
+      jinja2: { icon: "integration_instructions", class: "default" },
       j2: { icon: "integration_instructions", class: "default" },
       db: { icon: "storage", class: "default" },
       sqlite: { icon: "storage", class: "default" },
@@ -831,8 +1159,8 @@
       conf: yamlMode,
       cfg: yamlMode,
       ini: "yaml",
-      jinja2: yamlMode,
       jinja: yamlMode,
+      jinja2: yamlMode,
       j2: yamlMode,
       db: null,
       sqlite: null,
@@ -869,9 +1197,9 @@
       conf: "Config",
       cfg: "Config",
       ini: "INI",
-      jinja2: "Jinja2",
       jinja: "Jinja",
-      j2: "J2",
+      jinja2: "Jinja2",
+      j2: "Jinja",
       db: "Database",
       sqlite: "Database",
       pem: "Certificate",
@@ -1099,14 +1427,39 @@
       state.gitConfig = settings.gitConfig || null;
       state.customColors = settings.customColors || {};
       
+      // New UI customization settings
+      state.themePreset = settings.themePreset || "dark";
+      state.accentColor = settings.accentColor || null;
+      state.fontSize = settings.fontSize || 14;
+      state.fontFamily = settings.fontFamily || "'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace";
+      state.sidebarWidth = settings.sidebarWidth || 320;
+      state.tabPosition = settings.tabPosition || "top";
+      state.wordWrap = settings.wordWrap !== false; // default true
+      state.showLineNumbers = settings.showLineNumbers !== false; // default true
+      state.showMinimap = settings.showMinimap || false;
+      state.showWhitespace = settings.showWhitespace || false;
+      state.autoSave = settings.autoSave || false;
+      state.autoSaveDelay = settings.autoSaveDelay || 1000;
+      state.fileTreeCompact = settings.fileTreeCompact || false;
+      state.fileTreeShowIcons = settings.fileTreeShowIcons !== false; // default true
+      state.recentFilesLimit = settings.recentFilesLimit || 10;
+      state.breadcrumbStyle = settings.breadcrumbStyle || "path";
+      
       // New state properties for sync
       state.onboardingCompleted = settings.onboardingCompleted ?? (localStorage.getItem("onboardingCompleted") === "true");
       state.gitIntegrationEnabled = settings.gitIntegrationEnabled ?? (localStorage.getItem("gitIntegrationEnabled") !== "false");
+      state.aiIntegrationEnabled = settings.aiIntegrationEnabled ?? false;
+      state.aiProvider = settings.aiProvider || "local";
+      state.aiModel = settings.aiModel || (state.aiProvider === "openai" ? "gpt-5.1-auto" : "gemini-2.5-flash-lite");
+      state.geminiApiKey = settings.geminiApiKey || "";
+      state.openaiApiKey = settings.openaiApiKey || "";
 
       state._savedOpenTabs = settings.openTabs || localSettings.openTabs || [];
       state._savedActiveTabPath = settings.activeTabPath || localSettings.activeTabPath || null;
 
+      applyTheme();
       applyCustomSyntaxColors();
+      updateAIVisibility();
 
     } catch (e) {
       console.log("Could not load settings:", e);
@@ -1133,7 +1486,29 @@
         activeTabPath: activeTabPath,
         gitConfig: state.gitConfig,
         onboardingCompleted: state.onboardingCompleted,
-        gitIntegrationEnabled: state.gitIntegrationEnabled
+        gitIntegrationEnabled: state.gitIntegrationEnabled,
+        aiIntegrationEnabled: state.aiIntegrationEnabled,
+        aiProvider: state.aiProvider,
+        aiModel: state.aiModel,
+        geminiApiKey: state.geminiApiKey,
+        openaiApiKey: state.openaiApiKey,
+        // New UI customization settings
+        themePreset: state.themePreset,
+        accentColor: state.accentColor,
+        fontSize: state.fontSize,
+        fontFamily: state.fontFamily,
+        sidebarWidth: state.sidebarWidth,
+        tabPosition: state.tabPosition,
+        wordWrap: state.wordWrap,
+        showLineNumbers: state.showLineNumbers,
+        showMinimap: state.showMinimap,
+        showWhitespace: state.showWhitespace,
+        autoSave: state.autoSave,
+        autoSaveDelay: state.autoSaveDelay,
+        fileTreeCompact: state.fileTreeCompact,
+        fileTreeShowIcons: state.fileTreeShowIcons,
+        recentFilesLimit: state.recentFilesLimit,
+        breadcrumbStyle: state.breadcrumbStyle
       };
 
       // Save to server
@@ -1164,29 +1539,176 @@
 
   function applyTheme() {
     const effectiveTheme = getEffectiveTheme();
+    const preset = THEME_PRESETS[state.themePreset] || THEME_PRESETS.dark;
+    
+    // Apply CSS variables
+    const root = document.documentElement;
+    const colors = preset.colors;
+    
+    // Override accent color if custom
+    let accentColor = colors.accentColor;
+    let accentHover = colors.accentHover;
+    if (state.accentColor) {
+      accentColor = state.accentColor;
+      // Generate hover color by lightening
+      accentHover = lightenColor(accentColor, 20);
+    }
+    
+    root.style.setProperty('--bg-primary', colors.bgPrimary);
+    root.style.setProperty('--bg-secondary', colors.bgSecondary);
+    root.style.setProperty('--bg-tertiary', colors.bgTertiary);
+    root.style.setProperty('--bg-hover', colors.bgHover);
+    root.style.setProperty('--bg-active', colors.bgActive);
+    root.style.setProperty('--text-primary', colors.textPrimary);
+    root.style.setProperty('--text-secondary', colors.textSecondary);
+    root.style.setProperty('--text-muted', colors.textMuted);
+    root.style.setProperty('--border-color', colors.borderColor);
+    root.style.setProperty('--accent-color', accentColor);
+    root.style.setProperty('--accent-hover', accentHover);
+    root.style.setProperty('--success-color', colors.successColor);
+    root.style.setProperty('--warning-color', colors.warningColor);
+    root.style.setProperty('--error-color', colors.errorColor);
+    root.style.setProperty('--icon-folder', colors.iconFolder);
+    root.style.setProperty('--icon-yaml', colors.iconYaml);
+    root.style.setProperty('--icon-json', colors.iconJson);
+    root.style.setProperty('--icon-python', colors.iconPython);
+    root.style.setProperty('--icon-js', colors.iconJs);
+    root.style.setProperty('--icon-default', colors.iconDefault);
+    root.style.setProperty('--modal-bg', colors.modalBg);
+    root.style.setProperty('--input-bg', colors.inputBg);
+    root.style.setProperty('--shadow-color', colors.shadowColor);
+    root.style.setProperty('--cm-theme', colors.cmTheme);
+    
+    // Custom editor colors
+    const custom = state.customColors || {};
+    root.style.setProperty('--cm-line-number-color', custom.lineNumberColor || colors.textMuted);
+    root.style.setProperty('--cm-fold-color', custom.foldColor || colors.textMuted);
+    
     document.body.setAttribute("data-theme", effectiveTheme);
+    document.body.setAttribute("data-theme-preset", state.themePreset);
 
     // Update theme toggle display
-    const themeIcons = { light: "light_mode", dark: "dark_mode", auto: "brightness_auto" };
-    const themeLabels = { light: "Light", dark: "Dark", auto: "Auto" };
+    const themeIcons = { 
+        light: "light_mode", 
+        dark: "dark_mode", 
+        auto: "brightness_auto",
+        highContrast: "contrast",
+        solarizedDark: "palette",
+        solarizedLight: "palette",
+        ocean: "water",
+        dracula: "nightlight_round"
+    };
+    const themeLabels = { 
+        light: "Light", 
+        dark: "Dark", 
+        auto: "Auto",
+        highContrast: "Contrast",
+        solarizedDark: "Solar Dark",
+        solarizedLight: "Solar Light",
+        ocean: "Ocean",
+        dracula: "Dracula"
+    };
+
+    // Use themePreset for label lookup if not auto, otherwise fallback to theme state
+    const displayKey = state.theme === 'auto' ? 'auto' : state.themePreset;
 
     if (elements.themeIcon) {
-      elements.themeIcon.textContent = themeIcons[state.theme];
+      elements.themeIcon.textContent = themeIcons[displayKey] || "dark_mode";
     }
     if (elements.themeLabel) {
-      elements.themeLabel.textContent = themeLabels[state.theme];
+      elements.themeLabel.textContent = themeLabels[displayKey] || "Dark";
     }
 
-    // Update active menu item
+    // Update active menu item based on preset
     document.querySelectorAll(".theme-menu-item").forEach(item => {
-      item.classList.toggle("active", item.dataset.theme === state.theme);
+      const itemTheme = item.dataset.theme;
+      // Match if item is 'auto' and state is 'auto', OR if item matches current preset
+      const isActive = (state.theme === 'auto' && itemTheme === 'auto') || 
+                       (state.theme !== 'auto' && itemTheme === state.themePreset);
+      item.classList.toggle("active", isActive);
     });
 
+    // Apply editor-specific customizations
+    applyEditorSettings();
+    
+    // Apply layout customizations
+    applyLayoutSettings();
+
     // Update CodeMirror theme
-    const cmTheme = effectiveTheme === "dark" ? "material-darker" : "default";
     if (state.editor) {
-      state.editor.setOption("theme", cmTheme);
+      state.editor.setOption("theme", colors.cmTheme);
     }
+  }
+
+  // Helper function to lighten a hex color
+  function lightenColor(hex, percent) {
+    const num = parseInt(hex.replace("#", ""), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255))
+      .toString(16).slice(1);
+  }
+
+  // Apply editor settings
+  function applyEditorSettings() {
+    if (!state.editor) return;
+    
+    // Font settings
+    const editorEl = document.querySelector('.CodeMirror');
+    if (editorEl) {
+      editorEl.style.fontSize = state.fontSize + 'px';
+      editorEl.style.fontFamily = state.fontFamily;
+    }
+    
+    // CodeMirror options
+    state.editor.setOption('lineNumbers', state.showLineNumbers);
+    state.editor.setOption('lineWrapping', state.wordWrap);
+    
+    // Minimap is custom implementation - would need additional setup
+    const minimapEl = document.getElementById('minimap');
+    if (minimapEl) {
+      minimapEl.style.display = state.showMinimap ? 'block' : 'none';
+    }
+  }
+
+  // Apply layout settings
+  function applyLayoutSettings() {
+    // Sidebar width
+    if (elements.sidebar) {
+      elements.sidebar.style.width = state.sidebarWidth + 'px';
+    }
+    
+    // Tab position
+    document.body.setAttribute('data-tab-position', state.tabPosition);
+    
+    // File tree compact mode
+    document.body.classList.toggle('file-tree-compact', state.fileTreeCompact);
+    
+    // File tree icons
+    document.body.classList.toggle('file-tree-no-icons', !state.fileTreeShowIcons);
+  }
+
+  // Set theme preset
+  function setThemePreset(preset) {
+    state.themePreset = preset;
+    if (preset === 'light') {
+      state.theme = 'light';
+    } else if (preset === 'dark' || preset === 'highContrast' || preset === 'solarizedDark' || preset === 'ocean' || preset === 'dracula') {
+      state.theme = 'dark';
+    }
+    applyTheme();
+    saveSettings();
+  }
+
+  // Set accent color
+  function setAccentColor(color) {
+    state.accentColor = color;
+    applyTheme();
+    saveSettings();
   }
 
   function setTheme(theme) {
@@ -1301,10 +1823,11 @@
       return;
     }
 
-    // Filter existing files
-    const existingRecentFiles = state.recentFiles.filter(filePath => 
-      state.files.some(f => f.path === filePath)
-    );
+    // Filter existing files and apply limit
+    const limit = state.recentFilesLimit || MAX_RECENT_FILES;
+    const existingRecentFiles = state.recentFiles
+      .filter(filePath => state.files.some(f => f.path === filePath))
+      .slice(0, limit);
 
     if (existingRecentFiles.length === 0) {
       recentFilesContainer.style.display = "none";
@@ -3946,6 +4469,15 @@
   // Update Git Panel UI
   function updateGitPanel() {
     const panel = document.getElementById("git-panel");
+    if (!panel) return;
+    
+    // Do not update or show if git is disabled
+    if (!isGitEnabled()) {
+        panel.classList.remove("visible");
+        panel.style.display = "none";
+        return;
+    }
+
     const container = document.getElementById("git-files-container");
     const badge = document.getElementById("git-changes-count");
     const commitBtn = document.getElementById("btn-commit-staged");
@@ -4378,50 +4910,123 @@
     `;
     };
 
+    // Generate theme preset options
+    const themePresetOptions = Object.entries(THEME_PRESETS).map(([key, preset]) => 
+      `<option value="${key}" ${state.themePreset === key ? 'selected' : ''}>${preset.name}</option>`
+    ).join('');
+
+    // Generate accent color options
+    const accentColorOptions = ACCENT_COLORS.map(color => 
+      `<option value="${color.value}" ${state.accentColor === color.value ? 'selected' : ''}>${color.name}</option>`
+    ).join('');
+
     modalBody.innerHTML = `
-      <div class="git-settings-content">
-        <div class="git-settings-section">
-          <div class="git-settings-label">Features</div>
+      <div class="settings-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">
+        <button class="settings-tab active" data-tab="general" style="padding: 10px 16px; background: transparent; border: none; color: var(--text-primary); cursor: pointer; border-bottom: 2px solid var(--accent-color); font-size: 13px;">General</button>
+        <button class="settings-tab" data-tab="appearance" style="padding: 10px 16px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px;">Appearance</button>
+        <button class="settings-tab" data-tab="editor" style="padding: 10px 16px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px;">Editor</button>
+        <button class="settings-tab" data-tab="features" style="padding: 10px 16px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px;">Features</button>
+      </div>
 
-          <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
-            <div style="flex: 1;">
-              <div style="font-weight: 500; margin-bottom: 4px;">GitHub Integration</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Push/pull configs to GitHub, stage changes, and manage commits</div>
+      <div class="settings-content">
+        <!-- General Tab -->
+        <div id="settings-tab-general" class="settings-panel active">
+          <div class="git-settings-section">
+            <div class="git-settings-label">File Management</div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Show Recent Files</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Display recently opened files at the top of the file tree</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="recent-files-toggle" ${showRecentFiles ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <label class="toggle-switch" style="margin-left: 16px;">
-              <input type="checkbox" id="git-integration-toggle" ${gitEnabled ? 'checked' : ''}>
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
 
-          <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
-            <div style="flex: 1;">
-              <div style="font-weight: 500; margin-bottom: 4px;">Show Recent Files</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Display recently opened files at the top of the file tree</div>
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Recent Files Limit</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Maximum number of recent files to display</div>
+              </div>
+              <input type="number" id="recent-files-limit" value="${state.recentFilesLimit}" min="5" max="30" style="width: 60px; padding: 6px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); text-align: center;">
             </div>
-            <label class="toggle-switch" style="margin-left: 16px;">
-              <input type="checkbox" id="recent-files-toggle" ${showRecentFiles ? 'checked' : ''}>
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
 
-          <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
-            <div style="flex: 1;">
-              <div style="font-weight: 500; margin-bottom: 4px;">Git Exclusions (.gitignore)</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Select which files and folders to include in your repository</div>
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">GitHub Integration</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Push/pull configs to GitHub, stage changes, and manage commits</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="git-integration-toggle" ${gitEnabled ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <button class="btn-secondary" id="btn-manage-exclusions" style="padding: 6px 12px; font-size: 12px;">
-              Manage Exclusions
-            </button>
-          </div>
 
-          <div style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; font-size: 13px;">
-            <span class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--info-color, #2196f3);">info</span>
-            <span style="margin-left: 8px;">Changes will take effect immediately</span>
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Git Exclusions (.gitignore)</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Select which files and folders to include in your repository</div>
+              </div>
+              <button class="btn-secondary" id="btn-manage-exclusions" style="padding: 6px 12px; font-size: 12px;">
+                Manage Exclusions
+              </button>
+            </div>
           </div>
+        </div>
 
-          <div class="git-settings-section" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-            <div class="git-settings-label">Editor Syntax Highlighting</div>
+        <!-- Appearance Tab -->
+        <div id="settings-tab-appearance" class="settings-panel" style="display: none;">
+          <div class="git-settings-section">
+            <div class="git-settings-label">Theme</div>
+
+            <div style="padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="font-weight: 500; margin-bottom: 8px;">Theme Preset</div>
+              <select id="theme-preset-select" class="git-settings-input" style="width: 100%;">
+                ${themePresetOptions}
+              </select>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Choose from pre-defined color schemes</div>
+            </div>
+
+            <div style="padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="font-weight: 500; margin-bottom: 8px;">Accent Color</div>
+              <select id="accent-color-select" class="git-settings-input" style="width: 100%; margin-bottom: 8px;">
+                <option value="">Use Theme Default</option>
+                ${accentColorOptions}
+              </select>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                ${ACCENT_COLORS.map(color => `
+                  <button class="accent-color-btn" data-color="${color.value}" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid ${state.accentColor === color.value ? 'var(--text-primary)' : 'transparent'}; background: ${color.value}; cursor: pointer;" title="${color.name}"></button>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="git-settings-label" style="margin-top: 20px;">File Tree</div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Compact Mode</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Reduce padding in the file tree for a more compact view</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="file-tree-compact-toggle" ${state.fileTreeCompact ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Show File Icons</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Display file type icons in the file tree</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="file-tree-icons-toggle" ${state.fileTreeShowIcons ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="git-settings-label" style="margin-top: 20px;">Editor Syntax Highlighting</div>
             <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Customize the font colors for the code editor.</div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -4432,16 +5037,179 @@
                 ${renderColorInput("Boolean", "boolean")}
                 ${renderColorInput("Key / Property", "key")}
                 ${renderColorInput("Tag", "tag")}
+                ${renderColorInput("Line Numbers", "lineNumberColor")}
+                ${renderColorInput("Fold Arrows", "foldColor")}
             </div>
             
             <button class="btn-secondary" id="btn-reset-colors" style="margin-top: 12px; width: 100%; font-size: 12px;">
                 Reset to Default Colors
             </button>
           </div>
+        </div>
 
-          <div class="git-settings-section" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-            <div class="git-settings-label" style="color: var(--error-color);">Danger Zone</div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
+        <!-- Editor Tab -->
+        <div id="settings-tab-editor" class="settings-panel" style="display: none;">
+          <div class="git-settings-section">
+            <div class="git-settings-label">Font</div>
+
+            <div style="padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="font-weight: 500; margin-bottom: 8px;">Font Size</div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <input type="range" id="font-size-slider" min="10" max="24" value="${state.fontSize}" style="flex: 1;">
+                <span id="font-size-value" style="min-width: 40px; text-align: center; font-family: monospace;">${state.fontSize}px</span>
+              </div>
+            </div>
+
+            <div style="padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="font-weight: 500; margin-bottom: 8px;">Font Family</div>
+              <select id="font-family-select" class="git-settings-input" style="width: 100%;">
+                <option value="'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace" ${state.fontFamily.includes('SF Mono') ? 'selected' : ''}>SF Mono (Default)</option>
+                <option value="'Fira Code', 'Fira Mono', monospace" ${state.fontFamily.includes('Fira Code') ? 'selected' : ''}>Fira Code</option>
+                <option value="'JetBrains Mono', 'Fira Code', monospace" ${state.fontFamily.includes('JetBrains Mono') ? 'selected' : ''}>JetBrains Mono</option>
+                <option value="'Cascadia Code', 'Fira Code', monospace" ${state.fontFamily.includes('Cascadia Code') ? 'selected' : ''}>Cascadia Code</option>
+                <option value="'Source Code Pro', 'Fira Code', monospace" ${state.fontFamily.includes('Source Code Pro') ? 'selected' : ''}>Source Code Pro</option>
+                <option value="'Ubuntu Mono', monospace" ${state.fontFamily.includes('Ubuntu Mono') ? 'selected' : ''}>Ubuntu Mono</option>
+                <option value="monospace" ${state.fontFamily === 'monospace' ? 'selected' : ''}>System Monospace</option>
+              </select>
+            </div>
+
+            <div class="git-settings-label" style="margin-top: 20px;">Editor Behavior</div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Word Wrap</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Wrap long lines to the next line</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="word-wrap-toggle" ${state.wordWrap ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Line Numbers</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Show line numbers in the editor</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="line-numbers-toggle" ${state.showLineNumbers ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Show Whitespace</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Display whitespace characters (spaces, tabs)</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="show-whitespace-toggle" ${state.showWhitespace ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Auto Save</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Automatically save files after a delay</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="auto-save-toggle" ${state.autoSave ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="padding: 12px 0; border-bottom: 1px solid var(--divider-color); ${state.autoSave ? '' : 'opacity: 0.5; pointer-events: none;'}" id="auto-save-delay-container">
+              <div style="font-weight: 500; margin-bottom: 8px;">Auto Save Delay</div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <input type="range" id="auto-save-delay-slider" min="500" max="5000" step="500" value="${state.autoSaveDelay}" style="flex: 1;">
+                <span id="auto-save-delay-value" style="min-width: 60px; text-align: center;">${state.autoSaveDelay}ms</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features Tab -->
+        <div id="settings-tab-features" class="settings-panel" style="display: none;">
+          <div class="git-settings-section">
+            <div class="git-settings-label">AI Studio Copilot</div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Enable AI Copilot</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">AI-powered automation generation, YAML fixes, and entity insights</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="ai-integration-toggle" ${state.aiIntegrationEnabled ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div id="ai-provider-section" style="display: ${state.aiIntegrationEnabled ? 'block' : 'none'}; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="font-weight: 500; margin-bottom: 8px; font-size: 13px;">AI Provider</div>
+              <select id="ai-provider-select" class="git-settings-input" style="width: 100%; margin-bottom: 8px;">
+                <option value="local" ${state.aiProvider === 'local' ? 'selected' : ''}>Local (Rule-based Beta)</option>
+                <option value="gemini" ${state.aiProvider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
+                <option value="openai" ${state.aiProvider === 'openai' ? 'selected' : ''}>OpenAI</option>
+              </select>
+
+              <div id="ai-model-section" style="display: ${state.aiProvider !== 'local' ? 'block' : 'none'}; margin-top: 8px;">
+                <div style="font-size: 12px; margin-bottom: 4px;">AI Model</div>
+                <div id="gemini-model-container" style="display: ${state.aiProvider === 'gemini' ? 'block' : 'none'};">
+                  <select id="gemini-model-select" class="git-settings-input" style="width: 100%;">
+                    <option value="gemini-3-pro" ${state.aiModel === 'gemini-3-pro' ? 'selected' : ''}>Gemini 3 Pro</option>
+                    <option value="gemini-3-flash" ${state.aiModel === 'gemini-3-flash' ? 'selected' : ''}>Gemini 3 Flash</option>
+                    <option value="gemini-2.5-pro" ${state.aiModel === 'gemini-2.5-pro' ? 'selected' : ''}>Gemini 2.5 Pro</option>
+                    <option value="gemini-2.5-flash" ${state.aiModel === 'gemini-2.5-flash' ? 'selected' : ''}>Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-flash-lite" ${state.aiModel === 'gemini-2.5-flash-lite' ? 'selected' : ''}>Gemini 2.5 Flash-Lite</option>
+                  </select>
+                </div>
+                <div id="openai-model-container" style="display: ${state.aiProvider === 'openai' ? 'block' : 'none'};">
+                  <select id="openai-model-select" class="git-settings-input" style="width: 100%;">
+                    <option value="gpt-5.2" ${state.aiModel === 'gpt-5.2' ? 'selected' : ''}>GPT-5.2</option>
+                    <option value="gpt-5-mini" ${state.aiModel === 'gpt-5-mini' ? 'selected' : ''}>GPT-5 mini</option>
+                    <option value="gpt-5.1" ${state.aiModel === 'gpt-5.1' ? 'selected' : ''}>GPT-5.1</option>
+                    <option value="gpt-5.1-auto" ${state.aiModel === 'gpt-5.1-auto' ? 'selected' : ''}>GPT-5.1 Auto</option>
+                    <option value="gpt-5.1-instant" ${state.aiModel === 'gpt-5.1-instant' ? 'selected' : ''}>GPT-5.1 Instant</option>
+                    <option value="o3" ${state.aiModel === 'o3' ? 'selected' : ''}>OpenAI o3</option>
+                    <option value="o4-mini" ${state.aiModel === 'o4-mini' ? 'selected' : ''}>OpenAI o4-mini</option>
+                    <option value="gpt-4.5" ${state.aiModel === 'gpt-4.5' ? 'selected' : ''}>GPT-4.5</option>
+                    <option value="gpt-4.1" ${state.aiModel === 'gpt-4.1' ? 'selected' : ''}>GPT-4.1</option>
+                    <option value="gpt-4.1-mini" ${state.aiModel === 'gpt-4.1-mini' ? 'selected' : ''}>GPT-4.1 mini</option>
+                    <option value="gpt-4.1-nano" ${state.aiModel === 'gpt-4.1-nano' ? 'selected' : ''}>GPT-4.1 nano</option>
+                    <option value="gpt-4o" ${state.aiModel === 'gpt-4o' ? 'selected' : ''}>GPT-4o</option>
+                    <option value="gpt-4o-mini" ${state.aiModel === 'gpt-4o-mini' ? 'selected' : ''}>GPT-4o mini</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div id="gemini-api-section" style="display: ${state.aiProvider === 'gemini' ? 'block' : 'none'}; margin-top: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <div style="font-size: 12px;">Gemini API Key</div>
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 11px; color: var(--accent-color); text-decoration: none; display: flex; align-items: center;">
+                    Get Key <span class="material-icons" style="font-size: 12px; margin-left: 2px;">open_in_new</span>
+                  </a>
+                </div>
+                <input type="password" id="gemini-api-key" class="git-settings-input" style="width: 100%;" value="${state.geminiApiKey || ''}" placeholder="Enter Gemini API Key">
+              </div>
+
+              <div id="openai-api-section" style="display: ${state.aiProvider === 'openai' ? 'block' : 'none'}; margin-top: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <div style="font-size: 12px;">OpenAI API Key</div>
+                  <a href="https://platform.openai.com/api-keys" target="_blank" style="font-size: 11px; color: var(--accent-color); text-decoration: none; display: flex; align-items: center;">
+                    Get Key <span class="material-icons" style="font-size: 12px; margin-left: 2px;">open_in_new</span>
+                  </a>
+                </div>
+                <input type="password" id="openai-api-key" class="git-settings-input" style="width: 100%;" value="${state.openaiApiKey || ''}" placeholder="Enter OpenAI API Key">
+              </div>
+
+              <button class="btn-primary" id="btn-save-ai-settings" style="margin-top: 12px; width: 100%; font-size: 12px; height: 32px;">
+                  Apply AI Settings
+              </button>
+            </div>
+
+            <div class="git-settings-label" style="margin-top: 20px; color: var(--error-color);">Danger Zone</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
                 <div style="font-size: 12px; color: var(--text-secondary); max-width: 70%;">
                     Reset all application settings, theme preferences, and onboarding status. This does not delete your files.
                 </div>
@@ -4452,10 +5220,16 @@
           </div>
         </div>
       </div>
+
+      <div style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; font-size: 13px;">
+        <span class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--info-color, #2196f3);">info</span>
+        <span style="margin-left: 8px;">Changes will take effect immediately</span>
+      </div>
     `;
 
     modalOverlay.classList.add("visible");
-    modal.style.maxWidth = "500px";
+    modal.style.maxWidth = "600px";
+    modal.style.maxHeight = "85vh";
 
     // Hide default modal buttons
     if (modalFooter) {
@@ -4482,13 +5256,191 @@
 
     modalOverlay.addEventListener("click", overlayClickHandler);
 
+    // Handle Settings Tabs
+    const tabButtons = modalBody.querySelectorAll('.settings-tab');
+    const tabPanels = modalBody.querySelectorAll('.settings-panel');
+    
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+        
+        // Update active tab button
+        tabButtons.forEach(b => {
+          b.classList.remove('active');
+          b.style.color = 'var(--text-secondary)';
+          b.style.borderBottomColor = 'transparent';
+        });
+        btn.classList.add('active');
+        btn.style.color = 'var(--text-primary)';
+        btn.style.borderBottomColor = 'var(--accent-color)';
+        
+        // Show active panel
+        tabPanels.forEach(panel => {
+          panel.style.display = panel.id === `settings-tab-${tabId}` ? 'block' : 'none';
+        });
+      });
+    });
+
+    // Handle Theme Preset selection
+    const themePresetSelect = document.getElementById('theme-preset-select');
+    if (themePresetSelect) {
+      themePresetSelect.addEventListener('change', (e) => {
+        setThemePreset(e.target.value);
+        showToast(`Theme changed to ${THEME_PRESETS[e.target.value].name}`, "success");
+      });
+    }
+
+    // Handle Accent Color selection
+    const accentColorSelect = document.getElementById('accent-color-select');
+    if (accentColorSelect) {
+      accentColorSelect.addEventListener('change', (e) => {
+        setAccentColor(e.target.value || null);
+        showToast(e.target.value ? 'Accent color updated' : 'Using theme default accent', "success");
+      });
+    }
+
+    // Handle Accent Color buttons
+    const accentColorBtns = modalBody.querySelectorAll('.accent-color-btn');
+    accentColorBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const color = btn.dataset.color;
+        setAccentColor(color);
+        
+        // Update button borders
+        accentColorBtns.forEach(b => b.style.borderColor = 'transparent');
+        btn.style.borderColor = 'var(--text-primary)';
+        
+        // Update select
+        if (accentColorSelect) accentColorSelect.value = color;
+      });
+    });
+
+    // Handle File Tree settings
+    const fileTreeCompactToggle = document.getElementById('file-tree-compact-toggle');
+    if (fileTreeCompactToggle) {
+      fileTreeCompactToggle.addEventListener('change', (e) => {
+        state.fileTreeCompact = e.target.checked;
+        applyLayoutSettings();
+        saveSettings();
+        showToast(e.target.checked ? 'Compact mode enabled' : 'Compact mode disabled', "success");
+      });
+    }
+
+    const fileTreeIconsToggle = document.getElementById('file-tree-icons-toggle');
+    if (fileTreeIconsToggle) {
+      fileTreeIconsToggle.addEventListener('change', (e) => {
+        state.fileTreeShowIcons = e.target.checked;
+        applyLayoutSettings();
+        saveSettings();
+        renderFileTree();
+        showToast(e.target.checked ? 'File icons enabled' : 'File icons hidden', "success");
+      });
+    }
+
+    // Handle Recent Files Limit
+    const recentFilesLimitInput = document.getElementById('recent-files-limit');
+    if (recentFilesLimitInput) {
+      recentFilesLimitInput.addEventListener('change', (e) => {
+        const value = parseInt(e.target.value) || 10;
+        state.recentFilesLimit = Math.max(5, Math.min(30, value));
+        saveSettings();
+        renderFileTree();
+        showToast(`Recent files limit set to ${state.recentFilesLimit}`, "success");
+      });
+    }
+
+    // Handle Font Size slider
+    const fontSizeSlider = document.getElementById('font-size-slider');
+    const fontSizeValue = document.getElementById('font-size-value');
+    if (fontSizeSlider && fontSizeValue) {
+      fontSizeSlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        fontSizeValue.textContent = value + 'px';
+      });
+      fontSizeSlider.addEventListener('change', (e) => {
+        state.fontSize = parseInt(e.target.value);
+        applyEditorSettings();
+        saveSettings();
+        showToast(`Font size set to ${state.fontSize}px`, "success");
+      });
+    }
+
+    // Handle Font Family selection
+    const fontFamilySelect = document.getElementById('font-family-select');
+    if (fontFamilySelect) {
+      fontFamilySelect.addEventListener('change', (e) => {
+        state.fontFamily = e.target.value;
+        applyEditorSettings();
+        saveSettings();
+        showToast('Font family updated', "success");
+      });
+    }
+
+    // Handle Editor settings toggles
+    const wordWrapToggle = document.getElementById('word-wrap-toggle');
+    if (wordWrapToggle) {
+      wordWrapToggle.addEventListener('change', (e) => {
+        state.wordWrap = e.target.checked;
+        applyEditorSettings();
+        saveSettings();
+        showToast(e.target.checked ? 'Word wrap enabled' : 'Word wrap disabled', "success");
+      });
+    }
+
+    const lineNumbersToggle = document.getElementById('line-numbers-toggle');
+    if (lineNumbersToggle) {
+      lineNumbersToggle.addEventListener('change', (e) => {
+        state.showLineNumbers = e.target.checked;
+        applyEditorSettings();
+        saveSettings();
+        showToast(e.target.checked ? 'Line numbers enabled' : 'Line numbers disabled', "success");
+      });
+    }
+
+    const showWhitespaceToggle = document.getElementById('show-whitespace-toggle');
+    if (showWhitespaceToggle) {
+      showWhitespaceToggle.addEventListener('change', (e) => {
+        state.showWhitespace = e.target.checked;
+        // Would need to implement whitespace visualization in CodeMirror
+        saveSettings();
+        showToast(e.target.checked ? 'Whitespace visualization enabled' : 'Whitespace visualization disabled', "success");
+      });
+    }
+
+    const autoSaveToggle = document.getElementById('auto-save-toggle');
+    const autoSaveDelayContainer = document.getElementById('auto-save-delay-container');
+    if (autoSaveToggle) {
+      autoSaveToggle.addEventListener('change', (e) => {
+        state.autoSave = e.target.checked;
+        if (autoSaveDelayContainer) {
+          autoSaveDelayContainer.style.opacity = state.autoSave ? '1' : '0.5';
+          autoSaveDelayContainer.style.pointerEvents = state.autoSave ? 'auto' : 'none';
+        }
+        saveSettings();
+        showToast(e.target.checked ? 'Auto-save enabled' : 'Auto-save disabled', "success");
+      });
+    }
+
+    const autoSaveDelaySlider = document.getElementById('auto-save-delay-slider');
+    const autoSaveDelayValue = document.getElementById('auto-save-delay-value');
+    if (autoSaveDelaySlider && autoSaveDelayValue) {
+      autoSaveDelaySlider.addEventListener('input', (e) => {
+        autoSaveDelayValue.textContent = e.target.value + 'ms';
+      });
+      autoSaveDelaySlider.addEventListener('change', (e) => {
+        state.autoSaveDelay = parseInt(e.target.value);
+        saveSettings();
+        showToast(`Auto-save delay set to ${state.autoSaveDelay}ms`, "success");
+      });
+    }
+
     // Handle Git integration toggle
     const gitToggle = document.getElementById("git-integration-toggle");
     if (gitToggle) {
       gitToggle.addEventListener("change", (e) => {
         const enabled = e.target.checked;
         state.gitIntegrationEnabled = enabled;
-        saveSettings(); 
+        saveSettings();
         applyGitVisibility();
         showToast(enabled ? "GitHub integration enabled" : "GitHub integration disabled", "success");
       });
@@ -4502,6 +5454,112 @@
         saveSettings();
         renderFileTree();
       });
+    }
+
+    // Handle AI integration toggle
+    const aiToggle = document.getElementById("ai-integration-toggle");
+    const aiProviderSection = document.getElementById("ai-provider-section");
+    if (aiToggle) {
+      aiToggle.addEventListener("change", (e) => {
+        state.aiIntegrationEnabled = e.target.checked;
+        if (aiProviderSection) {
+          aiProviderSection.style.display = state.aiIntegrationEnabled ? 'block' : 'none';
+        }
+        saveSettings();
+        showToast(state.aiIntegrationEnabled ? "AI Studio Copilot enabled" : "AI Studio Copilot disabled", "success");
+        if (typeof updateAIVisibility === "function") {
+            updateAIVisibility();
+        }
+      });
+    }
+
+    const aiProviderSelect = document.getElementById("ai-provider-select");
+    const aiModelSection = document.getElementById("ai-model-section");
+    const geminiModelContainer = document.getElementById("gemini-model-container");
+    const openaiModelContainer = document.getElementById("openai-model-container");
+    const geminiSection = document.getElementById("gemini-api-section");
+    const openaiSection = document.getElementById("openai-api-section");
+    
+    if (aiProviderSelect) {
+      aiProviderSelect.addEventListener("change", (e) => {
+        state.aiProvider = e.target.value;
+        if (aiModelSection) aiModelSection.style.display = state.aiProvider !== 'local' ? 'block' : 'none';
+        if (geminiModelContainer) geminiModelContainer.style.display = state.aiProvider === 'gemini' ? 'block' : 'none';
+        if (openaiModelContainer) openaiModelContainer.style.display = state.aiProvider === 'openai' ? 'block' : 'none';
+        if (geminiSection) geminiSection.style.display = state.aiProvider === 'gemini' ? 'block' : 'none';
+        if (openaiSection) openaiSection.style.display = state.aiProvider === 'openai' ? 'block' : 'none';
+        
+        // Suggest default model
+        if (state.aiProvider === 'gemini') {
+            state.aiModel = "gemini-2.5-flash-lite";
+            const geminiSelect = document.getElementById("gemini-model-select");
+            if (geminiSelect) geminiSelect.value = state.aiModel;
+        } else if (state.aiProvider === 'openai') {
+            state.aiModel = "gpt-5.1-auto";
+            const openaiSelect = document.getElementById("openai-model-select");
+            if (openaiSelect) openaiSelect.value = state.aiModel;
+        }
+        saveSettings();
+      });
+    }
+
+    const geminiModelSelect = document.getElementById("gemini-model-select");
+    if (geminiModelSelect) {
+        geminiModelSelect.addEventListener("change", (e) => {
+            state.aiModel = e.target.value;
+            saveSettings();
+        });
+    }
+
+    const openaiModelSelect = document.getElementById("openai-model-select");
+    if (openaiModelSelect) {
+        openaiModelSelect.addEventListener("change", (e) => {
+            state.aiModel = e.target.value;
+            saveSettings();
+        });
+    }
+
+    // Handle API Key inputs
+    const geminiKeyInput = document.getElementById("gemini-api-key");
+    if (geminiKeyInput) {
+      geminiKeyInput.addEventListener("change", (e) => {
+        state.geminiApiKey = e.target.value;
+        saveSettings();
+      });
+    }
+
+    const openaiKeyInput = document.getElementById("openai-api-key");
+    if (openaiKeyInput) {
+      openaiKeyInput.addEventListener("change", (e) => {
+        state.openaiApiKey = e.target.value;
+        saveSettings();
+      });
+    }
+
+    const btnSaveAI = document.getElementById("btn-save-ai-settings");
+    if (btnSaveAI) {
+        btnSaveAI.addEventListener("click", async () => {
+            const geminiKey = document.getElementById("gemini-api-key")?.value;
+            const openaiKey = document.getElementById("openai-api-key")?.value;
+            const provider = document.getElementById("ai-provider-select")?.value;
+            
+            let model = "";
+            if (provider === 'gemini') {
+                model = document.getElementById("gemini-model-select")?.value;
+            } else if (provider === 'openai') {
+                model = document.getElementById("openai-model-select")?.value;
+            } else {
+                model = "local";
+            }
+            
+            state.geminiApiKey = geminiKey;
+            state.openaiApiKey = openaiKey;
+            state.aiProvider = provider;
+            state.aiModel = model;
+            
+            await saveSettings();
+            showToast("AI Settings Applied", "success");
+        });
     }
 
     // Handle Manage Exclusions button
@@ -4544,6 +5602,7 @@
             }
             
             applyCustomSyntaxColors();
+            applyTheme(); // Update CSS variables for line numbers/fold
             saveSettings();
         });
     });
@@ -4562,6 +5621,7 @@
 
             state.customColors[key] = value;
             applyCustomSyntaxColors();
+            applyTheme(); // Update CSS variables for line numbers/fold
             saveSettings();
         });
     });
@@ -4572,6 +5632,7 @@
         btnResetColors.addEventListener("click", () => {
             state.customColors = {};
             applyCustomSyntaxColors();
+            applyTheme(); // Reset CSS variables
             saveSettings();
             showToast("Syntax colors reset to default", "success");
             closeSettings();
@@ -5094,16 +6155,172 @@
     });
   }
 
-  // Apply Git visibility based on localStorage setting
   function applyGitVisibility() {
-    const gitEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false"; // Default to true
+    const gitElements = [
+      document.getElementById("btn-git-pull"),
+      document.getElementById("btn-git-push"),
+      document.getElementById("btn-git-status"),
+      document.getElementById("btn-git-settings"),
+      document.getElementById("git-panel")
+    ];
 
-    if (gitEnabled) {
-      document.body.classList.remove("git-disabled");
-    } else {
-      document.body.classList.add("git-disabled");
+    const gitEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false";
+    gitElements.forEach(el => {
+      if (el) el.style.display = gitEnabled ? "flex" : "none";
+    });
+    
+    // Also remove the visible class if disabled
+    if (!gitEnabled) {
+        document.getElementById("git-panel")?.classList.remove("visible");
     }
   }
+
+  function updateAIVisibility() {
+    const btnAI = document.getElementById("btn-ai-studio");
+    if (btnAI) {
+      btnAI.style.display = state.aiIntegrationEnabled ? "flex" : "none";
+    }
+    const aiSidebar = document.getElementById("ai-sidebar");
+    if (aiSidebar && !state.aiIntegrationEnabled) {
+      aiSidebar.classList.add("hidden");
+    }
+  }
+
+  function toggleAISidebar() {
+    const aiSidebar = document.getElementById("ai-sidebar");
+    if (!aiSidebar) return;
+
+    const isHidden = aiSidebar.classList.contains("hidden");
+    if (isHidden) {
+      aiSidebar.classList.remove("hidden");
+      document.getElementById("ai-chat-input")?.focus();
+    } else {
+      aiSidebar.classList.add("hidden");
+    }
+  }
+
+  function formatAiResponse(text) {
+    if (!text) return "";
+    
+    // Replace code blocks with styled containers
+    let formatted = text.replace(/```(?:yaml|yml)?\n([\s\S]*?)\n```/g, (match, code) => {
+        return `<div class="ai-code-block"><pre><code>${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre></div>`;
+    });
+    
+    // Bold text
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Inline code
+    formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
+    
+    // New lines to <br> (only outside of code blocks)
+    // This is a simple version, ideally use a markdown library but keeping it local/lightweight
+    return formatted.replace(/\n/g, '<br>');
+  }
+
+  function copyToClipboard(text) {
+    if (!navigator.clipboard) {
+        // Fallback for non-secure contexts or browsers without clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast("Code copied to clipboard", "success");
+        } catch (err) {
+            console.error("Fallback copy failed:", err);
+            showToast("Failed to copy code", "error");
+        }
+        document.body.removeChild(textArea);
+        return;
+    }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        showToast("Code copied to clipboard", "success");
+    }).catch(err => {
+        console.error("Async copy failed:", err);
+        showToast("Failed to copy code", "error");
+    });
+  }
+
+  async function sendAIChatMessage() {
+    const input = document.getElementById("ai-chat-input");
+    const messagesContainer = document.getElementById("ai-chat-messages");
+    const query = input.value.trim();
+
+    if (!query) return;
+
+    // Add user message
+    const userMsg = document.createElement("div");
+    userMsg.className = "ai-message ai-message-user";
+    userMsg.textContent = query;
+    messagesContainer.appendChild(userMsg);
+    
+    input.value = "";
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Add assistant loading message
+    const loadingMsg = document.createElement("div");
+    loadingMsg.className = "ai-message ai-message-assistant";
+    loadingMsg.innerHTML = '<span class="ai-loading">Thinking...</span>';
+    messagesContainer.appendChild(loadingMsg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    try {
+      console.log("AI Copilot: Sending query...", {
+        provider: state.aiProvider,
+        file: state.activeTab ? state.activeTab.path : null,
+        query: query
+      });
+
+      const result = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ai_query",
+          query: query,
+          current_file: state.activeTab ? state.activeTab.path : null,
+          file_content: (state.activeTab && state.editor) ? state.editor.getValue() : null
+        })
+      });
+
+      console.log("AI Copilot: Received response:", result);
+
+      if (result.success) {
+        // Parse markdown code blocks and format them
+        const formattedResponse = formatAiResponse(result.response);
+        loadingMsg.innerHTML = formattedResponse;
+        
+        // Add copy buttons to code blocks
+        loadingMsg.querySelectorAll(".ai-code-block").forEach(block => {
+            const copyBtn = document.createElement("button");
+            copyBtn.className = "ai-copy-btn";
+            copyBtn.innerHTML = '<span class="material-icons">content_copy</span>';
+            copyBtn.title = "Copy to clipboard";
+            copyBtn.onclick = () => {
+                const code = block.querySelector("code").innerText;
+                copyToClipboard(code);
+            };
+            block.appendChild(copyBtn);
+        });
+      } else {
+        loadingMsg.textContent = "Error: " + (result.message || "Failed to get response from AI");
+        loadingMsg.style.color = "var(--error-color)";
+      }
+    } catch (e) {
+      console.error("AI Copilot Error:", e);
+      loadingMsg.textContent = "Error connecting to AI service: " + e.message;
+      loadingMsg.style.color = "var(--error-color)";
+    }
+    
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
 
   // ============================================
   // Git Settings
@@ -5610,6 +6827,9 @@
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" id="global-search-regex" style="width: 14px; height: 14px;"> Regex
                 </label>
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" id="global-search-entities" style="width: 14px; height: 14px;"> Search Entities
+                </label>
             </div>
             <div id="global-search-status" style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; min-height: 18px;"></div>
             <div id="global-search-results" style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary);"></div>
@@ -5624,18 +6844,103 @@
     const btnSearch = document.getElementById("btn-global-search");
     const checkCase = document.getElementById("global-search-case");
     const checkRegex = document.getElementById("global-search-regex");
+    const checkEntities = document.getElementById("global-search-entities");
     const resultsContainer = document.getElementById("global-search-results");
     const statusDiv = document.getElementById("global-search-status");
 
     const performSearch = async () => {
         const query = input.value.trim();
-        if (!query) return;
+        // Allow empty query for entity search (lists all)
+        if (!query && (!checkEntities || !checkEntities.checked)) return;
 
         statusDiv.textContent = "Searching...";
         resultsContainer.innerHTML = "";
         btnSearch.disabled = true;
 
         try {
+            // ENTITY SEARCH MODE
+            if (checkEntities && checkEntities.checked) {
+                const data = await fetchWithAuth(API_BASE, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        action: "get_entities", 
+                        query: query
+                    }),
+                });
+
+                if (data.entities) {
+                    statusDiv.textContent = `Found ${data.entities.length} entities (limit 1000)`;
+                    if (data.entities.length === 0) {
+                        resultsContainer.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">No entities found</div>`;
+                    } else {
+                        data.entities.forEach(ent => {
+                            const item = document.createElement("div");
+                            item.style.padding = "10px 12px";
+                            item.style.borderBottom = "1px solid var(--border-color)";
+                            item.style.cursor = "pointer";
+                            item.style.fontSize = "13px";
+                            item.style.display = "flex";
+                            item.style.alignItems = "center";
+                            item.style.gap = "12px";
+                            
+                            const iconName = (ent.icon || "mdi:circle-outline").replace("mdi:", "").replace(/-/g, "_");
+                            
+                            item.innerHTML = `
+                                <div style="color: var(--accent-color); display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;">
+                                    <span class="material-icons" style="font-size: 20px;">${iconName}</span>
+                                </div>
+                                <div style="flex: 1; overflow: hidden;">
+                                    <div style="font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px;">${ent.friendly_name || ent.entity_id}</div>
+                                    <div style="font-family: monospace; font-size: 11px; color: var(--text-muted); opacity: 0.8;">${ent.entity_id}</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="font-size: 11px; padding: 2px 8px; background: var(--bg-tertiary); border-radius: 10px; color: var(--text-secondary); border: 1px solid var(--border-color);">${ent.state}</div>
+                                    <span class="material-icons" style="font-size: 18px; color: var(--text-muted); opacity: 0.5;">content_copy</span>
+                                </div>
+                            `;
+                            
+                            item.addEventListener("click", () => {
+                                const textToCopy = ent.entity_id;
+                                copyToClipboard(textToCopy);
+                                showToast(`Copied entity ID: ${textToCopy}`, "success");
+                                
+                                closeDialog();
+                                
+                                if (state.editor) {
+                                    state.editor.replaceSelection(textToCopy);
+                                    state.editor.focus();
+                                }
+                            });
+                            
+                            item.addEventListener("mouseenter", () => { 
+                                item.style.background = "var(--bg-tertiary)";
+                                const icon = item.querySelector(".material-icons:last-child");
+                                if (icon) {
+                                    icon.style.opacity = "1";
+                                    icon.style.color = "var(--accent-color)";
+                                }
+                            });
+                            item.addEventListener("mouseleave", () => { 
+                                item.style.background = "transparent";
+                                const icon = item.querySelector(".material-icons:last-child");
+                                if (icon) {
+                                    icon.style.opacity = "0.5";
+                                    icon.style.color = "var(--text-muted)";
+                                }
+                            });
+
+                            resultsContainer.appendChild(item);
+                        });
+                    }
+                } else {
+                    statusDiv.textContent = "Error searching entities";
+                }
+                btnSearch.disabled = false;
+                return;
+            }
+
+            // FILE SEARCH MODE
             const results = await fetchWithAuth(API_BASE, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -5721,6 +7026,7 @@
         { id: "quick_switcher", label: "Go to File...", icon: "find_in_page", shortcut: "Ctrl+E", action: showQuickSwitcher },
         { id: "new_file", label: "New File", icon: "note_add", action: promptNewFile },
         { id: "new_folder", label: "New Folder", icon: "create_new_folder", action: promptNewFolder },
+        { id: "generate_uuid", label: "Generate UUID", icon: "fingerprint", shortcut: "Ctrl+Shift+U", action: insertUUID },
         { id: "git_status", label: "Git Status", icon: "sync", action: () => gitStatus(true) },
         { id: "git_push", label: "Git Push", icon: "cloud_upload", action: gitPush },
         { id: "git_pull", label: "Git Pull", icon: "cloud_download", action: gitPull },
@@ -5970,6 +7276,71 @@
   // File Tree Rendering
   // ============================================
 
+  // Content Search Logic
+  let contentSearchTimer = null;
+
+  function debouncedContentSearch() {
+    if (contentSearchTimer) clearTimeout(contentSearchTimer);
+    
+    // Show loading state
+    if (elements.fileSearch) {
+        elements.fileSearch.style.opacity = "0.7";
+    }
+
+    contentSearchTimer = setTimeout(() => {
+        performContentSearch();
+    }, 500); // 500ms debounce
+  }
+
+  async function performContentSearch() {
+    const query = state.searchQuery.trim();
+    
+    if (!query) {
+        state.contentSearchResults = null;
+        if (elements.fileSearch) elements.fileSearch.style.opacity = "1";
+        renderFileTree();
+        return;
+    }
+
+    try {
+        const results = await fetchWithAuth(API_BASE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                action: "global_search", 
+                query: query,
+                case_sensitive: false,
+                use_regex: false
+            }),
+        });
+
+        if (results && Array.isArray(results)) {
+            // Store matching paths in a Set for O(1) lookup
+            state.contentSearchResults = new Set(results.map(r => r.path));
+            
+            // Auto-expand folders that contain matches
+            if (state.contentSearchResults.size > 0 && state.contentSearchResults.size < 50) {
+                results.forEach(r => {
+                    const parts = r.path.split("/");
+                    let currentPath = "";
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        currentPath += (i > 0 ? "/" : "") + parts[i];
+                        state.expandedFolders.add(currentPath);
+                    }
+                });
+            }
+        } else {
+            state.contentSearchResults = new Set();
+        }
+    } catch (e) {
+        console.error("Content search failed", e);
+        state.contentSearchResults = new Set();
+    } finally {
+        if (elements.fileSearch) elements.fileSearch.style.opacity = "1";
+        renderFileTree();
+    }
+  }
+
   function renderFileTree() {
     if (!elements.fileTree) return;
     renderRecentFilesPanel(); // Call to render recent files
@@ -6024,7 +7395,9 @@
 
     // Render files
     files.forEach((file) => {
-      if (query && !file.name.toLowerCase().includes(query)) {
+      if (state.contentSearchEnabled && state.contentSearchResults) {
+          if (!state.contentSearchResults.has(file.path)) return;
+      } else if (query && !file.name.toLowerCase().includes(query)) {
         return;
       }
 
@@ -6116,6 +7489,18 @@
   }
 
   function folderMatchesSearch(folder, query) {
+    // Content Search Mode
+    if (state.contentSearchEnabled && state.contentSearchResults) {
+        if (folder._files) {
+            if (folder._files.some(f => state.contentSearchResults.has(f.path))) return true;
+        }
+        for (const key of Object.keys(folder)) {
+            if (!key.startsWith("_") && folderMatchesSearch(folder[key], query)) return true;
+        }
+        return false;
+    }
+
+    // Standard Filename Search
     if (folder._files) {
       if (folder._files.some((f) => f.name.toLowerCase().includes(query))) {
         return true;
@@ -6277,6 +7662,7 @@
 
   async function handleDrop(e) {
     e.preventDefault();
+    e.stopPropagation();
     
     const item = e.currentTarget.closest(".tree-item");
     if (item) {
@@ -6424,7 +7810,8 @@
         // Update recent files
         state.recentFiles = state.recentFiles.filter(p => p !== path); // Remove if already exists
         state.recentFiles.unshift(path); // Add to the beginning
-        if (state.recentFiles.length > MAX_RECENT_FILES) {
+        const limit = state.recentFilesLimit || MAX_RECENT_FILES;
+        if (state.recentFiles.length > limit) {
           state.recentFiles.pop(); // Trim to max size
         }
 
@@ -6592,6 +7979,26 @@
     updateToolbarState();
     renderTabs();
     renderFileTree();
+    
+    // Handle auto-save
+    if (state.autoSave && state.activeTab.modified) {
+      // Clear existing timer
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+      }
+      
+      // Set new timer
+      autoSaveTimer = setTimeout(() => {
+        // Double-check state before saving
+        if (state.autoSave && state.activeTab && state.activeTab.modified) {
+          saveCurrentFile(true); // true = isAutoSave
+        }
+      }, state.autoSaveDelay);
+    } else if (autoSaveTimer) {
+      // If auto-save disabled OR not modified, clear any pending timer
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
   }
 
   function createEditor() {
@@ -6602,14 +8009,15 @@
     elements.editorContainer.appendChild(wrapper);
 
     const effectiveTheme = getEffectiveTheme();
-    const cmTheme = effectiveTheme === "dark" ? "material-darker" : "default";
+    const preset = THEME_PRESETS[state.themePreset] || THEME_PRESETS.dark;
+    const cmTheme = preset.colors.cmTheme;
 
     state.editor = CodeMirror(wrapper, {
       value: "",
       mode: null,
       theme: cmTheme,
-      lineNumbers: true,
-      lineWrapping: true,
+      lineNumbers: state.showLineNumbers,
+      lineWrapping: state.wordWrap,
       matchBrackets: true,
       autoCloseBrackets: true,
       styleActiveLine: true,
@@ -6617,7 +8025,7 @@
       indentUnit: 2,
       tabSize: 2,
       indentWithTabs: false,
-      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter", "CodeMirror-lint-markers"],
+      gutters: state.showLineNumbers ? ["CodeMirror-linenumbers", "CodeMirror-foldgutter", "CodeMirror-lint-markers"] : ["CodeMirror-foldgutter", "CodeMirror-lint-markers"],
       hintOptions: {
         hint: homeAssistantHint,
         completeSingle: false,
@@ -6649,6 +8057,9 @@
       },
       inputStyle: "contenteditable",
     });
+    
+    // Apply font settings
+    applyEditorSettings();
 
     // Track changes
     state.editor.on("change", handleEditorChange);
@@ -6792,22 +8203,27 @@
   // File Operations
   // ============================================
 
-  async function saveCurrentFile() {
+  async function saveCurrentFile(isAutoSave = false) {
+    // Safety check: if this is an auto-save call but feature is disabled, abort.
+    if (isAutoSave && !state.autoSave) return;
+
     if (!state.activeTab) return;
 
     const tab = state.activeTab;
     
     // Prevent saving read-only files
     if (tab.path.endsWith(".gitignore") || tab.path.endsWith(".lock")) {
+      if (!isAutoSave) {
         showToast("This file is read-only and cannot be saved manually.", "warning");
-        return;
+      }
+      return;
     }
 
     const content = tab.content;
     const isYaml = tab.path.endsWith(".yaml") || tab.path.endsWith(".yml");
 
-    // 1. Validate if it's a YAML file
-    if (isYaml) {
+    // 1. Validate if it's a YAML file (skip validation for auto-save)
+    if (isYaml && !isAutoSave) {
       const validationResult = await validateYaml(content);
       if (!validationResult.valid) {
         const confirmed = await showConfirmDialog({
@@ -6826,11 +8242,15 @@
     }
 
     // 2. Proceed with saving
-    setButtonLoading(elements.btnSave, true);
+    if (!isAutoSave) {
+      setButtonLoading(elements.btnSave, true);
+    }
 
     const success = await saveFile(tab.path, content);
 
-    setButtonLoading(elements.btnSave, false);
+    if (!isAutoSave) {
+      setButtonLoading(elements.btnSave, false);
+    }
 
     if (success) {
       tab.originalContent = content;
@@ -6838,6 +8258,11 @@
       renderTabs();
       renderFileTree();
       updateToolbarState();
+      
+      if (isAutoSave) {
+        // Show subtle auto-save indicator
+        showToast(`Auto-saved ${tab.path.split("/").pop()}`, "info", 1500);
+      }
     }
   }
 
@@ -7058,6 +8483,32 @@
     // App Settings
     if (elements.btnAppSettings) {
       elements.btnAppSettings.addEventListener("click", showAppSettings);
+    }
+
+    // AI Studio button
+    const btnAI = document.getElementById("btn-ai-studio");
+    if (btnAI) {
+      btnAI.addEventListener("click", toggleAISidebar);
+    }
+
+    const btnCloseAI = document.getElementById("btn-close-ai");
+    if (btnCloseAI) {
+      btnCloseAI.addEventListener("click", toggleAISidebar);
+    }
+
+    const btnAISend = document.getElementById("btn-ai-send");
+    if (btnAISend) {
+      btnAISend.addEventListener("click", sendAIChatMessage);
+    }
+
+    const aiInput = document.getElementById("ai-chat-input");
+    if (aiInput) {
+      aiInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendAIChatMessage();
+        }
+      });
     }
 
     // Validate YAML
@@ -7381,8 +8832,35 @@
     if (elements.fileSearch) {
       elements.fileSearch.addEventListener("input", (e) => {
         state.searchQuery = e.target.value;
-        renderFileTree();
+        if (state.contentSearchEnabled) {
+            debouncedContentSearch();
+        } else {
+            renderFileTree();
+        }
       });
+    }
+    
+    // Content Search Toggle
+    if (elements.btnContentSearch) {
+        elements.btnContentSearch.addEventListener("click", () => {
+            state.contentSearchEnabled = !state.contentSearchEnabled;
+            
+            // UI Toggle
+            if (state.contentSearchEnabled) {
+                elements.btnContentSearch.style.background = "var(--accent-color)";
+                elements.btnContentSearch.style.color = "white";
+                elements.btnContentSearch.style.borderColor = "var(--accent-color)";
+                elements.fileSearch.placeholder = "Search file content...";
+                if (state.searchQuery) debouncedContentSearch();
+            } else {
+                elements.btnContentSearch.style.background = "var(--bg-tertiary)";
+                elements.btnContentSearch.style.color = "var(--text-secondary)";
+                elements.btnContentSearch.style.borderColor = "var(--border-color)";
+                elements.fileSearch.placeholder = "Search files...";
+                state.contentSearchResults = null;
+                renderFileTree();
+            }
+        });
     }
 
     // Welcome screen actions
@@ -7405,7 +8883,13 @@
     document.querySelectorAll(".theme-menu-item").forEach(item => {
       item.addEventListener("click", (e) => {
         e.stopPropagation();
-        setTheme(item.dataset.theme);
+        const theme = item.dataset.theme;
+        if (theme === 'auto') {
+            setTheme('auto');
+        } else {
+            // Use preset setter to ensure correct preset + theme mode sync
+            setThemePreset(theme);
+        }
         elements.themeMenu.classList.remove("visible");
       });
     });
@@ -7477,6 +8961,18 @@
     // Hide context menu on outside click
     document.addEventListener("click", hideContextMenu);
 
+    function insertUUID() {
+        if (!state.editor || !state.editor.hasFocus()) return;
+        
+        // Generate UUID v4
+        const uuid = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+        
+        state.editor.replaceSelection(uuid);
+    }
+
     // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       // ? - Show keyboard shortcuts help (only if not typing in input/textarea)
@@ -7501,6 +8997,11 @@
 
       // Ctrl/Cmd + S
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        // If inside CodeMirror, let its extraKeys handle it to avoid double-save
+        const activeElement = document.activeElement;
+        const isEditor = activeElement && (activeElement.classList.contains("CodeMirror-code") || activeElement.closest('.CodeMirror'));
+        if (isEditor) return;
+
         e.preventDefault();
         if (e.shiftKey) {
           saveAllFiles();
@@ -7538,6 +9039,12 @@
       if ((e.ctrlKey || e.metaKey) && e.key === "b") {
         e.preventDefault();
         toggleSidebar();
+      }
+
+      // Ctrl/Cmd + Shift + U - Generate UUID
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "u") {
+        e.preventDefault();
+        insertUUID();
       }
 
       // Ctrl/Cmd + Shift + F - Global Search

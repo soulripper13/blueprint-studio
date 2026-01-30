@@ -118,6 +118,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 ## ✨ Features
 
 ### Editor Features 🎨
+- **AI Studio Copilot (v2.0)** - Senior Home Assistant Configuration Expert with **Real Entity Awareness**, **7 Intelligent Scene Presets** (morning, evening, movie, reading, romantic, party, relax), **Advanced Script Generation** with multi-step sequences, delays & notifications, **Jinja Template Validation**, and **30+ Device Domains** with 100+ synonyms. Supports **Gemini 3** & **GPT-5** or runs entirely local by default 🧠
 - **Syntax Highlighting** - Support for YAML, JSON, Python, JavaScript, HTML, CSS, Markdown, and Shell scripts 🌈
 - **Code Folding** - Collapse and expand code sections for better focus 📜
 - **Line Numbers** - Easy navigation with line numbers 🔢
@@ -127,15 +128,30 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 - **Smart Autocomplete** - Intelligent suggestions for Home Assistant entities (type `light.` to see lights), keys, and values 🧠
 - **YAML Snippets** - Templates for common HA patterns like Automations and Sensors (type `snip:`) 🧩
 - **YAML Linting** - Real-time YAML syntax validation with error highlighting ❌
+- **Jinja Template Support** - Full syntax highlighting for Jinja2 templates with distinct coloring for brackets, keywords, and variables 📝
 - **Command Palette** - Instant access to all features with `Ctrl+K` ⌨️
+- **UUID Generator** - Instantly insert a random UUID v4 with `Ctrl+Shift+U` 🆔
 - **Professional Search** - Floating Find/Replace widget with navigation controls (`Ctrl+F`, `Ctrl+H`) 🔎
-- **Global Search** - Search across all files with Regex and Case Sensitivity support (`Ctrl+Shift+F`) 🌐
+- **Global Search** - Search across all files with Regex and Case Sensitivity support (`Ctrl+Shift+F`). Now optimized to skip binary files and hidden folders for lightning-fast results 🌐
+- **Entity Explorer Mode** - New mode in Global Search to browse the entity registry, view states, and copy IDs directly into your code 🔍
+- **Filter by Content** - Sidebar toggle to filter the file tree by text content (e.g., find all files containing `input_boolean.test`) 📂
+
+### Editor Customization ⚙️ **NEW in v2.0.0!**
+- **Font Size** - Adjustable from 10px to 24px to suit your preference 🔤
+- **Font Family** - Choose from 7 popular programming fonts (SF Mono, Fira Code, JetBrains Mono, Cascadia Code, Source Code Pro, Ubuntu Mono) 🔡
+- **Word Wrap** - Toggle line wrapping for long lines ↩️
+- **Line Numbers** - Show or hide line numbers #️⃣
+- **Show Whitespace** - Display spaces and tabs visually ␣
+- **Auto-Save** - Automatically save files after a configurable delay (500ms - 5000ms) 💾
+- **Tabbed Settings** - New organized settings interface with General, Appearance, Editor, and Features tabs 🗂️
 
 ### UI Features 🎨
-- **Dark Theme** - VS Code-inspired dark theme for eye-friendly editing 🌙
+- **6 Theme Presets** - Choose from Dark, Light, High Contrast, Solarized Dark, Solarized Light, Ocean, and Dracula themes 🎨
+- **Custom Accent Colors** - Personalize the accent color with 8 vibrant options 🔵🟣🔴🟢
 - **Onboarding Wizard** - Step-by-step tour for new users to initialize and connect 🎓
 - **File Tree Explorer** - Navigate your config directory with an expandable folder tree 🌳
-- **File Type Icons** - Different colored icons for various file types 🎨
+- **File Type Icons** - Different colored icons for various file types (toggle on/off) 🎨
+- **Compact File Tree Mode** - Dense layout option for smaller screens 📱
 - **Multiple Tabs** - Open and edit multiple files simultaneously 🗂️
 - **Resizable Sidebar** - Drag to resize the file explorer 📏
 - **File Search** - Filter files in the explorer 🔍
@@ -206,6 +222,7 @@ Tired of juggling external editors, SSH, or add-ons just to tweak your Home Assi
 | `Ctrl+Shift+[` | Previous Tab ⬅️ |
 | `Ctrl+F` / `Cmd+F` | Find in file 🔎 |
 | `Ctrl+Shift+F` / `Cmd+Shift+F` | Global Search 🌐 |
+| `Ctrl+Shift+U` / `Cmd+Shift+U` | Insert UUID 🆔 |
 | `Ctrl+H` / `Cmd+H` | Replace in file 🔄 |
 | `Ctrl+S` / `Cmd+S` | Save file 💾 |
 | `Ctrl+Shift+S` / `Cmd+Shift+S` | Save all files 💾📁 |
@@ -313,6 +330,21 @@ Blueprint Studio requires **no configuration**! After installation:
 - **Unpin** - Click the pin icon again to remove from favorites
 - **Visual indicator** - Pinned files show an orange pin icon
 
+### AI Studio Copilot 🧠
+**New in v2.5.0! Senior Home Assistant Configuration Expert with advanced intelligence.**
+
+1. **Enable in Settings**: Go to **Settings** and toggle **"AI Studio Copilot"**.
+2. **Choose Provider**: Select between **Local (Private)**, **Google Gemini**, or **OpenAI**.
+3. **Smart Discovery**: The AI knows your real entity IDs! Just ask to "Turn on the living room lights."
+4. **Intelligent Scene Generation**: Create scenes with natural language - "Create a morning scene for bedroom" generates 100% brightness at 4000K cool white. Supports 7 presets: morning, evening, movie, reading, romantic, party, relax.
+5. **Advanced Script Generation**: Create multi-step scripts with delays, notifications, and mode detection (single, parallel, restart, queued). Say "Turn on lights, wait 5 minutes, then turn them off."
+6. **Jinja Template Support**: Edit `.jinja`, `.jinja2`, and `.j2` files with syntax validation and error detection.
+7. **YAML Error Detection**: Automatically detects 7+ common YAML errors (legacy syntax, indentation, missing colons) with line-by-line solutions.
+8. **Multi-File Support**: Generate code specifically for `automations.yaml`, `scripts.yaml`, or `scenes.yaml`.
+9. **Context Aware**: The Copilot analyzes your open file to provide targeted help and perfectly formatted YAML code blocks.
+
+📖 **See Full Guides**: [AI_CAPABILITIES.md](./AI_CAPABILITIES.md) • [SCENE_SCRIPT_GUIDE.md](./SCENE_SCRIPT_GUIDE.md)
+
 ### GitHub Integration 🔗
 **Sync your Home Assistant configuration with GitHub!**
 
@@ -414,7 +446,7 @@ Blueprint Studio requires **no configuration**! After installation:
 | `.sh` | Shell | 🐚 |
 | `.txt`, `.log` | Plain Text | 📄 |
 | `.conf`, `.cfg`, `.ini` | Config | ⚙️ |
-| `.jinja2` | Jinja2 Template | 📄 |
+| `.jinja`, `.jinja2`, `.j2` | Jinja2 Template | 📄 |
 | `.pem`, `.crt`, `.key` | Certificate/Key | 🔒 |
 | `.cpp`, `.h` | C++ (ESPHome) | 🇨 |
 | `.db`, `.sqlite` | Database (Binary) | 🗄️ |
@@ -512,7 +544,16 @@ A: No. Blueprint Studio allows only one instance per Home Assistant installation
 A: Yes, for all supported file types listed in the Supported File Types section. 🌈
 
 **Q: Can I customize the theme or editor settings?**
-A: Currently, Blueprint Studio uses a fixed VS Code-inspired dark theme. Customization options may be added in future versions. 🎨
+A: Yes! Blueprint Studio v2.2.0+ offers extensive customization:
+- **6 Theme Presets**: Dark, Light, High Contrast, Solarized Dark, Solarized Light, Ocean, and Dracula
+- **8 Accent Colors**: Choose your preferred highlight color
+- **Font Options**: Adjust font size (10-24px) and family from 7 popular programming fonts
+- **Editor Behavior**: Toggle word wrap, line numbers, whitespace visibility, and auto-save
+- **File Tree**: Compact mode and icon visibility options
+All settings are available in the Settings modal (gear icon) with a new tabbed interface. 🎨
+
+**Q: Is the AI Copilot always on?**
+A: No. For privacy and performance, the AI Copilot is disabled by default. You can enable it in the Settings modal when you need help. 🧠
 
 **Q: Does Blueprint Studio support GitHub integration?**
 A: Yes! Blueprint Studio v1.2.0+ includes full GitHub integration with OAuth Device Flow, persistent credentials, and visual Git operations (stage, commit, push, pull). 🔗
