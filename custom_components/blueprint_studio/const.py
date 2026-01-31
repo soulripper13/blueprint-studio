@@ -2,7 +2,7 @@
 
 DOMAIN = "blueprint_studio"
 NAME = "Blueprint Studio"
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 # File extensions allowed for editing
 ALLOWED_EXTENSIONS = {

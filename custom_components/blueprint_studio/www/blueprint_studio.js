@@ -841,11 +841,11 @@
 
               // Highlight common HA domain keywords at start of line
               if (style === "atom" || style === "tag" || !style) {
-                  if (current.match(/^\s*(automation|script|sensor|binary_sensor|template|input_boolean|input_number|input_select|input_text|input_datetime|light|switch|climate|cover|scene|group|zone|person):/)) {
+                  if (current.match(/^[\s-]*(automation|script|sensor|binary_sensor|template|input_boolean|input_number|input_select|input_text|input_datetime|light|switch|climate|cover|scene|group|zone|person):/)) {
                     return style ? style + " ha-domain" : "ha-domain";
                   }
                   // Highlight trigger/condition/action keywords
-                  if (current.match(/^\s*(trigger|condition|action|service|entity_id|platform|device_id|area_id):/)) {
+                  if (current.match(/^[\s-]*(id|alias|trigger|triggers|condition|conditions|action|actions|service|entity_id|platform|device_id|area_id):/)) {
                     return style ? style + " ha-key" : "ha-key";
                   }
               }
@@ -899,6 +899,12 @@
               stream.next();
               return null;
             }
+          },
+          indent: function(state, textAfter) {
+            return yamlMode.indent ? yamlMode.indent(state.yamlState, textAfter) : CodeMirror.Pass;
+          },
+          innerMode: function(state) {
+            return {state: state.yamlState, mode: yamlMode};
           }
         };
       });
@@ -910,6 +916,25 @@
 
   // Define the HA YAML mode on load
   defineHAYamlMode();
+
+  // Define Whitespace Visualization Mode
+  function defineShowWhitespaceMode() {
+    try {
+      CodeMirror.defineMode("show-whitespace", function(config, parserConfig) {
+        return {
+          token: function(stream, state) {
+            if (stream.eat(" ")) return "whitespace-space";
+            if (stream.eat("\t")) return "whitespace-tab";
+            stream.next();
+            return null;
+          }
+        };
+      });
+    } catch (error) {
+        console.error("Error defining whitespace mode:", error);
+    }
+  }
+  defineShowWhitespaceMode();
 
   // ============================================
   // State Management
@@ -1667,6 +1692,13 @@
     // CodeMirror options
     state.editor.setOption('lineNumbers', state.showLineNumbers);
     state.editor.setOption('lineWrapping', state.wordWrap);
+    
+    // Whitespace Visualization
+    // We remove it first to avoid duplicates, then add if enabled
+    state.editor.removeOverlay("show-whitespace");
+    if (state.showWhitespace) {
+        state.editor.addOverlay("show-whitespace");
+    }
     
     // Minimap is custom implementation - would need additional setup
     const minimapEl = document.getElementById('minimap');
@@ -5401,7 +5433,7 @@
     if (showWhitespaceToggle) {
       showWhitespaceToggle.addEventListener('change', (e) => {
         state.showWhitespace = e.target.checked;
-        // Would need to implement whitespace visualization in CodeMirror
+        applyEditorSettings();
         saveSettings();
         showToast(e.target.checked ? 'Whitespace visualization enabled' : 'Whitespace visualization disabled', "success");
       });
@@ -8069,6 +8101,91 @@
       updateStatusBar();
     });
 
+    // Block Scope Highlighting Logic
+    let highlightedLines = [];
+
+    const clearBlockHighlight = () => {
+        highlightedLines.forEach(lh => {
+            state.editor.removeLineClass(lh, "wrap", "cm-block-highlight-line");
+            state.editor.removeLineClass(lh, "wrap", "cm-block-highlight-start");
+            state.editor.removeLineClass(lh, "wrap", "cm-block-highlight-end");
+        });
+        highlightedLines = [];
+    };
+
+    state.editor.on("mousedown", (cm, e) => {
+        // Clear existing on any click
+        if (highlightedLines.length > 0) {
+            clearBlockHighlight();
+        }
+
+        // Only handle left clicks
+        if (e.button !== 0) return;
+
+        const pos = cm.coordsChar({left: e.clientX, top: e.clientY});
+        if (!pos) return;
+        
+        const lineText = cm.getLine(pos.line);
+        
+        // Robust detection: Any line that looks like a key definition (e.g. "key:", "- key:", "  key:")
+        // We ignore comments
+        if (lineText.trim().startsWith("#")) return;
+
+        const isKeyLine = /^\s*(- )?[\w_]+:/.test(lineText);
+
+        if (isKeyLine) {
+            const lineNum = pos.line;
+            
+            // Calculate base indentation
+            // If it starts with "- ", the block content aligns with the text, not the dash.
+            // But for scope calculation, we just want to find lines DEEPER than the current line's start.
+            const indentMatch = lineText.match(/^\s*/);
+            const baseIndent = indentMatch ? indentMatch[0].length : 0;
+            
+            const totalLines = cm.lineCount();
+            let endLine = lineNum;
+            
+            // Find scope
+            for (let i = lineNum + 1; i < totalLines; i++) {
+                const nextLineText = cm.getLine(i);
+                
+                if (nextLineText.trim().length === 0) {
+                    if (i < totalLines - 1) continue; 
+                    else break;
+                }
+                
+                const nextIndentMatch = nextLineText.match(/^\s*/);
+                const nextIndent = nextIndentMatch ? nextIndentMatch[0].length : 0;
+                
+                // Block continues if:
+                // 1. Indentation is deeper (standard child)
+                // 2. Indentation is same, BUT the next line is a list item ("- ") and the current block header wasn't a list item
+                //    This handles cases like:
+                //    triggers:
+                //    - entity_id: ...
+                const isNextListItem = /^\s*- /.test(nextLineText);
+                const startIsListItem = /^\s*- /.test(lineText);
+                
+                if (nextIndent > baseIndent || (nextIndent === baseIndent && isNextListItem && !startIsListItem)) {
+                    endLine = i;
+                } else {
+                    break;
+                }
+            }
+            
+            // Apply highlight
+            if (endLine >= lineNum) {
+                clearBlockHighlight(); // Ensure clear
+                for (let i = lineNum; i <= endLine; i++) {
+                    const lineHandle = cm.addLineClass(i, "wrap", "cm-block-highlight-line");
+                    if (i === lineNum) cm.addLineClass(i, "wrap", "cm-block-highlight-start");
+                    if (i === endLine) cm.addLineClass(i, "wrap", "cm-block-highlight-end");
+                    highlightedLines.push(lineHandle);
+                }
+            }
+        }
+    });
+
     // Auto-trigger autocomplete for YAML files
     state.editor.on("inputRead", (cm, changeObj) => {
       // Only auto-complete in YAML mode
@@ -8205,7 +8322,10 @@
 
   async function saveCurrentFile(isAutoSave = false) {
     // Safety check: if this is an auto-save call but feature is disabled, abort.
-    if (isAutoSave && !state.autoSave) return;
+    // We check explicitly for boolean true because button clicks pass an Event object.
+    const reallyAutoSave = isAutoSave === true;
+    
+    if (reallyAutoSave && !state.autoSave) return;
 
     if (!state.activeTab) return;
 
@@ -8213,7 +8333,7 @@
     
     // Prevent saving read-only files
     if (tab.path.endsWith(".gitignore") || tab.path.endsWith(".lock")) {
-      if (!isAutoSave) {
+      if (!reallyAutoSave) {
         showToast("This file is read-only and cannot be saved manually.", "warning");
       }
       return;
@@ -8223,7 +8343,7 @@
     const isYaml = tab.path.endsWith(".yaml") || tab.path.endsWith(".yml");
 
     // 1. Validate if it's a YAML file (skip validation for auto-save)
-    if (isYaml && !isAutoSave) {
+    if (isYaml && !reallyAutoSave) {
       const validationResult = await validateYaml(content);
       if (!validationResult.valid) {
         const confirmed = await showConfirmDialog({
@@ -8242,13 +8362,13 @@
     }
 
     // 2. Proceed with saving
-    if (!isAutoSave) {
+    if (!reallyAutoSave) {
       setButtonLoading(elements.btnSave, true);
     }
 
     const success = await saveFile(tab.path, content);
 
-    if (!isAutoSave) {
+    if (!reallyAutoSave) {
       setButtonLoading(elements.btnSave, false);
     }
 
@@ -8259,7 +8379,7 @@
       renderFileTree();
       updateToolbarState();
       
-      if (isAutoSave) {
+      if (reallyAutoSave) {
         // Show subtle auto-save indicator
         showToast(`Auto-saved ${tab.path.split("/").pop()}`, "info", 1500);
       }

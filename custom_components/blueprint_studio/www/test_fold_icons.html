@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+  <style>
+    .CodeMirror { height: 300px; border: 1px solid #ccc; }
+    
+    /* My custom CSS */
+    .CodeMirror-foldmarker,
+    .CodeMirror-foldgutter-open,
+    .CodeMirror-foldgutter-folded {
+      color: red !important;
+      cursor: pointer;
+      font-size: 1.2em;
+      line-height: 1;
+      width: 1.2em;
+      display: inline-block;
+      text-align: center;
+      font-family: "Material Icons" !important;
+    }
+  </style>
+</head>
+<body>
+  <h3>Fold Icon Test</h3>
+  <textarea id="code">
+block:
+  key: value
+  list:
+    - item 1
+    - item 2
+  </textarea>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/indent-fold.min.js"></script>
+
+  <script>
+    var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+      mode: "yaml",
+      lineNumbers: true,
+      foldGutter: {
+        rangeFinder: CodeMirror.fold.indent,
+        indicatorOpen: "expand_more",
+        indicatorFolded: "chevron_right"
+      },
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
+    });
+  </script>
+</body>
+</html>

@@ -1007,16 +1007,57 @@
       padding: 0 8px;
     }
 
-    .CodeMirror-foldmarker,
+    .CodeMirror-foldmarker {
+      color: var(--cm-fold-color, var(--text-muted)) !important;
+      cursor: pointer;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      padding: 0 4px;
+      margin: 0 4px;
+      font-size: 0.9em;
+      vertical-align: middle;
+      font-family: inherit !important;
+    }
+
+    /* Shared styles for fold markers */
     .CodeMirror-foldgutter-open,
     .CodeMirror-foldgutter-folded {
       color: var(--cm-fold-color, var(--text-muted)) !important;
       cursor: pointer;
-      font-size: 1.4em; /* Relative to editor font size */
+      font-size: 0 !important;
       line-height: 1;
-      width: 1.2em;
-      display: inline-block;
+      width: 100%;
+      height: 100%;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+    }
+
+    /* Common pseudo-element setup for the icon */
+    .CodeMirror-foldgutter-open::after,
+    .CodeMirror-foldgutter-folded::after {
+      content: "\e5cc"; /* chevron_right */
+      font-family: "Material Icons" !important;
+      font-size: 22px !important;
+      display: block;
+      width: 22px;
+      height: 22px;
+      line-height: 22px;
       text-align: center;
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+      pointer-events: none;
+    }
+
+    /* Rotation for open state (like file tree) */
+    .CodeMirror-foldgutter-open::after {
+      transform: rotate(90deg);
+    }
+
+    /* No rotation for folded state */
+    .CodeMirror-foldgutter-folded::after {
+      transform: rotate(0deg);
     }
 
     .CodeMirror-activeline-background {
@@ -1166,6 +1207,39 @@
     }
     [data-theme="light"] .cm-jinja-atom {
       color: #bf360c;
+    }
+
+    /* Block Scope Highlight */
+    .cm-block-highlight-line {
+      background: rgba(128, 128, 128, 0.07) !important;
+      position: relative;
+    }
+    
+    /* The vertical line indicator */
+    .cm-block-highlight-line::after {
+      content: "";
+      position: absolute;
+      left: 1px;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--accent-color);
+      z-index: 10;
+      box-shadow: 0 0 4px var(--accent-color);
+      pointer-events: none;
+      opacity: 0.9;
+    }
+    
+    .cm-block-highlight-start::after {
+      top: 2px;
+      border-top-left-radius: 3px;
+      border-top-right-radius: 3px;
+    }
+    
+    .cm-block-highlight-end::after {
+      bottom: 2px;
+      border-bottom-left-radius: 3px;
+      border-bottom-right-radius: 3px;
     }
 
     /* Welcome screen */
@@ -1933,6 +2007,23 @@
       letter-spacing: 0.5px;
       color: var(--text-secondary);
       margin-bottom: 12px;
+    }
+
+    /* Whitespace Visualization */
+    .cm-whitespace-space {
+      background-image: radial-gradient(circle, var(--text-muted) 1.5px, transparent 1.5px);
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0.6;
+    }
+    
+    .cm-whitespace-tab {
+      /* Arrow-like line */
+      background: linear-gradient(to right, transparent, var(--text-muted) 50%, transparent);
+      background-size: 80% 1px;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0.4;
     }
 
     /* Range Slider */
