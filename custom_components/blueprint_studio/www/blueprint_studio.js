@@ -4009,7 +4009,7 @@
         // Function to clean up and close
         const closeDeviceFlow = (result) => {
           if (activePollTimer) {
-            clearInterval(activePollTimer);
+            clearTimeout(activePollTimer);
             activePollTimer = null;
           }
           modalOverlay.classList.remove("visible");
@@ -4024,7 +4024,7 @@
         const maxPolls = Math.floor(flowData.expiresIn / (pollInterval / 1000)) || 180; // Default ~15 mins
         let pollCount = 0;
 
-        activePollTimer = setInterval(async () => {
+        const pollLoop = async () => {
           pollCount++;
 
           if (pollCount > maxPolls) {
@@ -4058,10 +4058,19 @@
           } else if (result.status === "denied") {
             showToast("GitHub login denied", "error");
             setTimeout(() => closeDeviceFlow(false), 1000);
-          } else if (result.status === "slow_down") {
-            pollInterval = pollInterval * 1.5;
+          } else {
+            // Pending or slow_down
+            if (result.status === "slow_down") {
+              // Increase interval by 5 seconds if asked to slow down
+              pollInterval += 5000;
+            }
+            // Continue polling
+            activePollTimer = setTimeout(pollLoop, pollInterval);
           }
-        }, pollInterval);
+        };
+
+        // Start the loop
+        activePollTimer = setTimeout(pollLoop, pollInterval);
 
         const overlayClickHandler = (e) => {
           if (e.target === modalOverlay) {
@@ -4077,6 +4086,12 @@
         const btnCheckAuthNow = document.getElementById("btn-check-auth-now");
         if (btnCheckAuthNow) {
           btnCheckAuthNow.addEventListener("click", async () => {
+            // Stop auto-poll to prevent race conditions/rate limiting
+            if (activePollTimer) {
+                clearTimeout(activePollTimer);
+                activePollTimer = null;
+            }
+
             btnCheckAuthNow.disabled = true;
             const btnTextSpan = btnCheckAuthNow.querySelector('span:not(.material-icons)');
             if (btnTextSpan) btnTextSpan.textContent = "Checking...";
@@ -4101,25 +4116,34 @@
               }
               showToast(`Successfully logged in as ${result.username}!`, "success");
               setTimeout(() => closeDeviceFlow(true), 2000);
-            } else if (result.status === "pending") {
-              if (statusDiv) statusDiv.querySelector('p').textContent = "Still waiting for authorization...";
-              showToast("Still waiting for authorization...", "info", 3000);
-            } else if (result.status === "slow_down") {
-              if (statusDiv) statusDiv.querySelector('p').textContent = "GitHub requests slower polling. Waiting...";
-              showToast("GitHub requests slower polling...", "warning", 3000);
-              pollInterval = pollInterval * 1.5;
-            } else if (result.status === "expired") {
-              if (statusDiv) statusDiv.innerHTML = `<span class="material-icons" style="color: #f44336;">error</span><p style="color: #f44336;">Login expired.</p>`;
-              showToast("GitHub login expired", "error");
-              setTimeout(() => closeDeviceFlow(false), 2000);
-            } else if (result.status === "denied") {
-              if (statusDiv) statusDiv.innerHTML = `<span class="material-icons" style="color: #f44336;">error</span><p style="color: #f44336;">Login denied.</p>`;
-              showToast("GitHub login denied", "error");
-              setTimeout(() => closeDeviceFlow(false), 2000);
             } else {
-                showToast("Error checking status: " + (result.message || "Unknown error"), "error");
-                if (statusDiv) statusDiv.querySelector('p').textContent = "Error checking status. Waiting...";
+                // Handle non-success states
+                if (result.status === "pending") {
+                  if (statusDiv) statusDiv.querySelector('p').textContent = "Still waiting for authorization...";
+                  showToast("Still waiting for authorization...", "info", 3000);
+                } else if (result.status === "slow_down") {
+                  if (statusDiv) statusDiv.querySelector('p').textContent = "GitHub requests slower polling. Waiting...";
+                  showToast("GitHub requests slower polling...", "warning", 3000);
+                  pollInterval += 5000;
+                } else if (result.status === "expired") {
+                  if (statusDiv) statusDiv.innerHTML = `<span class="material-icons" style="color: #f44336;">error</span><p style="color: #f44336;">Login expired.</p>`;
+                  showToast("GitHub login expired", "error");
+                  setTimeout(() => closeDeviceFlow(false), 2000);
+                  return; // Stop here
+                } else if (result.status === "denied") {
+                  if (statusDiv) statusDiv.innerHTML = `<span class="material-icons" style="color: #f44336;">error</span><p style="color: #f44336;">Login denied.</p>`;
+                  showToast("GitHub login denied", "error");
+                  setTimeout(() => closeDeviceFlow(false), 2000);
+                  return; // Stop here
+                } else {
+                    showToast("Error checking status: " + (result.message || "Unknown error"), "error");
+                    if (statusDiv) statusDiv.querySelector('p').textContent = "Error checking status. Waiting...";
+                }
+                
+                // Restart auto-poll loop if not terminal
+                activePollTimer = setTimeout(pollLoop, pollInterval);
             }
+            
             btnCheckAuthNow.disabled = false;
             if (btnTextSpan) btnTextSpan.textContent = "Check Now";
           });
@@ -8056,6 +8080,47 @@
     }
   }
 
+  function selectNextOccurrence(cm) {
+    const selections = cm.listSelections();
+    if (selections.length === 0) return;
+
+    // Use the last selection (the most recently added one) as the reference
+    const lastSelection = selections[selections.length - 1];
+    
+    // If text is not selected, select the word under cursor
+    if (lastSelection.empty()) {
+      const word = cm.findWordAt(lastSelection.head);
+      // Replace the last empty cursor with the word selection
+      const newSelections = selections.slice(0, -1);
+      newSelections.push({ anchor: word.anchor, head: word.head });
+      cm.setSelections(newSelections);
+      return;
+    }
+
+    // Get the text to match
+    const query = cm.getRange(lastSelection.anchor, lastSelection.head);
+    if (!query) return;
+
+    // Find next occurrence
+    // Start searching from the end of the last selection (max of anchor/head)
+    const searchStart = (lastSelection.head.line > lastSelection.anchor.line || (lastSelection.head.line === lastSelection.anchor.line && lastSelection.head.ch > lastSelection.anchor.ch)) 
+                        ? lastSelection.head 
+                        : lastSelection.anchor;
+
+    // Check if searchcursor addon is loaded
+    if (!cm.getSearchCursor) {
+        console.warn("CodeMirror searchcursor addon not loaded");
+        return;
+    }
+
+    const cursor = cm.getSearchCursor(query, searchStart, { caseFold: false }); // Case sensitive for code precision
+    
+    if (cursor.findNext()) {
+      cm.addSelection(cursor.from(), cursor.to());
+      cm.scrollIntoView(cursor.to(), 20);
+    }
+  }
+
   function createEditor() {
     const wrapper = document.createElement("div");
     wrapper.style.height = "100%";
@@ -8091,6 +8156,8 @@
       extraKeys: {
         "Ctrl-S": () => saveCurrentFile(),
         "Cmd-S": () => saveCurrentFile(),
+        "Ctrl-D": (cm) => selectNextOccurrence(cm),
+        "Cmd-D": (cm) => selectNextOccurrence(cm),
         "Ctrl-F": () => openSearchWidget(false),
         "Cmd-F": () => openSearchWidget(false),
         "Ctrl-H": () => openSearchWidget(true),

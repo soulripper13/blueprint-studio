@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-01-31
+
+### ✨ Improvements
+*   **Robust OAuth Polling**: Re-engineered the GitHub Device Flow authentication to dynamically adjust polling speed in response to server rate limits ("slow_down" signals), preventing API timeouts and ensuring a reliable login experience.
+*   **Smart "Check Now"**: The manual auth check button now coordinates with the background polling loop to prevent race conditions and accidental rate limiting.
+*   **Multi-Cursor Editing**: Added **Ctrl+D** (Cmd+D) support to select the next occurrence of the current selection, enabling simultaneous editing of multiple lines for faster refactoring.
+
 ## [2.0.2] - 2026-01-31
 
 ### ✨ Improvements
@@ -143,6 +150,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 
 ## Version History
 
+- **2.0.3** - Robust GitHub Authentication
 - **2.0.2** - Git & UI Improvements
 - **2.0.1** - Bug Fixes & Stability
 - **2.0.0** - AI Copilot, Intelligent Scenes, Advanced Scripts & UI Customization
@@ -151,7 +159,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.0.3
 [2.0.2]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.0.2
 [2.0.1]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.0.1
 [2.0.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.0.0
