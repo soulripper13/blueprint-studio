@@ -942,6 +942,7 @@
   
   // Auto-save timer reference
   let autoSaveTimer = null;
+  let workspaceSaveTimer = null;
   
   const state = {
     files: [],
@@ -989,6 +990,7 @@
     recentFilesLimit: 10,        // Number of recent files to show
     breadcrumbStyle: "path",     // Breadcrumb style: path, filename
     gitPanelCollapsed: false,    // Git panel collapsed state
+    rememberWorkspace: true,     // Remember open tabs, active tab, cursor, and scroll
   };
 
   // ============================================
@@ -1471,6 +1473,7 @@
       state.recentFilesLimit = settings.recentFilesLimit || 10;
       state.breadcrumbStyle = settings.breadcrumbStyle || "path";
       state.gitPanelCollapsed = settings.gitPanelCollapsed || false;
+      state.rememberWorkspace = settings.rememberWorkspace !== false; // default true
       
       // New state properties for sync
       state.onboardingCompleted = settings.onboardingCompleted ?? (localStorage.getItem("onboardingCompleted") === "true");
@@ -1495,12 +1498,25 @@
 
   async function saveSettings() {
     try {
+      // Update current active tab's cursor/scroll before saving
+      if (state.activeTab && state.editor) {
+        state.activeTab.cursor = state.editor.getCursor();
+        state.activeTab.scroll = state.editor.getScrollInfo();
+      }
+
       // Save open tabs state
-      const openTabsState = state.openTabs.map(tab => ({
-        path: tab.path,
-        modified: tab.modified
-      }));
-      const activeTabPath = state.activeTab ? state.activeTab.path : null;
+      let openTabsState = [];
+      let activeTabPath = null;
+      
+      if (state.rememberWorkspace) {
+        openTabsState = state.openTabs.map(tab => ({
+          path: tab.path,
+          modified: tab.modified,
+          cursor: tab.cursor,
+          scroll: tab.scroll
+        }));
+        activeTabPath = state.activeTab ? state.activeTab.path : null;
+      }
 
       const settings = {
         theme: state.theme,
@@ -1536,11 +1552,12 @@
         fileTreeShowIcons: state.fileTreeShowIcons,
         recentFilesLimit: state.recentFilesLimit,
         breadcrumbStyle: state.breadcrumbStyle,
-        gitPanelCollapsed: state.gitPanelCollapsed
+        gitPanelCollapsed: state.gitPanelCollapsed,
+        rememberWorkspace: state.rememberWorkspace
       };
 
       // Save to server
-      fetchWithAuth(API_BASE, {
+      const savePromise = fetchWithAuth(API_BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "save_settings", settings: settings }),
@@ -1553,8 +1570,10 @@
       if (state.onboardingCompleted) localStorage.setItem("onboardingCompleted", "true");
       localStorage.setItem("gitIntegrationEnabled", state.gitIntegrationEnabled);
 
+      return savePromise;
     } catch (e) {
       console.log("Could not save settings:", e);
+      return Promise.resolve();
     }
   }
 
@@ -5021,6 +5040,17 @@
 
             <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
               <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Remember Workspace</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Restore open tabs, active file, and cursor position on restart</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="remember-workspace-toggle" ${state.rememberWorkspace ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
                 <div style="font-weight: 500; margin-bottom: 4px;">Show Recent Files</div>
                 <div style="font-size: 12px; color: var(--text-secondary);">Display recently opened files at the top of the file tree</div>
               </div>
@@ -5538,6 +5568,15 @@
         state.showRecentFiles = e.target.checked;
         saveSettings();
         renderFileTree();
+      });
+    }
+
+    // Handle Remember Workspace toggle
+    const rememberWorkspaceToggle = document.getElementById("remember-workspace-toggle");
+    if (rememberWorkspaceToggle) {
+      rememberWorkspaceToggle.addEventListener("change", (e) => {
+        state.rememberWorkspace = e.target.checked;
+        saveSettings();
       });
     }
 
@@ -7119,7 +7158,7 @@
         { id: "validate_yaml", label: "Validate YAML", icon: "check_circle", action: () => { if (state.activeTab) validateYaml(state.activeTab.content); } },
         { id: "restart_ha", label: "Restart Home Assistant", icon: "restart_alt", action: restartHomeAssistant },
         { id: "toggle_sidebar", label: "Toggle Sidebar", icon: "menu", shortcut: "Ctrl+B", action: toggleSidebar },
-        { id: "shortcuts", label: "Show Keyboard Shortcuts", icon: "keyboard", shortcut: "?", action: showShortcuts },
+        { id: "shortcuts", label: "Show Keyboard Shortcuts", icon: "keyboard", action: showShortcuts },
         { id: "settings", label: "Settings", icon: "settings", action: showAppSettings },
         { id: "theme_light", label: "Switch to Light Theme", icon: "light_mode", action: () => setTheme("light") },
         { id: "theme_dark", label: "Switch to Dark Theme", icon: "dark_mode", action: () => setTheme("dark") },
@@ -7804,7 +7843,7 @@
   // Tab Management
   // ============================================
 
-  async function openFile(path, forceReload = false) {
+  async function openFile(path, forceReload = false, noActivate = false) {
     // Check if it's a binary file (not meant for CodeMirror)
     if (!isTextFile(path)) {
       const filename = path.split("/").pop();
@@ -7914,6 +7953,8 @@
       }
     }
 
+    if (noActivate) return tab;
+
     activateTab(tab);
     renderTabs();
     renderFileTree();
@@ -7998,6 +8039,9 @@
 
     // Update current folder path
     state.currentFolderPath = tab.path.split("/").slice(0, -1).join("/");
+    
+    // Save state after switching
+    saveSettings();
   }
 
   // ============================================
@@ -8205,6 +8249,19 @@
     // Track cursor position
     state.editor.on("cursorActivity", () => {
       updateStatusBar();
+      
+      // Debounce saving workspace state (cursor/scroll)
+      if (state.rememberWorkspace) {
+        if (workspaceSaveTimer) clearTimeout(workspaceSaveTimer);
+        workspaceSaveTimer = setTimeout(() => saveSettings(), 2000);
+      }
+    });
+
+    state.editor.on("scroll", () => {
+      if (state.rememberWorkspace) {
+        if (workspaceSaveTimer) clearTimeout(workspaceSaveTimer);
+        workspaceSaveTimer = setTimeout(() => saveSettings(), 2000);
+      }
     });
 
     // Block Scope Highlighting Logic
@@ -9215,20 +9272,6 @@
 
     // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
-      // ? - Show keyboard shortcuts help (only if not typing in input/textarea)
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const activeElement = document.activeElement;
-        const isTyping = activeElement && (
-          activeElement.tagName === "INPUT" ||
-          activeElement.tagName === "TEXTAREA" ||
-          activeElement.classList.contains("CodeMirror")
-        );
-        if (!isTyping) {
-          e.preventDefault();
-          showShortcuts();
-        }
-      }
-
       // Ctrl/Cmd + E - Quick Switcher
       if ((e.ctrlKey || e.metaKey) && e.key === "e") {
         e.preventDefault();
@@ -9530,6 +9573,9 @@
     });
 
     if (confirmed) {
+        // Save current state before restart
+        await saveSettings();
+
         try {
             const data = await fetchWithAuth(API_BASE, {
                 method: "POST",
@@ -9559,7 +9605,11 @@
       // Check if file still exists
       const fileExists = state.files.some(f => f.path === tabState.path);
       if (fileExists) {
-        await openFile(tabState.path);
+        const tab = await openFile(tabState.path, false, true);
+        if (tab) {
+          tab.cursor = tabState.cursor || null;
+          tab.scroll = tabState.scroll || null;
+        }
       }
     }
 

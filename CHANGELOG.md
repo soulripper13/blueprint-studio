@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-02-02
+
+### ✨ New Features
+*   **Persistent Workspace**: The editor now remembers your exact workspace layout across restarts, including the specific order of your open tabs, which tab was actively being edited, and the exact cursor/scroll positions for every file. This can be toggled in **Settings > General**.
+
+### 🐛 Bug Fixes
+*   **Keyboard Shortcuts**: Removed the `?` global shortcut for the help overlay, as it was interfering with typing question marks in some contexts.
+
 ## [2.0.4] - 2026-02-01
 
 ### 🐛 Bug Fixes
