@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.6] - 2026-02-05
 
 ### 🐛 Bug Fixes
-*   **Folders in custom_components couldn't be deleted.
+*   Folders in custom_components couldn't be deleted.
 
 ## [2.0.5] - 2026-02-02
 
