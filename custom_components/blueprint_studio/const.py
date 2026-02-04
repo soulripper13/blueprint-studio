@@ -42,6 +42,5 @@ PROTECTED_PATHS = {
     "configuration.yaml",
     "secrets.yaml",
     "home-assistant.log",
-    "custom_components",
     ".storage",
 }
