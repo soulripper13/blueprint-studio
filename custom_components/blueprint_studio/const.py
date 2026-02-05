@@ -2,7 +2,7 @@
 
 DOMAIN = "blueprint_studio"
 NAME = "Blueprint Studio"
-VERSION = "2.0.6"
+VERSION = "2.1.0"
 
 # File extensions allowed for editing
 ALLOWED_EXTENSIONS = {
@@ -35,6 +35,7 @@ EXCLUDED_PATTERNS = {
     ".cache",
     "deps",
     "tts",
+    ".git_credential_helper",
 }
 
 # Protected paths that cannot be deleted

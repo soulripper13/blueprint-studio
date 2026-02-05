@@ -13,6 +13,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, NAME
 from .api import BlueprintStudioApiView
+from .websocket import async_register_websockets
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +51,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     config_dir = Path(hass.config.config_dir)
     api_view = BlueprintStudioApiView(config_dir, store, data)
     hass.http.register_view(api_view)
+    
+    # Register WebSocket commands
+    async_register_websockets(hass)
 
     await hass.http.async_register_static_paths([
         StaticPathConfig(

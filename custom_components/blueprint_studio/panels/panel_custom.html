@@ -20,14 +20,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
   <!-- Note: "default" theme is built into codemirror.min.css, no separate file needed -->
 
-  <!-- Material Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Local Material Icons -->
+  <link rel="stylesheet" href="/local/blueprint_studio/www/fonts/material-icons.css">
 
   <!-- GitHub Octicons (for Git features) -->
   <link href="https://unpkg.com/@primer/octicons@19.8.0/dist/octicons.css" rel="stylesheet">
-
-  <!-- Diff Match Patch (Required for CodeMirror Merge) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
@@ -53,7 +50,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/merge/merge.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/overlay.min.js"></script>
 
@@ -224,7 +220,7 @@
     /* GitHub Octicons support */
     .octicon {
       display: inline-block;
-      vertical-align: text-bottom;
+      vertical-align: middle;
       fill: currentColor;
     }
 
@@ -1000,7 +996,7 @@
     }
 
     .CodeMirror-gutters {
-      background: var(--bg-secondary);
+      background: var(--cm-gutter-bg, var(--bg-secondary)) !important;
       border-right: 1px solid var(--border-color);
     }
 
@@ -1589,10 +1585,10 @@
     .toast-container {
       position: fixed;
       bottom: calc(40px + var(--safe-area-bottom));
-      left: 50%;
-      transform: translateX(-50%);
+      right: 20px;
       z-index: 10005; /* Above modals (10000) and context menus (10002) */
-      width: 90%;
+      width: auto;
+      min-width: 280px;
       max-width: 400px;
     }
 
@@ -1604,7 +1600,7 @@
       border-radius: 8px;
       margin-top: 8px;
       box-shadow: 0 4px 12px var(--shadow-color);
-      animation: slideUp 0.3s ease;
+      animation: slideInRight 0.3s ease;
     }
 
     .toast.success { border-left: 4px solid var(--success-color); }
@@ -1670,13 +1666,13 @@
     }
 
 
-    @keyframes slideUp {
+    @keyframes slideInRight {
       from {
-        transform: translateY(100%);
+        transform: translateX(100%);
         opacity: 0;
       }
       to {
-        transform: translateY(0);
+        transform: translateX(0);
         opacity: 1;
       }
     }
@@ -2610,11 +2606,21 @@
     }
 
     .git-panel-btn:active {
-      background: var(--border-color);
+      background: var(--bg-active);
+      transform: translateY(1px);
     }
 
-    .git-panel-btn .material-icons {
-      font-size: 18px;
+    /* Gitea Specific Styles */
+    .gitea-toolbar-group .material-icons {
+      color: #fa8e14;
+    }
+    
+    #gitea-panel .git-panel-badge {
+      background: #fa8e14;
+    }
+    
+    #gitea-panel .git-empty-state .material-icons {
+      color: #fa8e14;
     }
 
     .git-files-container {
@@ -2714,6 +2720,14 @@
       margin-right: 8px;
       cursor: pointer;
       accent-color: var(--accent-color);
+    }
+
+    .gitea-file-checkbox {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      cursor: pointer;
+      accent-color: #fa8e14;
     }
 
     .git-file-icon {
@@ -3320,6 +3334,27 @@
       </button>
     </div>
 
+    <div class="toolbar-group gitea-toolbar-group" id="gitea-toolbar-group" style="display: none;">
+      <button class="toolbar-btn" id="btn-gitea-pull" title="Gitea Pull">
+        <svg class="octicon" viewBox="0 0 16 16" width="20" height="20" style="color:#fa8e14">
+          <path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 2.122a2.25 2.25 0 1 0-1.5 0v.878A2.25 2.25 0 0 0 5.75 8.5h1.5v2.128a2.251 2.251 0 1 0 1.5 0V8.5h1.5a2.25 2.25 0 0 0 2.25-2.25v-.878a2.25 2.25 0 1 0-1.5 0v.878a.75.75 0 0 1-.75.75h-4.5A.75.75 0 0 1 5 6.25v-.878zm3.75 7.378a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm3-8.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-gitea-push" title="Gitea Push">
+      <svg class="octicon" viewBox="0 0 16 16" width="20" height="20" style="color:#fa8e14">
+          <path d="M1 2.5A2.5 2.5 0 0 1 3.5 0h8.75a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0V1.5h-8a1 1 0 0 0-1 1v6.708A2.492 2.492 0 0 1 3.5 9h3.25a.75.75 0 0 1 0 1.5H3.5a1 1 0 0 0 0 2h5.75a.75.75 0 0 1 0 1.5H3.5A2.5 2.5 0 0 1 1 11.5v-9zm13.23 7.79h-.001l-1.224-1.224v6.184a.75.75 0 0 1-1.5 0V9.066L10.28 10.29a.75.75 0 0 1-1.06-1.061l2.505-2.504a.75.75 0 0 1 1.06 0L15.29 9.23a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018z"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-gitea-status" title="Gitea Status">
+        <svg class="octicon" viewBox="0 0 16 16" width="20" height="20" style="color:#fa8e14">
+          <path d="M8.75 1a.75.75 0 0 0-1.5 0v.5h-.984c-.305 0-.604.08-.869.23l-1.288.737A.25.25 0 0 0 4 2.75v1.5a.25.25 0 0 0 .109.207l1.288.738c.265.15.564.229.869.229h.984v2.759a.75.75 0 0 1-.182.485l-2.006 2.34a.25.25 0 0 0-.061.159v1.583a.25.25 0 0 0 .369.221l2.006-1.032a.75.75 0 0 1 .682 0l2.006 1.032a.25.25 0 0 0 .369-.221v-1.583a.25.25 0 0 0-.061-.159l-2.006-2.34a.75.75 0 0 1-.182-.485V5.5h.984c.305 0 .604-.08.869-.23l1.289-.737A.25.25 0 0 0 12 4.25v-1.5a.25.25 0 0 0-.109-.207l-1.289-.738a1.75 1.75 0 0 0-.869-.229H8.75V1z"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-gitea-settings" title="Gitea Settings">
+        <span class="material-icons" style="color: #fa8e14;">emoji_food_beverage</span>
+      </button>
+    </div>
+
     <div class="breadcrumb-container" id="breadcrumb-container">
       <div class="breadcrumb" id="breadcrumb"></div>
       <button class="breadcrumb-copy-btn" id="breadcrumb-copy" title="Copy full path">
@@ -3330,8 +3365,8 @@
     <div class="toolbar-spacer"></div>
 
     <div class="toolbar-group">
-      <button class="toolbar-btn" id="btn-shortcuts-help" title="Keyboard Shortcuts (?)">
-        <span class="material-icons">keyboard</span>
+      <button class="toolbar-btn" id="btn-support" title="Help & Support">
+        <span class="material-icons">help_outline</span>
       </button>
       <button class="toolbar-btn" id="btn-ai-studio" title="AI Studio Copilot" style="display: none;">
         <span class="material-icons" style="color: #9c27b0;">psychology</span>
@@ -3405,20 +3440,19 @@
       <div class="git-panel" id="git-panel">
         <div class="git-panel-header">
           <div class="git-panel-title">
+            <svg class="octicon" viewBox="0 0 16 16" width="18" height="18" style="margin-right: 6px;"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02-.08-2.12 0 0 .67-.22 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
             <span>Git Changes</span>
             <span class="git-panel-badge" id="git-changes-count">0</span>
           </div>
-          <div class="git-panel-actions">
-            <button class="git-panel-btn" id="btn-git-history" title="Git History: View recent commits">
-              <span class="material-icons" style="font-size: 18px;">history</span>
-            </button>
+          <div class="git-panel-actions" id="git-panel-actions">
             <button class="git-panel-btn" id="btn-git-help" title="Git Help: Learn how to use these features">
               <span class="material-icons" style="font-size: 18px;">help_outline</span>
             </button>
+            <button class="git-panel-btn" id="btn-git-history" title="Git History: View recent commits">
+              <span class="material-icons" style="font-size: 18px;">history</span>
+            </button>
             <button class="git-panel-btn" id="btn-git-refresh" title="Refresh Git Status">
-              <svg class="octicon" viewBox="0 0 16 16" width="18" height="18">
-                <path d="M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z"></path>
-              </svg>
+              <span class="material-icons" style="font-size: 18px;">refresh</span>
             </button>
             <button class="git-panel-btn" id="btn-git-collapse" title="Collapse Git Panel">
               <span class="material-icons">expand_less</span>
@@ -3438,6 +3472,43 @@
           <button class="btn-stage-all" id="btn-stage-all" title="Stage All: Prepare all changes for upload">Stage All</button>
           <button class="btn-unstage-all" id="btn-unstage-all" title="Unstage: Undo preparation for upload">Unstage</button>
           <button class="btn-commit" id="btn-commit-staged" title="Commit: Save your prepared changes locally as a checkpoint" disabled>Commit</button>
+        </div>
+      </div>
+
+      <!-- Gitea Changes Panel -->
+      <div class="git-panel" id="gitea-panel">
+        <div class="git-panel-header">
+          <div class="git-panel-title">
+            <span class="material-icons" style="color: #fa8e14; margin-right: 6px;">emoji_food_beverage</span>
+            <span>Gitea Changes</span>
+            <span class="git-panel-badge" id="gitea-changes-count" style="background: #fa8e14;">0</span>
+          </div>
+          <div class="git-panel-actions" id="gitea-panel-actions">
+            <button class="git-panel-btn" id="btn-gitea-help" title="Gitea Integration Help">
+              <span class="material-icons" style="font-size: 18px;">help_outline</span>
+            </button>
+            <button class="git-panel-btn" id="btn-gitea-history" title="Gitea History: View recent commits">
+              <span class="material-icons" style="font-size: 18px;">history</span>
+            </button>
+            <button class="git-panel-btn" id="btn-gitea-refresh" title="Refresh Gitea Status">
+              <span class="material-icons" style="font-size: 18px;">refresh</span>
+            </button>
+            <button class="git-panel-btn" id="btn-gitea-collapse" title="Collapse Gitea Panel">
+              <span class="material-icons">expand_less</span>
+            </button>
+          </div>
+        </div>
+        <div class="git-files-container" id="gitea-files-container">
+          <div class="git-empty-state">
+            <span class="material-icons" style="font-size: 48px; color: #fa8e14; opacity: 0.5;">emoji_food_beverage</span>
+            <p>No changes detected</p>
+          </div>
+        </div>
+        <div class="git-panel-footer">
+          <button class="btn-stage-all" id="btn-gitea-stage-selected" title="Stage: Prepare selected changes for upload">Stage</button>
+          <button class="btn-stage-all" id="btn-gitea-stage-all" title="Stage All: Prepare all changes for upload">Stage All</button>
+          <button class="btn-unstage-all" id="btn-gitea-unstage-all" title="Unstage: Undo preparation for upload">Unstage</button>
+          <button class="btn-commit" id="btn-gitea-commit-staged" title="Commit: Save your prepared changes locally as a checkpoint" disabled>Commit</button>
         </div>
       </div>
 
@@ -3671,10 +3742,72 @@
   </div>
 
   <!-- Loading Overlay -->
-  <div class="loading-overlay" id="loading-overlay">
+  <div class="loading-overlay visible" id="loading-overlay">
     <div class="loading-content">
       <div class="loading-spinner"></div>
       <div class="loading-text" id="loading-text">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Support Modal -->
+  <div class="modal-overlay" id="modal-support-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <div class="modal-title">Help & Support</div>
+        <button class="modal-close" id="btn-close-support">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="support-options" style="display: flex; flex-direction: column; gap: 12px;">
+          
+          <button class="support-btn" id="btn-support-shortcuts" style="display: flex; align-items: center; padding: 16px; border: 1px solid var(--border-color); background: var(--bg-primary); border-radius: 8px; cursor: pointer; text-align: left; transition: background 0.15s;">
+            <div class="support-icon" style="width: 40px; height: 40px; background: var(--bg-tertiary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 16px;">
+              <span class="material-icons" style="color: var(--accent-color);">keyboard</span>
+            </div>
+            <div class="support-text">
+              <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">Keyboard Shortcuts</div>
+              <div style="font-size: 13px; color: var(--text-secondary);">View a list of all available key bindings</div>
+            </div>
+          </button>
+
+          <button class="support-btn" id="btn-support-feature" style="display: flex; align-items: center; padding: 16px; border: 1px solid var(--border-color); background: var(--bg-primary); border-radius: 8px; cursor: pointer; text-align: left; transition: background 0.15s;">
+            <div class="support-icon" style="width: 40px; height: 40px; background: rgba(255, 152, 0, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 16px;">
+              <span class="material-icons" style="color: #ff9800;">lightbulb</span>
+            </div>
+            <div class="support-text">
+              <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">Request Feature</div>
+              <div style="font-size: 13px; color: var(--text-secondary);">Have an idea? Suggest a new feature</div>
+            </div>
+          </button>
+
+          <button class="support-btn" id="btn-support-issue" style="display: flex; align-items: center; padding: 16px; border: 1px solid var(--border-color); background: var(--bg-primary); border-radius: 8px; cursor: pointer; text-align: left; transition: background 0.15s;">
+            <div class="support-icon" style="width: 40px; height: 40px; background: rgba(244, 67, 54, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 16px;">
+              <span class="material-icons" style="color: #f44336;">bug_report</span>
+            </div>
+            <div class="support-text">
+              <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">Report Issue</div>
+              <div style="font-size: 13px; color: var(--text-secondary);">Found a bug? Let us know</div>
+            </div>
+          </button>
+
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+          <a href="https://github.com/soulripper13/blueprint-studio" id="btn-github-star" target="_blank" class="support-btn" style="display: flex; align-items: center; justify-content: center; padding: 12px; border: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 8px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: background 0.15s;">
+            <span class="material-icons" style="color: #ffc107; margin-right: 8px;">star</span>
+            <span style="font-weight: 600; font-size: 13px;">Give a Star</span>
+          </a>
+          <a href="https://github.com/soulripper13" id="btn-github-follow" target="_blank" class="support-btn" style="display: flex; align-items: center; justify-content: center; padding: 12px; border: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 8px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: background 0.15s;">
+            <span class="material-icons" style="color: var(--accent-color); margin-right: 8px;">person_add</span>
+            <span style="font-weight: 600; font-size: 13px;">Follow Author</span>
+          </a>
+        </div>
+        
+        <div style="margin-top: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">
+          Blueprint Studio <span id="app-version-display">v2.2.0</span> • Soulripper13
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3775,6 +3908,6 @@
     </div>
   </div>
 
-      <script src="/local/blueprint_studio/www/blueprint_studio.js?v=2.0.6"></script>
+      <script type="module" src="/local/blueprint_studio/www/modules/main.js?v=2.1.0"></script>
   </body>
   </html>

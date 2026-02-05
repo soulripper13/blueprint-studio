@@ -35,7 +35,7 @@ class GitManager:
         self.data = data
         self.store = store
 
-    def _run_git_command(self, args: list[str]) -> dict[str, Any]:
+    def _run_git_command(self, args: list[str], auth_provider: str = "github") -> dict[str, Any]:
         """Run a git command in the config directory."""
         try:
             env = os.environ.copy()
@@ -45,12 +45,19 @@ class GitManager:
                 timeout = 300
 
             needs_auth = any(cmd in args for cmd in ["push", "pull", "fetch", "clone"])
-            creds = self.data.get("credentials", {})
+            
+            # Select credentials based on provider
+            creds_key = f"{auth_provider}_credentials" if auth_provider != "github" else "credentials"
+            
+            creds = self.data.get(creds_key, {})
+            # Fallback for github
+            if not creds and auth_provider == "github":
+                 creds = self.data.get("github_credentials", {})
 
             if needs_auth and creds and "username" in creds and "token" in creds:
                 username = creds["username"]
                 token = base64.b64decode(creds["token"]).decode()
-                helper_script = self.config_dir / ".git_credential_helper.sh"
+                helper_script = self.config_dir / f".git_credential_helper_{auth_provider}.sh"
                 helper_content = f"#!/bin/sh\necho \"username={username}\"\necho \"password={token}\"\n"
                 helper_script.write_text(helper_content)
                 helper_script.chmod(0o700)
@@ -85,7 +92,7 @@ class GitManager:
         except Exception as err:
             return {"success": False, "output": "", "error": str(err)}
 
-    async def get_status(self, should_fetch: bool = False) -> web.Response:
+    async def get_status(self, should_fetch: bool = False, remote: str = "origin", auth_provider: str = "github") -> web.Response:
         """Get git status with structured data."""
         try:
             git_dir = self.config_dir / ".git"
@@ -94,10 +101,10 @@ class GitManager:
             has_remote = False
             if is_initialized:
                 remote_result = await self.hass.async_add_executor_job(self._run_git_command, ["remote"])
-                has_remote = remote_result["success"] and bool(remote_result["output"].strip())
+                has_remote = remote_result["success"] and remote in remote_result["output"].split()
 
             if is_initialized and has_remote and should_fetch:
-                await self.hass.async_add_executor_job(self._run_git_command, ["fetch", "--prune"])
+                await self.hass.async_add_executor_job(self._run_git_command, ["fetch", remote, "--prune"], auth_provider)
 
             if not is_initialized:
                  return json_response({
@@ -133,11 +140,11 @@ class GitManager:
             has_changes = any(status_data.values())
             ahead = behind = 0
             if has_remote:
-                compare_result = await self.hass.async_add_executor_job(self._run_git_command, ["rev-list", "--left-right", "--count", "HEAD...@{u}"])
+                compare_result = await self.hass.async_add_executor_job(self._run_git_command, ["rev-list", "--left-right", "--count", f"HEAD...{remote}"])
                 if not compare_result["success"]:
                     branch_result = await self.hass.async_add_executor_job(self._run_git_command, ["symbolic-ref", "--short", "HEAD"])
                     current_branch = branch_result["output"].strip() if branch_result["success"] else "main"
-                    compare_result = await self.hass.async_add_executor_job(self._run_git_command, ["rev-list", "--left-right", "--count", f"HEAD...origin/{current_branch}"])
+                    compare_result = await self.hass.async_add_executor_job(self._run_git_command, ["rev-list", "--left-right", "--count", f"HEAD...{remote}/{current_branch}"])
                 if compare_result["success"]:
                     try:
                         counts = compare_result["output"].strip().split()
@@ -150,10 +157,14 @@ class GitManager:
             local_branches = [b.strip() for b in all_branches_result["output"].split("\n") if b.strip()] if all_branches_result["success"] else []
             remote_branches = []
             if has_remote:
-                rb_result = await self.hass.async_add_executor_job(self._run_git_command, ["ls-remote", "--heads", "origin"])
+                # Use local tracking branches instead of ls-remote to avoid network delay
+                rb_result = await self.hass.async_add_executor_job(self._run_git_command, ["branch", "-r"])
                 if rb_result["success"]:
                     for line in rb_result["output"].split("\n"):
-                        if "\trefs/heads/" in line: remote_branches.append(line.split("\trefs/heads/")[1].strip())
+                        if f"{remote}/" in line:
+                            branch_name = line.split(f"{remote}/")[-1].strip()
+                            if branch_name and "HEAD ->" not in branch_name:
+                                remote_branches.append(branch_name)
 
             return json_response({
                 "success": True, "is_initialized": True, "has_remote": has_remote, "current_branch": current_branch,
@@ -177,18 +188,18 @@ class GitManager:
             _LOGGER.error("Error showing git file: %s", err)
             return json_message(str(err), status_code=500)
 
-    async def pull(self) -> web.Response:
+    async def pull(self, remote: str = "origin", auth_provider: str = "github") -> web.Response:
         """Pull changes from git remote."""
         try:
             branch_result = await self.hass.async_add_executor_job(self._run_git_command, ["symbolic-ref", "--short", "HEAD"])
             target_branch = branch_result["output"].strip() if branch_result["success"] else None
             if not target_branch:
-                remote_head = await self.hass.async_add_executor_job(self._run_git_command, ["remote", "show", "origin"])
+                remote_head = await self.hass.async_add_executor_job(self._run_git_command, ["remote", "show", remote], auth_provider)
                 if remote_head["success"]:
                     match = re.search(r"HEAD branch: (.+)", remote_head["output"])
                     if match: target_branch = match.group(1).strip()
             if not target_branch: target_branch = "main"
-            result = await self.hass.async_add_executor_job(self._run_git_command, ["pull", "--rebase", "origin", target_branch])
+            result = await self.hass.async_add_executor_job(self._run_git_command, ["pull", "--rebase", remote, target_branch], auth_provider)
             if result["success"]:
                 return json_response({"success": True, "output": result["output"]})
             return json_message(result["error"], status_code=500)
@@ -207,7 +218,7 @@ class GitManager:
             _LOGGER.error("Error committing to git: %s", err)
             return json_message(str(err), status_code=500)
 
-    async def push(self, commit_message: str) -> web.Response:
+    async def push(self, commit_message: str, remote: str = "origin", auth_provider: str = "github") -> web.Response:
         """Commit and push changes to git remote."""
         try:
             git_dir = self.config_dir / ".git"
@@ -227,7 +238,7 @@ class GitManager:
 
             branch_result = await self.hass.async_add_executor_job(self._run_git_command, ["symbolic-ref", "--short", "HEAD"])
             target_branch = branch_result["output"].strip() if branch_result["success"] else "main"
-            push_result = await self.hass.async_add_executor_job(self._run_git_command, ["push", "-u", "origin", f"HEAD:refs/heads/{target_branch}"])
+            push_result = await self.hass.async_add_executor_job(self._run_git_command, ["push", "-u", remote, f"HEAD:refs/heads/{target_branch}"], auth_provider)
             if push_result["success"]:
                 return json_response({"success": True, "output": push_result["output"]})
             return json_message(push_result["error"], status_code=500)
@@ -235,7 +246,7 @@ class GitManager:
             _LOGGER.error("Error pushing to git: %s", err)
             return json_message(str(err), status_code=500)
 
-    async def push_only(self) -> web.Response:
+    async def push_only(self, remote: str = "origin", auth_provider: str = "github") -> web.Response:
         """Push existing commits to remote without committing first."""
         try:
             git_dir = self.config_dir / ".git"
@@ -245,7 +256,7 @@ class GitManager:
             
             branch_result = await self.hass.async_add_executor_job(self._run_git_command, ["symbolic-ref", "--short", "HEAD"])
             target_branch = branch_result["output"].strip() if branch_result["success"] else "main"
-            push_result = await self.hass.async_add_executor_job(self._run_git_command, ["push", "-u", "origin", f"HEAD:refs/heads/{target_branch}"])
+            push_result = await self.hass.async_add_executor_job(self._run_git_command, ["push", "-u", remote, f"HEAD:refs/heads/{target_branch}"], auth_provider)
             if push_result["success"]:
                 return json_response({"success": True, "message": "Successfully pushed", "output": push_result["output"]})
             return json_message(f"Push failed: {push_result['error']}", status_code=500)
@@ -278,7 +289,7 @@ class GitManager:
         try:
             gitignore_path = self.config_dir / ".gitignore"
             if not gitignore_path.exists():
-                gitignore_content = "# Home Assistant - Git Ignore File\n*.db\n*.log\n.storage/\n.cloud/\n__pycache__/\n.vscode/\n.git_credential_helper.sh\n"
+                gitignore_content = "# Home Assistant - Git Ignore File\n*.db\n*.log\n.storage/\n.cloud/\n__pycache__/\n.vscode/\n.git_credential_helper*.sh\n"
                 await self.hass.async_add_executor_job(gitignore_path.write_text, gitignore_content)
         except Exception as err:
             _LOGGER.warning("Failed to create .gitignore: %s", err)
@@ -392,46 +403,75 @@ class GitManager:
             _LOGGER.error("Error getting remotes: %s", err)
             return json_message(str(err), status_code=500)
 
-    def get_credentials(self) -> web.Response:
+    def get_credentials(self, provider: str = "github") -> web.Response:
         """Get saved git credentials."""
-        creds = self.data.get("credentials", {})
+        creds_key = f"{provider}_credentials" if provider != "github" else "credentials"
+        creds = self.data.get(creds_key, {})
+        # Fallback check
+        if not creds and provider == "github":
+             creds = self.data.get("github_credentials", {})
         return json_response({"success": True, "has_credentials": "username" in creds, "username": creds.get("username", "")})
 
-    async def set_credentials(self, username: str, token: str, remember_me: bool = True) -> web.Response:
-        """Set git credentials for GitHub authentication."""
+    async def set_credentials(self, username: str, token: str, remember_me: bool = True, provider: str = "github") -> web.Response:
+        """Set git credentials."""
         try:
             await self.hass.async_add_executor_job(self._run_git_command, ["config", "credential.helper", "store"])
+            
+            creds_key = f"{provider}_credentials"
+            if provider == "github":
+                pass 
+            
             if remember_me:
-                self.data["credentials"] = {"username": username, "token": base64.b64encode(token.encode()).decode()}
+                self.data[creds_key] = {"username": username, "token": base64.b64encode(token.encode()).decode()}
+                # Clean up legacy key if setting github
+                if provider == "github" and "credentials" in self.data:
+                    del self.data["credentials"]
+                
                 await self.store.async_save(self.data)
-            elif "credentials" in self.data:
-                del self.data["credentials"]
+            elif creds_key in self.data:
+                del self.data[creds_key]
+                if provider == "github" and "credentials" in self.data:
+                    del self.data["credentials"]
                 await self.store.async_save(self.data)
+            
             if DOMAIN not in self.hass.data: self.hass.data[DOMAIN] = {}
-            self.hass.data[DOMAIN]["git_credentials"] = {"username": username, "token": token}
+            if "git_credentials" not in self.hass.data[DOMAIN]: self.hass.data[DOMAIN]["git_credentials"] = {}
+            
+            # Store in memory by provider
+            self.hass.data[DOMAIN]["git_credentials"][provider] = {"username": username, "token": token}
+            
             await self.hass.async_add_executor_job(self._run_git_command, ["config", "user.name", username])
-            await self.hass.async_add_executor_job(self._run_git_command, ["config", "user.email", f"{username}@users.noreply.github.com"])
+            # Default email logic
+            email_host = "users.noreply.github.com" if provider == "github" else "localhost" 
+            await self.hass.async_add_executor_job(self._run_git_command, ["config", "user.email", f"{username}@{email_host}"])
             return json_response({"success": True, "message": "Git credentials saved"})
         except Exception as err:
             _LOGGER.error("Error setting credentials: %s", err)
             return json_message(str(err), status_code=500)
 
-    async def clear_credentials(self) -> web.Response:
+    async def clear_credentials(self, provider: str = "github") -> web.Response:
         """Clear git credentials and sign out."""
         try:
-            if "credentials" in self.data: del self.data["credentials"]
+            creds_key = f"{provider}_credentials"
+            if creds_key in self.data: del self.data[creds_key]
+            if provider == "github" and "credentials" in self.data: del self.data["credentials"]
+            
             await self.store.async_save(self.data)
-            if DOMAIN in self.hass.data and "git_credentials" in self.hass.data[DOMAIN]: del self.hass.data[DOMAIN]["git_credentials"]
+            
+            if DOMAIN in self.hass.data and "git_credentials" in self.hass.data[DOMAIN]:
+                if provider in self.hass.data[DOMAIN]["git_credentials"]:
+                    del self.hass.data[DOMAIN]["git_credentials"][provider]
+            
             await self.hass.async_add_executor_job(self._run_git_command, ["config", "--unset", "credential.helper"])
             return json_response({"success": True, "message": "Successfully signed out"})
         except Exception as err:
             _LOGGER.error("Error clearing credentials: %s", err)
             return json_message(str(err), status_code=500)
 
-    async def test_connection(self) -> web.Response:
+    async def test_connection(self, remote: str = "origin", auth_provider: str = "github") -> web.Response:
         """Test connection to git remote."""
         try:
-            result = await self.hass.async_add_executor_job(self._run_git_command, ["ls-remote", "--exit-code", "origin"])
+            result = await self.hass.async_add_executor_job(self._run_git_command, ["ls-remote", "--exit-code", remote], auth_provider)
             if result["success"]: return json_response({"success": True, "message": "Connection successful"})
             return json_response({"success": False, "message": "Connection failed", "error": result["error"]}, status_code=400)
         except Exception as err:
@@ -462,7 +502,7 @@ class GitManager:
                         status = "pending" if error_code == "authorization_pending" else "slow_down" if error_code == "slow_down" else "error"
                         return json_response({"success": False, "status": status, "message": data.get("error_description", "Unknown error")})
                     access_token = data.get("access_token")
-                    async with session.get("https://api.github.com/user", headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"}) as user_response:
+                    async with session.get("https://api.openai.com/user" if "openai" in str(access_token) else "https://api.github.com/user", headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"}) as user_response:
                         if user_response.status == 200:
                             user_data = await user_response.json()
                             await self.set_credentials(user_data.get("login"), access_token)
@@ -471,6 +511,32 @@ class GitManager:
         except Exception as err:
             _LOGGER.error("Error polling device flow: %s", err)
             return json_message(str(err), status_code=500)
+
+    async def github_star(self) -> web.Response:
+        """Star the repository on behalf of the user."""
+        try:
+            creds = self.data.get("credentials", {})
+            if not creds or "token" not in creds: return json_message("Not authenticated with GitHub", status_code=401)
+            token = base64.b64decode(creds["token"]).decode()
+            url = "https://api.github.com/user/starred/soulripper13/blueprint-studio"
+            async with aiohttp.ClientSession() as session:
+                async with session.put(url, headers={"Authorization": f"Bearer {token}", "Content-Length": "0", "Accept": "application/vnd.github+json"}) as response:
+                    if response.status == 204: return json_response({"success": True, "message": "Repository starred!"})
+                    return json_message(f"GitHub Error: {response.status}", status_code=response.status)
+        except Exception as e: return json_message(str(e), status_code=500)
+
+    async def github_follow(self) -> web.Response:
+        """Follow the author on behalf of the user."""
+        try:
+            creds = self.data.get("credentials", {})
+            if not creds or "token" not in creds: return json_message("Not authenticated with GitHub", status_code=401)
+            token = base64.b64decode(creds["token"]).decode()
+            url = "https://api.github.com/user/following/soulripper13"
+            async with aiohttp.ClientSession() as session:
+                async with session.put(url, headers={"Authorization": f"Bearer {token}", "Content-Length": "0", "Accept": "application/vnd.github+json"}) as response:
+                    if response.status == 204: return json_response({"success": True, "message": "Now following soulripper13!"})
+                    return json_message(f"GitHub Error: {response.status}", status_code=response.status)
+        except Exception as e: return json_message(str(e), status_code=500)
 
     async def stage(self, files: list[str]) -> web.Response:
         """Stage specific files."""
@@ -577,22 +643,22 @@ class GitManager:
             _LOGGER.error("Error merging unrelated histories: %s", err)
             return json_message(str(err), status_code=500)
 
-    async def force_push(self) -> web.Response:
+    async def force_push(self, remote: str = "origin", auth_provider: str = "github") -> web.Response:
         """Force push local branch to remote."""
         try:
             branch_result = await self.hass.async_add_executor_job(self._run_git_command, ["symbolic-ref", "--short", "HEAD"])
             current = branch_result["output"].strip() if branch_result["success"] else "main"
-            result = await self.hass.async_add_executor_job(self._run_git_command, ["push", "-f", "origin", current])
-            if result["success"]: return json_response({"success": True, "message": f"Force pushed to {current} successfully"})
+            result = await self.hass.async_add_executor_job(self._run_git_command, ["push", "-f", remote, current], auth_provider)
+            if result["success"]: return json_response({"success": True, "message": f"Force pushed to {current} on {remote} successfully"})
             return json_message(result["error"], status_code=500)
         except Exception as err:
             _LOGGER.error("Error force pushing: %s", err)
             return json_message(str(err), status_code=500)
 
-    async def hard_reset(self, remote: str, branch: str) -> web.Response:
+    async def hard_reset(self, remote: str, branch: str, auth_provider: str = "github") -> web.Response:
         """Hard reset local branch to match remote exactly."""
         try:
-            await self.hass.async_add_executor_job(self._run_git_command, ["fetch", remote])
+            await self.hass.async_add_executor_job(self._run_git_command, ["fetch", remote], auth_provider)
             result = await self.hass.async_add_executor_job(self._run_git_command, ["reset", "--hard", f"{remote}/{branch}"])
             if result["success"]: return json_response({"success": True, "message": f"Hard reset to {remote}/{branch} successful"})
             return json_message(result["error"], status_code=500)

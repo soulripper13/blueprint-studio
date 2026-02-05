@@ -850,7 +850,7 @@ class AIManager:
             model = settings.get("aiModel")
 
             # Cloud AI providers
-            if provider in ["gemini", "openai"]:
+            if provider in ["gemini", "openai", "claude"]:
                 system = """You are the Blueprint Studio AI Copilot, a Senior Home Assistant Configuration Expert.
 
 CRITICAL RULES (2024+ Best Practices):
@@ -891,7 +891,7 @@ Example modern automation:
                                 res = await r.json()
                                 return json_response({"success": True, "response": res['candidates'][0]['content']['parts'][0]['text']})
                             return json_message(f"Gemini Error: {r.status}", status_code=r.status)
-                else:
+                elif provider == "openai":
                     key = settings.get("openaiApiKey")
                     url = "https://api.openai.com/v1/chat/completions"
                     async with aiohttp.ClientSession() as s:
@@ -906,6 +906,26 @@ Example modern automation:
                                 res = await r.json()
                                 return json_response({"success": True, "response": res['choices'][0]['message']['content']})
                             return json_message(f"OpenAI Error: {r.status}", status_code=r.status)
+                elif provider == "claude":
+                    key = settings.get("claudeApiKey")
+                    url = "https://api.anthropic.com/v1/messages"
+                    async with aiohttp.ClientSession() as s:
+                        async with s.post(url, headers={
+                            "x-api-key": key,
+                            "anthropic-version": "2023-06-01",
+                            "content-type": "application/json"
+                        }, json={
+                            "model": model or "claude-3-5-sonnet-20241022",
+                            "max_tokens": 4096,
+                            "system": system,
+                            "messages": [
+                                {"role": "user", "content": prompt}
+                            ]
+                        }) as r:
+                            if r.status == 200:
+                                res = await r.json()
+                                return json_response({"success": True, "response": res['content'][0]['text']})
+                            return json_message(f"Claude Error: {r.status}", status_code=r.status)
 
             # ===== ADVANCED LOCAL LOGIC ENGINE =====
 

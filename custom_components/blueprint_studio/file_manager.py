@@ -8,6 +8,7 @@ import os
 import shutil
 import zipfile
 import mimetypes
+import time
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,8 @@ class FileManager:
         """Initialize file manager."""
         self.hass = hass
         self.config_dir = config_dir
+        self._file_cache: dict[bool, list[dict]] = {}
+        self._last_cache_update: float = 0
 
     def _is_file_allowed(self, path: Path) -> bool:
         """Check if file type/name is allowed."""
@@ -54,6 +57,18 @@ class FileManager:
         except (OSError, PermissionError): pass
         return total
 
+    def _fire_update(self, action: str, path: str | None = None):
+        """Fire a websocket update event."""
+        # Invalidate both caches on any change
+        self._file_cache = {}
+        
+        if self.hass:
+            self.hass.bus.async_fire("blueprint_studio_update", {
+                "action": action,
+                "path": path,
+                "timestamp": time.time()
+            })
+
     def list_files(self, show_hidden: bool = False) -> list[dict]:
         """List files recursively."""
         res = []
@@ -67,12 +82,20 @@ class FileManager:
                 res.append({"path": str(rel_root / name if str(rel_root) != "." else name), "name": name, "type": "file"})
         return sorted(res, key=lambda x: x["path"])
 
-    def list_all(self, show_hidden: bool = False) -> list[dict]:
+    def list_all(self, show_hidden: bool = False, force: bool = False) -> list[dict]:
         """List all files and folders."""
+        # Use cache if available and not too old (30s TTL as fallback) and not forced
+        if not force and show_hidden in self._file_cache and (time.time() - self._last_cache_update < 30):
+            return self._file_cache[show_hidden]
+
         res = []
         for root, dirs, files in os.walk(self.config_dir):
-            if not show_hidden: dirs[:] = [d for d in dirs if d not in EXCLUDED_PATTERNS and not d.startswith(".")]
-            else: dirs[:] = [d for d in dirs if d not in EXCLUDED_PATTERNS]
+            # Control recursion and filter directories
+            if not show_hidden:
+                dirs[:] = [d for d in dirs if d not in EXCLUDED_PATTERNS and not d.startswith(".")]
+            else:
+                dirs[:] = [d for d in dirs if d not in EXCLUDED_PATTERNS]
+
             rel_root = Path(root).relative_to(self.config_dir)
             for name in sorted(dirs):
                 res.append({"path": str(rel_root / name if str(rel_root) != "." else name), "name": name, "type": "folder", "size": self._get_dir_size(Path(root) / name)})
@@ -82,7 +105,12 @@ class FileManager:
                 try: size = file_path.stat().st_size
                 except: size = 0
                 res.append({"path": str(rel_root / name if str(rel_root) != "." else name), "name": name, "type": "file", "size": size})
-        return sorted(res, key=lambda x: x["path"])
+        
+        # Save to specific cache (hidden or visible)
+        self._file_cache[show_hidden] = sorted(res, key=lambda x: x["path"])
+        self._last_cache_update = time.time()
+
+        return self._file_cache[show_hidden]
 
     def list_git_files(self) -> list[dict]:
         """List all files for git management."""
@@ -107,9 +135,19 @@ class FileManager:
         try:
             if safe_path.suffix.lower() in BINARY_EXTENSIONS:
                 content = await self.hass.async_add_executor_job(safe_path.read_bytes)
-                return json_response({"content": base64.b64encode(content).decode(), "is_base64": True, "mime_type": mimetypes.guess_type(safe_path.name)[0] or "application/octet-stream"})
+                return json_response({"content": base64.b64encode(content).decode(), "is_base64": True, "mime_type": mimetypes.guess_type(safe_path.name)[0] or "application/octet-stream", "mtime": safe_path.stat().st_mtime})
             content = await self.hass.async_add_executor_job(safe_path.read_text, "utf-8")
-            return json_response({"content": content, "is_base64": False, "mime_type": mimetypes.guess_type(safe_path.name)[0] or "text/plain;charset=utf-8"})
+            return json_response({"content": content, "is_base64": False, "mime_type": mimetypes.guess_type(safe_path.name)[0] or "text/plain;charset=utf-8", "mtime": safe_path.stat().st_mtime})
+        except Exception as e: return json_message(str(e), status_code=500)
+
+    async def get_file_stat(self, path: str) -> web.Response:
+        """Get file statistics."""
+        safe_path = get_safe_path(self.config_dir, path)
+        if not safe_path or not safe_path.is_file(): return json_message("File not found", status_code=404)
+        if not self._is_file_allowed(safe_path): return json_message("Not allowed", status_code=403)
+        try:
+            stat = safe_path.stat()
+            return json_response({"success": True, "mtime": stat.st_mtime, "size": stat.st_size})
         except Exception as e: return json_message(str(e), status_code=500)
 
     async def write_file(self, path: str, content: str) -> web.Response:
@@ -118,7 +156,8 @@ class FileManager:
         if not safe_path or not self._is_file_allowed(safe_path): return json_message("Not allowed", status_code=403)
         try:
             await self.hass.async_add_executor_job(safe_path.write_text, content, "utf-8")
-            return json_response({"success": True})
+            self._fire_update("write", path)
+            return json_response({"success": True, "mtime": safe_path.stat().st_mtime})
         except Exception as e: return json_message(str(e), status_code=500)
 
     async def create_file(self, path: str, content: str, is_base64: bool = False) -> web.Response:
@@ -129,6 +168,7 @@ class FileManager:
         try:
             if is_base64: await self.hass.async_add_executor_job(safe_path.write_bytes, base64.b64decode(content))
             else: await self.hass.async_add_executor_job(safe_path.write_text, content, "utf-8")
+            self._fire_update("create", path)
             return json_response({"success": True, "path": path})
         except Exception as e: return json_message(str(e), status_code=500)
 
@@ -138,6 +178,7 @@ class FileManager:
         if not safe_path or safe_path.exists(): return json_message("Not allowed or exists", status_code=403)
         try:
             await self.hass.async_add_executor_job(safe_path.mkdir, 0o755)
+            self._fire_update("create_folder", path)
             return json_response({"success": True, "path": path})
         except Exception as e: return json_message(str(e), status_code=500)
 
@@ -149,6 +190,7 @@ class FileManager:
         try:
             if safe_path.is_dir(): await self.hass.async_add_executor_job(shutil.rmtree, safe_path)
             else: await self.hass.async_add_executor_job(safe_path.unlink)
+            self._fire_update("delete", path)
             return json_response({"success": True})
         except Exception as e: return json_message(str(e), status_code=500)
 
@@ -159,6 +201,7 @@ class FileManager:
         try:
             if src.is_dir(): await self.hass.async_add_executor_job(shutil.copytree, src, dest)
             else: await self.hass.async_add_executor_job(shutil.copy2, src, dest)
+            self._fire_update("copy", destination)
             return json_response({"success": True, "path": destination})
         except Exception as e: return json_message(str(e), status_code=500)
 
@@ -169,6 +212,7 @@ class FileManager:
         if not src or not dest or not src.exists() or dest.exists(): return json_message("Invalid path or exists", status_code=403)
         try:
             await self.hass.async_add_executor_job(src.rename, dest)
+            self._fire_update("rename", destination)
             return json_response({"success": True, "path": destination})
         except Exception as e: return json_message(str(e), status_code=500)
 
@@ -226,6 +270,7 @@ class FileManager:
         try:
             if is_base64: await self.hass.async_add_executor_job(safe_path.write_bytes, base64.b64decode(content))
             else: await self.hass.async_add_executor_job(safe_path.write_text, content, "utf-8")
+            self._fire_update("upload", path)
             return json_response({"success": True, "path": path})
         except Exception as e: return json_message(str(e), status_code=500)
 
@@ -240,5 +285,6 @@ class FileManager:
                 for member in zf.namelist():
                     if not member.endswith("/") and self._is_file_allowed(safe_path / member):
                         zf.extract(member, safe_path)
+            self._fire_update("upload_folder", path)
             return json_response({"success": True})
         except Exception as e: return json_message(str(e), status_code=500)

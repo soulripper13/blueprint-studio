@@ -56,7 +56,8 @@ class BlueprintStudioApiView(HomeAssistantView):
             return json_response(files)
         if action == "list_all":
             show_hidden = params.get("show_hidden", "false").lower() == "true"
-            items = await hass.async_add_executor_job(self.file.list_all, show_hidden)
+            force_refresh = params.get("force", "false").lower() == "true"
+            items = await hass.async_add_executor_job(self.file.list_all, show_hidden, force_refresh)
             return json_response(items)
         if action == "list_git_files":
             items = await hass.async_add_executor_job(self.file.list_git_files)
@@ -65,12 +66,32 @@ class BlueprintStudioApiView(HomeAssistantView):
             path = params.get("path")
             if not path: return json_message("Missing path", status_code=400)
             return await self.file.read_file(path)
+        if action == "get_file_stat":
+            path = params.get("path")
+            if not path: return json_message("Missing path", status_code=400)
+            return await self.file.get_file_stat(path)
         if action == "download_folder":
             path = params.get("path")
             if not path: return json_message("Missing path", status_code=400)
             return await self.file.download_folder(path)
         if action == "get_settings":
             return json_response(self.data.get("settings", {}))
+        if action == "get_version":
+            from homeassistant.const import __version__ as ha_version_const
+            integration_version = "Unknown"
+            try:
+                # Try to get version from manifest.json
+                manifest_path = Path(__file__).parent / "manifest.json"
+                import json
+                with open(manifest_path, "r") as f:
+                    manifest = json.load(f)
+                    integration_version = manifest.get("version", "Unknown")
+            except: pass
+            
+            return json_response({
+                "ha_version": ha_version_const,
+                "integration_version": integration_version
+            })
         
         return json_message("Unknown action", status_code=400)
 
@@ -129,20 +150,34 @@ class BlueprintStudioApiView(HomeAssistantView):
         if action == "git_status": return await self.git.get_status(data.get("fetch", False))
         if action == "git_log": return await self.git.get_log(data.get("count", 20))
         if action == "git_diff_commit": return await self.git.diff_commit(data.get("hash"))
-        if action == "git_pull": return await self.git.pull()
+        if action == "git_pull": 
+            response = await self.git.pull()
+            if response.status == 200: self.file._file_cache = None
+            return response
         if action == "git_push": return await self.git.push(data.get("commit_message", "Update via Blueprint Studio"))
         if action == "git_push_only": return await self.git.push_only()
         if action == "git_commit": return await self.git.commit(data.get("commit_message", "Update via Blueprint Studio"))
         if action == "git_show": return await self.git.show(data.get("path"))
-        if action == "git_init": return await self.git.init()
+        if action == "git_init": 
+            response = await self.git.init()
+            if response.status == 200: self.file._file_cache = None
+            return response
         if action == "git_add_remote": return await self.git.add_remote(data.get("name", "origin"), data.get("url"))
         if action == "git_remove_remote": return await self.git.remove_remote(data.get("name"))
         if action == "git_delete_repo": return await self.git.delete_repo()
         if action == "git_repair_index": return await self.git.repair_index()
         if action == "git_rename_branch": return await self.git.rename_branch(data.get("old_name"), data.get("new_name"))
         if action == "git_merge_unrelated": return await self.git.merge_unrelated(data.get("remote", "origin"), data.get("branch", "main"))
-        if action == "git_force_push": return await self.git.force_push()
-        if action == "git_hard_reset": return await self.git.hard_reset(data.get("remote", "origin"), data.get("branch", "main"))
+        if action == "git_force_push": 
+            remote = data.get("remote", "origin")
+            auth = "gitea" if remote == "gitea" else "github"
+            return await self.git.force_push(remote, auth_provider=auth)
+        if action == "git_hard_reset": 
+            remote = data.get("remote", "origin")
+            auth = "gitea" if remote == "gitea" else "github"
+            response = await self.git.hard_reset(remote, data.get("branch", "main"), auth_provider=auth)
+            if response.status == 200: self.file._file_cache = None
+            return response
         if action == "git_delete_remote_branch": return await self.git.delete_remote_branch(data.get("branch"))
         if action == "git_abort": return await self.git.abort()
         if action == "git_stage": return await self.git.stage(data.get("files", []))
@@ -156,6 +191,22 @@ class BlueprintStudioApiView(HomeAssistantView):
         if action == "git_clear_credentials": return await self.git.clear_credentials()
         if action == "git_test_connection": return await self.git.test_connection()
         
+        # Gitea Specific
+        if action == "gitea_status": return await self.git.get_status(data.get("fetch", False), remote="gitea", auth_provider="gitea")
+        if action == "gitea_pull": return await self.git.pull(remote="gitea", auth_provider="gitea")
+        if action == "gitea_push": return await self.git.push(data.get("commit_message", "Update via Blueprint Studio"), remote="gitea", auth_provider="gitea")
+        if action == "gitea_push_only": return await self.git.push_only(remote="gitea", auth_provider="gitea")
+        # Commit/Stage/Unstage/Reset are local operations, so we reuse git_commit etc. or assume they share the same repo state.
+        # But we might want gitea_commit just for consistency in frontend calls?
+        # Ideally, local operations are provider-agnostic. The frontend can just call git_commit.
+        
+        if action == "gitea_get_credentials": return self.git.get_credentials(provider="gitea")
+        if action == "gitea_set_credentials": return await self.git.set_credentials(data.get("username"), data.get("token"), data.get("remember_me", True), provider="gitea")
+        if action == "gitea_clear_credentials": return await self.git.clear_credentials(provider="gitea")
+        if action == "gitea_test_connection": return await self.git.test_connection(remote="gitea", auth_provider="gitea")
+        if action == "gitea_add_remote": return await self.git.add_remote(data.get("name", "gitea"), data.get("url"))
+        if action == "gitea_remove_remote": return await self.git.remove_remote("gitea")
+
         # AI
         if action == "ai_query": return await self.ai.query(data.get("query"), data.get("current_file"), data.get("file_content"))
 
@@ -164,6 +215,8 @@ class BlueprintStudioApiView(HomeAssistantView):
         if action == "github_set_default_branch": return await self.git.github_set_default_branch(data.get("branch"))
         if action == "github_device_flow_start": return await self.git.github_device_flow_start(data.get("client_id"))
         if action == "github_device_flow_poll": return await self.git.github_device_flow_poll(data.get("client_id"), data.get("device_code"))
+        if action == "github_star": return await self.git.github_star()
+        if action == "github_follow": return await self.git.github_follow()
 
         # Misc
         if action == "restart_home_assistant":
