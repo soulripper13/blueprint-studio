@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-02-05
+
+### ✨ New Features
+*   **Context Menu Creation**: You can now **right-click** any folder or file in the explorer to quickly add a **New File** or **New Folder** in that directory.
+*   **Productivity Shortcuts**: Added VS Code-style line operations:
+    *   `Alt + Up/Down`: Move selected lines up/down.
+    *   `Shift + Alt + Up/Down`: Duplicate selected lines.
+    *   Includes Mac support using `Option` and `Cmd + Shift + Up/Down` overrides.
+*   **Nested Folder Creation**: Create deep directory structures instantly (e.g., `folder/sub/deep`) without creating each level manually.
+*   **Context Menu Actions**: Added **New File** and **New Folder** options to the file explorer right-click menu.
+*   **Smart Path Pre-filling**: "New File/Folder" dialogs now pre-fill with the currently selected folder path, allowing for quick modifications.
+
 ## [2.1.0] - 2026-02-05
 
 ### ✨ New Features
@@ -207,7 +219,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.1
 [2.1.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.0
 [2.0.6]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.0.6
 [2.0.5]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.0.5
