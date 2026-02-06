@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-02-06
+
+### ✨ AI Models Update
+*   **AI Model Refresh**: Updated Copilot to support latest 2026 models: **Gemini 3 Pro/Flash**, **GPT-5**, **GPT-5.2**, and more.
+
 ## [2.1.2] - 2026-02-06
 
 ### ✨ New Features
@@ -224,6 +229,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 ---
 
 ## Version History
+- **2.1.3** - AI Models Update
 - **2.1.2** - Visuals & Efficiency Update
 - **2.1.1** - Professional File Management and Productivity Boost 
 - **2.1.0** - The Performance & Architecture Update
@@ -239,7 +245,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.1.2...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.1.3...HEAD
+[2.1.3]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.3
 [2.1.2]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.2
 [2.1.1]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.1
 [2.1.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.0
