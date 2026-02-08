@@ -22,6 +22,7 @@ export const state = {
   showHidden: false,
   showRecentFiles: true,
   contextMenuTarget: null,
+  tabContextMenuTarget: null,
   currentFolderPath: "",
   editor: null,
   gitConfig: null,

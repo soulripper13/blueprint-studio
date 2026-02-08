@@ -1022,12 +1022,15 @@ export function initElements() {
     elements.sidebarOverlay = document.getElementById("sidebar-overlay");
     elements.resizeHandle = document.getElementById("resize-handle");
     elements.statusPosition = document.getElementById("status-position");
+    elements.statusIndent = document.getElementById("status-indent");
+    elements.statusEncoding = document.getElementById("status-encoding");
     elements.statusLanguage = document.getElementById("status-language");
     elements.statusConnection = document.getElementById("status-connection");
     elements.btnSave = document.getElementById("btn-save");
     elements.btnSaveAll = document.getElementById("btn-save-all");
     elements.btnUndo = document.getElementById("btn-undo");
     elements.btnRedo = document.getElementById("btn-redo");
+    elements.btnFormat = document.getElementById("btn-format");
     elements.btnMenu = document.getElementById("btn-menu");
     elements.btnSearch = document.getElementById("btn-search");
     elements.btnRefresh = document.getElementById("btn-refresh");
@@ -1073,6 +1076,7 @@ export function initElements() {
     elements.modalCancel = document.getElementById("modal-cancel");
     elements.modalClose = document.getElementById("modal-close");
     elements.contextMenu = document.getElementById("context-menu");
+    elements.tabContextMenu = document.getElementById("tab-context-menu");
     elements.btnUpload = document.getElementById("btn-upload");
     elements.btnDownload = document.getElementById("btn-download");
     elements.btnUploadFolder = document.getElementById("btn-upload-folder");
@@ -2358,9 +2362,37 @@ export function showContextMenu(x, y, target) {
     menu.style.top = `${posY}px`;
   }
 
+export function showTabContextMenu(x, y, tab) {
+    state.tabContextMenuTarget = tab;
+    const menu = elements.tabContextMenu;
+    if (!menu) return;
+
+    menu.classList.add("visible");
+
+    // Position menu
+    const menuRect = menu.getBoundingClientRect();
+    const viewWidth = window.innerWidth;
+    const viewHeight = window.innerHeight;
+
+    let posX = x;
+    let posY = y;
+
+    if (x + menuRect.width > viewWidth) {
+      posX = viewWidth - menuRect.width - 10;
+    }
+    if (y + menuRect.height > viewHeight) {
+      posY = viewHeight - menuRect.height - 10;
+    }
+
+    menu.style.left = `${posX}px`;
+    menu.style.top = `${posY}px`;
+}
+
 export function hideContextMenu() {
     elements.contextMenu.classList.remove("visible");
+    if (elements.tabContextMenu) elements.tabContextMenu.classList.remove("visible");
     state.contextMenuTarget = null;
+    state.tabContextMenuTarget = null;
   }
 
   // ============================================
@@ -2987,6 +3019,23 @@ export async function loadFiles(force = false) {
 
 export async function loadFile(path) {
     try {
+      // Large File Protection
+      const fileInfo = state.files.find(f => f.path === path);
+      if (fileInfo && fileInfo.size > 2 * 1024 * 1024) { // 2MB limit
+          const confirmed = await showConfirmDialog({
+              title: "Large File Detected",
+              message: `This file is <b>${formatBytes(fileInfo.size)}</b>. Opening it may cause the browser to freeze.<br><br>Do you want to download it instead?`,
+              confirmText: "Download",
+              cancelText: "Open Anyway (Risky)"
+          });
+
+          if (confirmed) {
+              downloadFileByPath(path);
+              // Return dummy content to prevent editor from loading empty state
+              return { content: "", mtime: 0 }; 
+          }
+      }
+
       const data = await fetchWithAuth(
         `${API_BASE}?action=read_file&path=${encodeURIComponent(path)}&_t=${Date.now()}`
       );
@@ -3146,6 +3195,90 @@ export async function renameItem(source, destination) {
       return false;
     }
   }
+
+export function formatCode() {
+    if (!state.editor) return;
+    
+    // Feature disabled temporarily
+    showToast("Auto-formatting is currently disabled", "info");
+
+    /*
+    // Heuristic: Fix Home Assistant root keys indentation
+    // These keys should almost always be at the root level in configuration.yaml
+    const ROOT_KEYS = [
+        "automation:", "script:", "scene:", "template:", "sensor:", "binary_sensor:", 
+        "switch:", "light:", "fan:", "cover:", "climate:", "person:", "zone:", 
+        "homeassistant:", "default_config:", "frontend:", "http:", "panel_custom:", 
+        "panel_iframe:", "group:", "input_boolean:", "input_number:", "input_select:",
+        "input_text:", "input_datetime:", "timer:", "counter:", "notify:", "tts:",
+        "media_player:", "camera:", "alarm_control_panel:", "lock:", "vacuum:", "siren:"
+    ];
+
+    state.editor.operation(() => {
+        const doc = state.editor.getDoc();
+        const totalLines = doc.lineCount();
+        const cursor = doc.getCursor();
+        const scroll = state.editor.getScrollInfo();
+
+        let lastRootKeyLine = -1;
+        const isListFile = state.activeTab && state.activeTab.path.match(/(automations|scripts|scenes)\.yaml$/);
+
+        // 1. Fix Indentation Heuristics
+        for (let i = 0; i < totalLines; i++) {
+            const lineContent = doc.getLine(i);
+            const trimmed = lineContent.trim();
+            
+            // Skip empty lines or comments
+            if (!trimmed || trimmed.startsWith("#")) continue;
+
+            const leadingWhitespace = lineContent.match(/^\s+/);
+            const currentIndent = leadingWhitespace ? leadingWhitespace[0].length : 0;
+
+            // A. Root Keys -> Force 0 indent
+            if (ROOT_KEYS.some(key => trimmed.startsWith(key))) {
+                if (currentIndent > 0) {
+                    doc.replaceRange("", {line: i, ch: 0}, {line: i, ch: currentIndent});
+                }
+                lastRootKeyLine = i;
+                continue;
+            }
+            
+            // A.2 Root List Items (for automations.yaml, scripts.yaml) -> Force 0 indent
+            if (isListFile && (trimmed.startsWith("- id:") || trimmed.startsWith("- alias:"))) {
+                if (currentIndent > 0) {
+                    doc.replaceRange("", {line: i, ch: 0}, {line: i, ch: currentIndent});
+                }
+                // Reset root context since this starts a new block
+                lastRootKeyLine = i; 
+                continue;
+            }
+
+            // B. Level 1 Lists (children of root keys) -> Force 2 indent
+            // If we are directly under a root key (no other keys in between)
+            // This is a heuristic: if previous line was root, this line MUST be indented.
+            if (lastRootKeyLine === i - 1) {
+                // If it starts with dash or text, it should be indented
+                // Standard HA indentation is 2 spaces
+                if (currentIndent !== 2) {
+                    // Replace existing indent with 2 spaces
+                    doc.replaceRange("  ", {line: i, ch: 0}, {line: i, ch: currentIndent});
+                }
+            }
+        }
+
+        // 2. Run Standard Auto-Indent to fix deeper levels based on our corrected anchors
+        if (state.editor.somethingSelected()) {
+            state.editor.indentSelection("smart");
+        } else {
+            state.editor.execCommand("selectAll");
+            state.editor.indentSelection("smart");
+            state.editor.setCursor(cursor);
+            state.editor.scrollTo(scroll.left, scroll.top);
+        }
+    });
+    showToast("Code formatted", "success");
+    */
+}
 
 export async function validateYaml(content) {
     try {
@@ -3606,7 +3739,10 @@ export async function gitStatus(shouldFetch = false, silent = false) {
     if (!isGitEnabled()) return;
 
     try {
-      if (!silent) setButtonLoading(elements.btnGitStatus, true);
+      if (!silent) {
+          // Use pulsing effect instead of spinner
+          if (elements.btnGitStatus) elements.btnGitStatus.classList.add("pulsing");
+      }
 
       const data = await fetchWithAuth(API_BASE, {
         method: "POST",
@@ -3617,7 +3753,9 @@ export async function gitStatus(shouldFetch = false, silent = false) {
         }),
       });
 
-      if (!silent) setButtonLoading(elements.btnGitStatus, false);
+      if (!silent) {
+          if (elements.btnGitStatus) elements.btnGitStatus.classList.remove("pulsing");
+      }
 
       if (data.success) {
         // Store previous change list string to check for meaningful changes
@@ -3677,7 +3815,7 @@ export async function gitStatus(shouldFetch = false, silent = false) {
       }
     } catch (error) {
       if (!silent) {
-          setButtonLoading(elements.btnGitStatus, false);
+          if (elements.btnGitStatus) elements.btnGitStatus.classList.remove("pulsing");
           showToast("Git error: " + error.message, "error");
       }
     }
@@ -5728,7 +5866,9 @@ export async function giteaStatus(shouldFetch = false, silent = false) {
     if (!state.giteaIntegrationEnabled) return;
 
     try {
-      if (!silent) setButtonLoading(elements.btnGiteaStatus, true);
+      if (!silent) {
+          if (elements.btnGiteaStatus) elements.btnGiteaStatus.classList.add("pulsing");
+      }
 
       const data = await fetchWithAuth(API_BASE, {
         method: "POST",
@@ -5739,7 +5879,9 @@ export async function giteaStatus(shouldFetch = false, silent = false) {
         }),
       });
 
-      if (!silent) setButtonLoading(elements.btnGiteaStatus, false);
+      if (!silent) {
+          if (elements.btnGiteaStatus) elements.btnGiteaStatus.classList.remove("pulsing");
+      }
 
       if (data.success) {
         // Store previous change list string to check for meaningful changes
@@ -5785,7 +5927,7 @@ export async function giteaStatus(shouldFetch = false, silent = false) {
       }
     } catch (error) {
       if (!silent) {
-          setButtonLoading(elements.btnGiteaStatus, false);
+          if (elements.btnGiteaStatus) elements.btnGiteaStatus.classList.remove("pulsing");
           showToast("Gitea error: " + error.message, "error");
       }
     }
@@ -8472,6 +8614,10 @@ export function showCommandPalette() {
             saveSettings();
             showToast(`Word wrap ${state.wordWrap ? "enabled" : "disabled"}`, "info");
         }},
+        { id: "fold_all", label: "Fold All", icon: "unfold_less", action: () => { if (state.editor) state.editor.execCommand("foldAll"); } },
+        { id: "unfold_all", label: "Unfold All", icon: "unfold_more", action: () => { if (state.editor) state.editor.execCommand("unfoldAll"); } },
+        { id: "close_others", label: "Close Other Tabs", icon: "close_fullscreen", action: () => { if (state.activeTab) { const tabs = state.openTabs.filter(t => t !== state.activeTab); tabs.forEach(t => closeTab(t)); } } },
+        { id: "close_saved", label: "Close Saved Tabs", icon: "save", action: () => { if (state.activeTab) { const tabs = state.openTabs.filter(t => !t.modified && t !== state.activeTab); tabs.forEach(t => closeTab(t)); } } },
         { id: "theme_light", label: "Switch to Light Theme", icon: "light_mode", action: () => setTheme("light") },
         { id: "theme_dark", label: "Switch to Dark Theme", icon: "dark_mode", action: () => setTheme("dark") },
         { id: "theme_auto", label: "Switch to Auto Theme", icon: "brightness_auto", action: () => setTheme("auto") },
@@ -8792,6 +8938,43 @@ export async function promptCopy(path, isFolder) {
       await copyItem(path, newPath);
     }
   }
+
+export async function duplicateItem(path, isFolder) {
+    const currentName = path.split("/").pop();
+    const parentPath = path.split("/").slice(0, -1).join("/");
+    
+    let newName = "";
+    let counter = 1;
+    let baseName = currentName;
+    let ext = "";
+
+    if (!isFolder && currentName.includes(".")) {
+        const parts = currentName.split(".");
+        ext = "." + parts.pop();
+        baseName = parts.join(".");
+    }
+
+    // Find a unique name
+    while (true) {
+        const suffix = counter === 1 ? "_copy" : `_copy_${counter}`;
+        newName = `${baseName}${suffix}${ext}`;
+        const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+        
+        const exists = isFolder 
+            ? state.folders.some(f => f.path === newPath)
+            : state.files.some(f => f.path === newPath);
+        
+        if (!exists) break;
+        counter++;
+        if (counter > 100) {
+            showToast("Could not generate a unique name", "error");
+            return;
+        }
+    }
+
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+    await copyItem(path, newPath);
+}
 
 export async function promptDelete(path, isFolder) {
     const name = path.split("/").pop();
@@ -9446,6 +9629,12 @@ export function activateTab(tab, skipSave = false) {
         state.editor.setOption("readOnly", isReadOnly);
         state.editor.setOption("lint", (mode === "ha-yaml" || mode === "yaml") ? { getAnnotations: yamlLinter, async: true } : false);
 
+        // Dynamic Indent Detection
+        const indent = detectIndentation(tab.content);
+        state.editor.setOption("indentWithTabs", indent.tabs);
+        state.editor.setOption("indentUnit", indent.size);
+        state.editor.setOption("tabSize", indent.size);
+
         // Set content without triggering change event
         state.editor.off("change", handleEditorChange);
         state.editor.setValue(tab.content);
@@ -9767,6 +9956,56 @@ function renderMarkdown(text) {
     return html;
 }
 
+export function detectIndentation(content) {
+    if (!content) return { tabs: false, size: 2 };
+
+    const lines = content.split("\n").slice(0, 100); // Check first 100 lines
+    let tabs = 0;
+    let spaces = 0;
+    const spaceCounts = {};
+
+    lines.forEach(line => {
+        const indentMatch = line.match(/^(\s+)/);
+        if (indentMatch) {
+            const indent = indentMatch[1];
+            if (indent.includes("\t")) {
+                tabs++;
+            } else {
+                // Ignore lines that are just whitespace
+                if (indent.length === line.length) return;
+                
+                spaces++;
+                const count = indent.length;
+                if (count > 0) {
+                    spaceCounts[count] = (spaceCounts[count] || 0) + 1;
+                }
+            }
+        }
+    });
+
+    if (tabs > spaces) {
+        return { tabs: true, size: 4 }; // Default tab size 4
+    }
+
+    // Find most common indentation jump
+    let bestSize = 2;
+    let maxFreq = 0;
+    for (const [size, freq] of Object.entries(spaceCounts)) {
+        if (freq > maxFreq) {
+            maxFreq = freq;
+            bestSize = parseInt(size);
+        }
+    }
+
+    // Heuristic: If we detected mostly 4, 8, 12... assume 4.
+    // If we detect 2, 4, 6... assume 2.
+    // Since 4 is also a multiple of 2, this is tricky.
+    // But usually simple frequency is enough.
+
+    // Home Assistant standard is 2, so if it's 0 or weird, default to 2
+    return { tabs: false, size: bestSize || 2 };
+}
+
   // ============================================
   // Breadcrumb Navigation
   // ============================================
@@ -10023,6 +10262,11 @@ export function createEditor() {
         "Ctrl-Alt-Down": (cm) => duplicateLines(cm, "down"),
         "Cmd-Alt-Down": (cm) => duplicateLines(cm, "down"),
         
+        "Ctrl-Alt-[": (cm) => cm.execCommand("foldAll"),
+        "Cmd-Alt-[": (cm) => cm.execCommand("foldAll"),
+        "Ctrl-Alt-]": (cm) => cm.execCommand("unfoldAll"),
+        "Cmd-Alt-]": (cm) => cm.execCommand("unfoldAll"),
+
         "Ctrl-Space": (cm) => {
           cm.showHint({ hint: homeAssistantHint });
         },
@@ -10279,6 +10523,12 @@ export function renderTabs() {
         }
       });
 
+      tabEl.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showTabContextMenu(e.clientX, e.clientY, tab);
+      });
+
       const closeBtn = tabEl.querySelector(".tab-close");
       closeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -10463,12 +10713,29 @@ export function updateStatusBar() {
       if (elements.statusPosition) {
         elements.statusPosition.innerHTML = `<span>Ln ${cursor.line + 1}, Col ${cursor.ch + 1}</span>`;
       }
+      
+      if (elements.statusIndent) {
+        const tabSize = state.editor.getOption("tabSize") || 2;
+        const indentWithTabs = state.editor.getOption("indentWithTabs");
+        elements.statusIndent.innerHTML = `<span>${indentWithTabs ? 'Tabs' : 'Spaces'}: ${tabSize}</span>`;
+      }
+
+      if (elements.statusEncoding) {
+        elements.statusEncoding.innerHTML = `<span>UTF-8</span>`;
+      }
+
       if (elements.statusLanguage) {
         elements.statusLanguage.innerHTML = `<span>${getLanguageName(tab.path)}</span>`;
       }
     } else {
       if (elements.statusPosition) {
         elements.statusPosition.innerHTML = "<span>Ln 1, Col 1</span>";
+      }
+      if (elements.statusIndent) {
+        elements.statusIndent.innerHTML = "<span>Spaces: 2</span>";
+      }
+      if (elements.statusEncoding) {
+        elements.statusEncoding.innerHTML = "<span>-</span>";
       }
       if (elements.statusLanguage) {
         elements.statusLanguage.innerHTML = "<span>-</span>";
@@ -10585,6 +10852,12 @@ export function initEventListeners() {
           updateToolbarState();
         }
       });
+    }
+
+    if (elements.btnFormat) {
+        // elements.btnFormat.addEventListener("click", formatCode);
+        // Temporarily disabled
+        elements.btnFormat.style.display = "none";
     }
 
     // Search
@@ -11320,16 +11593,17 @@ export function initEventListeners() {
       });
     }
 
-    // Context menu items
-    document.querySelectorAll(".context-menu-item").forEach(item => {
-      item.addEventListener("click", async () => {
-        const action = item.dataset.action;
-        const target = state.contextMenuTarget;
-        hideContextMenu();
-
-        if (!target) return;
-
-        switch (action) {
+    // File Context menu items
+    if (elements.contextMenu) {
+        elements.contextMenu.querySelectorAll(".context-menu-item").forEach(item => {
+          item.addEventListener("click", async () => {
+            const action = item.dataset.action;
+            const target = state.contextMenuTarget;
+            hideContextMenu();
+    
+            if (!target) return;
+    
+            switch (action) {
           case "new_file":
             {
               const targetPath = target.isFolder ? target.path : target.path.split("/").slice(0, -1).join("/");
@@ -11352,6 +11626,9 @@ export function initEventListeners() {
           case "copy":
             await promptCopy(target.path, target.isFolder);
             break;
+          case "duplicate":
+            await duplicateItem(target.path, target.isFolder);
+            break;
           case "download":
             if (target.isFolder) {
               await downloadFolder(target.path);
@@ -11365,6 +11642,32 @@ export function initEventListeners() {
         }
       });
     });
+    }
+
+    // Tab Context Menu Items
+    if (elements.tabContextMenu) {
+        elements.tabContextMenu.querySelectorAll(".context-menu-item").forEach(item => {
+            item.addEventListener("click", () => {
+                const action = item.dataset.action;
+                const tab = state.tabContextMenuTarget;
+                hideContextMenu();
+
+                if (!tab) return;
+
+                if (action === "close_others") {
+                    const tabsToClose = state.openTabs.filter(t => t !== tab);
+                    // Close sequentially to handle confirmations if needed
+                    tabsToClose.forEach(t => closeTab(t));
+                } else if (action === "close_saved") {
+                    const tabsToClose = state.openTabs.filter(t => !t.modified && t !== tab);
+                    tabsToClose.forEach(t => closeTab(t));
+                } else if (action === "copy_path") {
+                    copyToClipboard(tab.path);
+                    showToast("Path copied to clipboard", "success");
+                }
+            });
+        });
+    }
 
     // Hide context menu on outside click
     document.addEventListener("click", hideContextMenu);
@@ -11391,6 +11694,14 @@ export function initEventListeners() {
           saveCurrentFile();
         }
       }
+
+      // Shift + Alt + F - Format Code
+      /* 
+      if (e.shiftKey && e.altKey && (e.key === "f" || e.key === "F")) {
+          e.preventDefault();
+          formatCode();
+      }
+      */
 
       // Alt + W - close tab (Ctrl/Cmd + W closes browser tab)
       if (e.altKey && e.key === "w") {

@@ -2247,6 +2247,19 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Pulsing Animation for Git/Gitea buttons */
+    @keyframes pulse-opacity {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    .pulsing {
+        animation: pulse-opacity 1.5s infinite ease-in-out;
+        pointer-events: none; /* Prevent clicking while pulsing */
+        cursor: wait !important;
+    }
+
     .spinning {
       animation: spin 1s linear infinite;
     }
@@ -3409,6 +3422,9 @@
       <button class="toolbar-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>
         <span class="material-icons">redo</span>
       </button>
+      <button class="toolbar-btn" id="btn-format" title="Format Code (Shift+Alt+F)" style="display: none;">
+        <span class="material-icons">format_align_left</span>
+      </button>
     </div>
 
     <div class="toolbar-group">
@@ -3774,6 +3790,12 @@
     <div class="status-item" id="status-position">
       <span>Ln 1, Col 1</span>
     </div>
+    <div class="status-item" id="status-indent">
+      <span>Spaces: 2</span>
+    </div>
+    <div class="status-item" id="status-encoding">
+      <span>UTF-8</span>
+    </div>
     <div class="status-item" id="status-language">
       <span>-</span>
     </div>
@@ -3885,6 +3907,10 @@
       <span class="material-icons">content_copy</span>
       Copy
     </div>
+    <div class="context-menu-item" data-action="duplicate">
+      <span class="material-icons">content_paste</span>
+      Duplicate
+    </div>
     <div class="context-menu-item" data-action="download">
       <span class="material-icons">download</span>
       Download
@@ -3893,6 +3919,22 @@
     <div class="context-menu-item danger" data-action="delete">
       <span class="material-icons">delete</span>
       Delete
+    </div>
+  </div>
+
+  <div class="context-menu" id="tab-context-menu">
+    <div class="context-menu-item" data-action="close_others">
+      <span class="material-icons">close_fullscreen</span>
+      Close Others
+    </div>
+    <div class="context-menu-item" data-action="close_saved">
+      <span class="material-icons">save</span>
+      Close Saved
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="copy_path">
+      <span class="material-icons">content_copy</span>
+      Copy Path
     </div>
   </div>
 
@@ -4042,6 +4084,14 @@
             <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>U</kbd></span>
             <span class="shortcut-desc">Insert UUID</span>
           </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Alt</kbd> + <kbd>[</kbd></span>
+            <span class="shortcut-desc">Fold All</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Alt</kbd> + <kbd>]</kbd></span>
+            <span class="shortcut-desc">Unfold All</span>
+          </div>
         </div>
 
         <div class="shortcuts-section">
@@ -4075,6 +4125,6 @@
     </div>
   </div>
 
-      <script type="module" src="/local/blueprint_studio/www/modules/main.js?v=2.1.41"></script>
+      <script type="module" src="/local/blueprint_studio/www/modules/main.js?v=2.1.56"></script>
   </body>
   </html>
