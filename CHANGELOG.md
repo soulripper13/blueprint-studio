@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-02-06
+
+### ✨ New Features
+*   **Smart Duplicate**: Added "Duplicate" action to file explorer context menu.
+*   **Tab Management**: Added context menu for tabs with "Close Others" and "Close Saved".
+*   **Folding Shortcuts**: Added `Ctrl+Alt+[` and `Ctrl+Alt+]` to Fold/Unfold All.
+*   **VS Code-like Status Bar**: Real-time Ln/Col tracking, indentation info, and file encoding display.
+
+### 🛡️ Fixes
+*   **Large File Safety**: Added protection against opening files larger than 2MB to prevent browser crashes.
+
 ## [2.1.3] - 2026-02-06
 
 ### ✨ AI Models Update
@@ -229,6 +240,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 ---
 
 ## Version History
+- **2.1.4** - Quality of Life Update
 - **2.1.3** - AI Models Update
 - **2.1.2** - Visuals & Efficiency Update
 - **2.1.1** - Professional File Management and Productivity Boost 
@@ -245,7 +257,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.1.3...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.1.4...HEAD
+[2.1.4]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.4
 [2.1.3]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.3
 [2.1.2]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.2
 [2.1.1]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.1.1
