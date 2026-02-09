@@ -1,7 +1,7 @@
 /**
  * Main module for Blueprint Studio
  */
-import { init } from './app.js?v=2.1.56';
+import { init } from './app.js?v=2.1.57';
 
 // Start the application
 if (document.readyState === "loading") {
