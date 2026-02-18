@@ -288,6 +288,15 @@
       color: white;
     }
 
+    .toolbar-btn.active {
+      background: var(--accent-color);
+      color: white;
+      opacity: 1;
+    }
+    .toolbar-btn.active:hover {
+      opacity: 0.85;
+    }
+
     .toolbar-spacer {
       flex: 1;
       min-width: 8px;
@@ -4106,6 +4115,21 @@
     </div>
 
     <div class="toolbar-group">
+      <button class="toolbar-btn" id="btn-show-hidden" title="Show hidden folders">
+        <span class="material-icons">visibility_off</span>
+      </button>
+      <button class="toolbar-btn" id="btn-toggle-select" title="Select Files">
+        <span class="material-icons">checklist</span>
+      </button>
+      <button class="toolbar-btn" id="btn-collapse-all-folders" title="Collapse All Folders">
+        <span class="material-icons">unfold_less</span>
+      </button>
+      <button class="toolbar-btn" id="btn-one-tab-mode" title="One Tab Mode: Only keep last opened file (auto-saves others)">
+        <span class="material-icons">tab</span>
+      </button>
+    </div>
+
+    <div class="toolbar-group">
       <button class="toolbar-btn" id="btn-upload" title="Upload File">
         <span class="material-icons">upload_file</span>
       </button>
@@ -4232,26 +4256,6 @@
 
       <div class="sidebar-content">
         <div id="view-explorer" class="sidebar-view">
-          <div class="sidebar-header">
-        <span>Explorer</span>
-        <div class="sidebar-header-actions">
-          <button class="sidebar-header-btn" id="btn-new-file-sidebar" title="New File">
-            <span class="material-icons">note_add</span>
-          </button>
-          <button class="sidebar-header-btn" id="btn-new-folder-sidebar" title="New Folder">
-            <span class="material-icons">create_new_folder</span>
-          </button>
-          <button class="sidebar-header-btn" id="btn-show-hidden" title="Show hidden folders">
-            <span class="material-icons">visibility_off</span>
-          </button>
-          <button class="sidebar-header-btn" id="btn-toggle-select" title="Select Files">
-            <span class="material-icons">checklist</span>
-          </button>
-          <button class="sidebar-header-btn" id="btn-close-sidebar" title="Close">
-            <span class="material-icons">close</span>
-          </button>
-        </div>
-      </div>
       <div class="search-container" style="display: flex; gap: 8px;">
         <input type="text" class="search-input" id="file-search" placeholder="Search all files..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex: 1;">
         <button id="btn-content-search" title="Match File Content" style="width: 32px; height: 32px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer;">
