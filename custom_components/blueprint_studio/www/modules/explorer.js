@@ -121,11 +121,3 @@ export function toggleFolder(path) {
     }
     renderFileTree();
 }
-
-/**
- * Collapse all expanded folders at once
- */
-export function collapseAllFolders() {
-    state.expandedFolders.clear();
-    renderFileTree();
-}

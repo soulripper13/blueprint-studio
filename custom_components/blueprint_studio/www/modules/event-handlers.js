@@ -114,8 +114,7 @@ import {
 } from './gitea-integration.js';
 import { showDiffModal, showGitHistory } from './git-diff.js';
 import { showGitSettings } from './github-integration.js';
-import { renderFileTree, debouncedRenderFileTree, handleFileDrop, cancelPendingSearch } from './file-tree.js';
-import { collapseAllFolders } from './explorer.js';
+import { renderFileTree, debouncedRenderFileTree, handleFileDrop, cancelPendingSearch, collapseAllFolders } from './file-tree.js';
 import { showAppSettings } from './settings-ui.js';
 import { saveSettings, updateShowHiddenButton } from './settings.js';
 import { hideContextMenu } from './context-menu.js';

@@ -1207,3 +1207,21 @@ export function updateToggleAllButton() {
     }
   }
 }
+
+/**
+ * Collapse all folders — works in both tree and navigation modes
+ */
+export async function collapseAllFolders() {
+  // Collapsable tree mode: clear expanded set and re-render
+  if (state.treeCollapsableMode && !state.lazyLoadingEnabled) {
+    state.expandedFolders.clear();
+    renderFileTree();
+    return;
+  }
+
+  // Folder navigation mode (default/lazy loading): navigate back to root
+  if (state.currentNavigationPath !== "") {
+    state.navigationHistory = [];
+    await navigateToFolder("");
+  }
+}
