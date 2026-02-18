@@ -585,6 +585,8 @@ export function initElements() {
     elements.btnNewFileSidebar = document.getElementById("btn-new-file-sidebar");
     elements.btnNewFolderSidebar = document.getElementById("btn-new-folder-sidebar");
     elements.btnToggleSelect = document.getElementById("btn-toggle-select");
+    elements.btnCollapseAllFolders = document.getElementById("btn-collapse-all-folders");
+    elements.btnOneTabMode = document.getElementById("btn-one-tab-mode");
     elements.selectionToolbar = document.getElementById("selection-toolbar");
     elements.selectionCount = document.getElementById("selection-count");
     elements.btnDownloadSelected = document.getElementById("btn-download-selected");

@@ -95,11 +95,6 @@ export async function showAppSettings() {
       `<option value="${key}" ${state.themePreset === key ? 'selected' : ''}>${preset.name}</option>`
     ).join('');
 
-    // Generate accent color options
-    const accentColorOptions = ACCENT_COLORS.map(color =>
-      `<option value="${color.value}" ${state.accentColor === color.value ? 'selected' : ''}>${color.name}</option>`
-    ).join('');
-
     modalBody.innerHTML = `
       <div class="settings-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">
         <button class="settings-tab active" data-tab="general" style="padding: 10px 16px; background: transparent; border: none; color: var(--text-primary); cursor: pointer; border-bottom: 2px solid var(--accent-color); font-size: 13px;">General</button>
@@ -186,14 +181,11 @@ export async function showAppSettings() {
 
             <div style="padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
               <div style="font-weight: 500; margin-bottom: 8px;">Accent Color</div>
-              <select id="accent-color-select" class="git-settings-input" style="width: 100%; margin-bottom: 8px;">
-                <option value="">Use Theme Default</option>
-                ${accentColorOptions}
-              </select>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 ${ACCENT_COLORS.map(color => `
                   <button class="accent-color-btn" data-color="${color.value}" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid ${state.accentColor === color.value ? 'var(--text-primary)' : 'transparent'}; background: ${color.value}; cursor: pointer;" title="${color.name}"></button>
                 `).join('')}
+                <button class="accent-color-btn" data-color="" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid ${!state.accentColor ? 'var(--text-primary)' : 'transparent'}; background: var(--bg-tertiary); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);" title="Use Theme Default">✕</button>
               </div>
             </div>
 
@@ -331,6 +323,17 @@ export async function showAppSettings() {
                 <div style="font-size: 12px; color: var(--text-secondary);">Delay in milliseconds before auto-saving</div>
               </div>
               <input type="number" id="auto-save-delay-input" value="${state.autoSaveDelay}" min="500" max="10000" step="100" style="width: 80px; padding: 6px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); text-align: center;">
+            </div>
+
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">One Tab Mode</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">When opening a file, auto-save and close all other tabs. Only the last opened file stays open.</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="one-tab-mode-toggle" ${state.onTabMode ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
             </div>
 
             <div class="git-settings-label" style="margin-top: 20px;">Syntax Highlighting</div>
@@ -896,41 +899,24 @@ export async function showAppSettings() {
       });
     }
 
-    // Handle Accent Color selection
-    const accentColorSelect = document.getElementById("accent-color-select");
-    if (accentColorSelect) {
-      accentColorSelect.addEventListener("change", async (e) => {
-        state.accentColor = e.target.value || null;
-        await saveSettingsImpl();
-        if (callbacks.applyTheme) {
-          callbacks.applyTheme();
-        }
-        showToast("Accent color updated", "success");
-      });
-    }
-
     // Handle Accent Color buttons
     const accentColorButtons = modalBody.querySelectorAll('.accent-color-btn');
     accentColorButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
-        const color = btn.dataset.color;
+        const color = btn.dataset.color || null;
         state.accentColor = color;
-
-        // Update dropdown
-        if (accentColorSelect) {
-          accentColorSelect.value = color;
-        }
 
         // Update button borders
         accentColorButtons.forEach(b => {
-          b.style.borderColor = b.dataset.color === color ? 'var(--text-primary)' : 'transparent';
+          const isActive = (b.dataset.color || null) === color;
+          b.style.borderColor = isActive ? 'var(--text-primary)' : 'transparent';
         });
 
         await saveSettingsImpl();
         if (callbacks.applyTheme) {
           callbacks.applyTheme();
         }
-        showToast("Accent color updated", "success");
+        showToast(color ? "Accent color updated" : "Accent color reset to theme default", "success");
       });
     });
 
@@ -1068,6 +1054,20 @@ export async function showAppSettings() {
         state.autoSaveDelay = parseInt(e.target.value);
         await saveSettingsImpl();
         showToast(`Auto-save delay set to ${state.autoSaveDelay}ms`, "success");
+      });
+    }
+
+    const oneTabModeToggle = document.getElementById("one-tab-mode-toggle");
+    if (oneTabModeToggle) {
+      oneTabModeToggle.addEventListener("change", async (e) => {
+        state.onTabMode = e.target.checked;
+        // Sync toolbar button if present
+        const btnOneTabMode = document.getElementById("btn-one-tab-mode");
+        if (btnOneTabMode) {
+          btnOneTabMode.classList.toggle("active", state.onTabMode);
+        }
+        await saveSettingsImpl();
+        showToast(state.onTabMode ? "One Tab Mode enabled" : "One Tab Mode disabled", "success");
       });
     }
 

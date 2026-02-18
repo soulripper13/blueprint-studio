@@ -65,21 +65,27 @@ export function toggleFavorite(path) {
  * Render the favorites panel in the sidebar
  */
 export function renderFavoritesPanel() {
-  const favoritesContainer = document.getElementById("favorites-panel");
-  if (!favoritesContainer) return;
+  const favoritesPanel = document.getElementById("favorites-panel");
+  if (!favoritesPanel) return;
 
-  // Filter valid favorites first
+  // Use the inner favorites-tree container if it exists, otherwise fall back to the panel itself
+  const favoritesTree = document.getElementById("favorites-tree") || favoritesPanel;
+
+  // Filter valid favorites first — check against all loaded items (files + folders)
   const validFavorites = state.favoriteFiles.filter(filePath =>
-    state.files.some(f => f.path === filePath)
+    state.files.some(f => f.path === filePath) ||
+    state.folders.some(f => f.path === filePath)
   );
 
   if (validFavorites.length === 0) {
-    favoritesContainer.style.display = "none";
+    favoritesPanel.style.display = "none";
     return;
   }
 
-  favoritesContainer.style.display = "block";
-  favoritesContainer.innerHTML = '<div class="favorites-header">Favorites</div>';
+  favoritesPanel.style.display = "block";
+
+  // Only clear the tree container, not the whole panel (preserves the header element)
+  favoritesTree.innerHTML = "";
 
   validFavorites.forEach((filePath) => {
     const fileName = filePath.split("/").pop();
@@ -97,7 +103,7 @@ export function renderFavoritesPanel() {
       </div>
       <span class="tree-name">${fileName}</span>
       <div class="tree-item-actions">
-        <button class="tree-action-btn" title="Unpin">
+        <button class="tree-action-btn" title="Unpin from favorites">
           <span class="material-icons">push_pin</span>
         </button>
       </div>
@@ -121,6 +127,6 @@ export function renderFavoritesPanel() {
       }
     });
 
-    favoritesContainer.appendChild(item);
+    favoritesTree.appendChild(item);
   });
 }

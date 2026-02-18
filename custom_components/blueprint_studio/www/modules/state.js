@@ -272,6 +272,7 @@ export const state = {
   fileCacheSize: 10,             // Number of files to cache in memory
   enableVirtualScroll: false,    // Virtual scrolling for large file trees
   enableSplitView: false,        // Enable split view feature (Experimental)
+  onTabMode: false,              // One Tab Mode: auto-save & close other tabs on file open
   _lastShowHidden: false,
   _lastGitChanges: null,
   _lastGiteaChanges: null,

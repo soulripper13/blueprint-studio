@@ -1029,6 +1029,28 @@ export async function openFile(path, forceReload = false, noActivate = false) {
 
     let tab = state.openTabs.find((t) => t.path === path);
 
+    // ONE TAB MODE: auto-save & close all other tabs before opening a new file
+    if (state.onTabMode && !tab) {
+      const tabsToClose = state.openTabs.slice(); // copy array before mutating
+      for (const t of tabsToClose) {
+        if (t.modified && t.content !== undefined && !t.isBinary) {
+          // Auto-save silently (no toast, no YAML validation)
+          try {
+            await fetchWithAuth(API_BASE, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "write_file", path: t.path, content: t.content }),
+            });
+          } catch (e) {
+            console.warn("One Tab Mode: could not auto-save", t.path, e);
+          }
+        }
+        if (t._blobUrl) URL.revokeObjectURL(t._blobUrl);
+      }
+      state.openTabs = [];
+      state.activeTab = null;
+    }
+
     if (tab && forceReload) {
         // If this is the active tab, preserve cursor/scroll from editor before reload
         if (state.activeTab === tab && state.editor && !tab.isBinary) {

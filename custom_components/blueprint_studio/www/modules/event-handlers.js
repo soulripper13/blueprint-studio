@@ -115,6 +115,7 @@ import {
 import { showDiffModal, showGitHistory } from './git-diff.js';
 import { showGitSettings } from './github-integration.js';
 import { renderFileTree, debouncedRenderFileTree, handleFileDrop, cancelPendingSearch } from './file-tree.js';
+import { collapseAllFolders } from './explorer.js';
 import { showAppSettings } from './settings-ui.js';
 import { saveSettings, updateShowHiddenButton } from './settings.js';
 import { hideContextMenu } from './context-menu.js';
@@ -543,6 +544,27 @@ export function initEventListeners() {
 
     if (elements.btnToggleSelect) {
       elements.btnToggleSelect.addEventListener("click", toggleSelectionMode);
+    }
+
+    // Collapse All Folders
+    if (elements.btnCollapseAllFolders) {
+      elements.btnCollapseAllFolders.addEventListener("click", () => {
+        collapseAllFolders();
+      });
+    }
+
+    // One Tab Mode toggle
+    if (elements.btnOneTabMode) {
+      elements.btnOneTabMode.addEventListener("click", () => {
+        state.onTabMode = !state.onTabMode;
+        elements.btnOneTabMode.classList.toggle("active", state.onTabMode);
+        elements.btnOneTabMode.title = state.onTabMode
+          ? "One Tab Mode: ON — only last opened file is kept (click to disable)"
+          : "One Tab Mode: OFF — click to enable (auto-saves & closes other tabs on open)";
+        saveSettings();
+      });
+      // Restore visual state on init
+      elements.btnOneTabMode.classList.toggle("active", !!state.onTabMode);
     }
 
     if (elements.btnDownloadSelected) {
