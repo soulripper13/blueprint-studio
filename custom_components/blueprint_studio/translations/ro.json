@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Adaugă Blueprint Studio la Home Assistant-ul tău. Acesta oferă un panou modern de editare a fișierelor pentru editarea fișierelor de configurare."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Deja configurat. Este posibilă o singură configurare."
+    }
+  }
+}

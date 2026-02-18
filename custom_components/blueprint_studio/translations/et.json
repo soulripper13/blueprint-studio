@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Lisa Blueprint Studio oma Home Assistanti. See pakub kaasaegset failiredaktori paneeli konfiguratsioonifailide redigeerimiseks."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Juba konfigureeritud. Võimalik on ainult üks konfiguratsioon."
+    }
+  }
+}

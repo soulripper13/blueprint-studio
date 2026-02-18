@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Tambahkan Blueprint Studio ke Home Assistant Anda. Ini menyediakan panel editor file modern untuk mengedit file konfigurasi Anda."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Sudah dikonfigurasi. Hanya satu konfigurasi yang dimungkinkan."
+    }
+  }
+}

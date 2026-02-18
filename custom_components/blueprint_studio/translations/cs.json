@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Přidejte Blueprint Studio do svého Home Assistant. Poskytuje moderní panel pro úpravu souborů pro úpravu konfiguračních souborů."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Již nakonfigurováno. Je možná pouze jedna konfigurace."
+    }
+  }
+}

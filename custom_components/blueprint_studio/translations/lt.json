@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Pridėkite Blueprint Studio prie savo Home Assistant. Tai suteikia modernų failų redagavimo skydelį konfigūracijos failų redagavimui."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Jau sukonfigūruota. Galima tik viena konfigūracija."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Legg til Blueprint Studio i din Home Assistant. Dette gir et moderne filredigeringspanel for å redigere konfigurasjonsfilene dine."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Allerede konfigurert. Bare én konfigurasjon er mulig."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Προσθέστε το Blueprint Studio στο Home Assistant σας. Παρέχει ένα σύγχρονο πάνελ επεξεργασίας αρχείων για την επεξεργασία των αρχείων διαμόρφωσής σας."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Έχει ήδη ρυθμιστεί. Είναι δυνατή μόνο μία διαμόρφωση."
+    }
+  }
+}

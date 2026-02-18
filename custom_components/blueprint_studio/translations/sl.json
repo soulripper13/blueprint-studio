@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Dodajte Blueprint Studio v vaš Home Assistant. To zagotavlja sodoben urejevalnik datotek za urejanje konfiguracijskih datotek."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Že konfigurirano. Mogoča je samo ena konfiguracija."
+    }
+  }
+}

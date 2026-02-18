@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Pievienojiet Blueprint Studio savam Home Assistant. Tas nodrošina modernu failu rediģēšanas paneli konfigurācijas failu rediģēšanai."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Jau konfigurēts. Iespējama tikai viena konfigurācija."
+    }
+  }
+}

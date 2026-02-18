@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Blueprint Studio को अपने Home Assistant में जोड़ें। यह आपकी कॉन्फ़िगरेशन फ़ाइलों को संपादित करने के लिए एक आधुनिक फ़ाइल संपादक पैनल प्रदान करता है।"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "पहले से कॉन्फ़िगर किया गया है। केवल एक ही कॉन्फ़िगरेशन संभव है।"
+    }
+  }
+}

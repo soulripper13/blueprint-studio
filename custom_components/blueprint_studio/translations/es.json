@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Agrega Blueprint Studio a tu Home Assistant. Proporciona un panel de edición de archivos moderno para editar tus archivos de configuración."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Ya está configurado. Solo es posible una única configuración."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "将 Blueprint Studio 添加到您的 Home Assistant。这将提供一个现代文件编辑器面板，用于编辑您的配置文件。"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "已配置。只能进行单个配置。"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Blueprint Studio'yu Home Assistant'ınıza ekleyin. Bu, yapılandırma dosyalarınızı düzenlemek için modern bir dosya düzenleyici paneli sağlar."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Zaten yapılandırılmış. Yalnızca tek bir yapılandırma mümkündür."
+    }
+  }
+}

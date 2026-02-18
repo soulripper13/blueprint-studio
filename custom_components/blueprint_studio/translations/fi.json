@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Lisää Blueprint Studio Home Assistantiin. Tämä tarjoaa modernin tiedostonmuokkausohjauspaneelin kokoonpanotiedostojesi muokkaamiseen."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Jo määritetty. Vain yksi määritys on mahdollinen."
+    }
+  }
+}

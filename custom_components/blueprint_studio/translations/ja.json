@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Blueprint Studio を Home Assistant に追加します。設定ファイルを編集するための最新のファイルエディターパネルを提供します。"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "すでに設定済みです。設定できるのは1つのみです。"
+    }
+  }
+}

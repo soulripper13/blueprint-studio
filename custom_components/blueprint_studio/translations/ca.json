@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Afegiu Blueprint Studio al vostre Home Assistant. Proporciona un tauler d'edició de fitxers modern per editar els vostres fitxers de configuració."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Ja configurat. Només és possible una sola configuració."
+    }
+  }
+}

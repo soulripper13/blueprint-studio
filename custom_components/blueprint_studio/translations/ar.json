@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "أضف Blueprint Studio إلى Home Assistant الخاص بك. يوفر هذا لوحة تحرير ملفات حديثة لتعديل ملفات الإعداد الخاصة بك."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "تمت الإعداد بالفعل. يُسمح بإعداد واحد فقط."
+    }
+  }
+}

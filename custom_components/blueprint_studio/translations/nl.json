@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Voeg Blueprint Studio toe aan je Home Assistant. Dit biedt een modern bestandsbewerkingspaneel voor het bewerken van je configuratiebestanden."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Al geconfigureerd. Slechts één configuratie is mogelijk."
+    }
+  }
+}

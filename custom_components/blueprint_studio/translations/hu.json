@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blueprint Studio",
+        "description": "Add hozzá a Blueprint Studio-t a Home Assistantedhez. Ez egy modern fájlszerkesztő panelt biztosít a konfigurációs fájlok szerkesztéséhez."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Már konfigurálva. Csak egyetlen konfiguráció lehetséges."
+    }
+  }
+}
