@@ -7,6 +7,202 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-03-20
+
+### Blueprint Studio 2.4.0 — PWA Power, Blueprint Magic, SFTP & SSH Supercharged
+
+### New Features
+
+#### "Use Blueprint" Form — Instantiate Blueprints as Automations
+- **Toolbar button**: `btn-use-blueprint` appears in the editor toolbar whenever the active file contains a `blueprint:` block
+- **Command palette**: "Use Blueprint (Instantiate)" command added
+- **Split-view panel**: The form opens in the secondary pane (side-by-side with the YAML editor) rather than a modal overlay — same pattern as Markdown Preview
+- **Smart form controls** — selector type is mapped to an appropriate control:
+  - `entity` / `target` → searchable dropdown with optional multi-select pill UI, filtered by domain
+  - `device` / `area` → searchable dropdown populated from HA device/area registry
+  - `boolean` → animated toggle switch
+  - `number` → range slider synced with a numeric input box, respects `min`/`max`/`step`/`unit_of_measurement`
+  - `select` (single) → `<select>` dropdown; `select` (multiple) → checkbox list
+  - `time` / `date` → native time/date pickers
+  - `duration` → H / M / S spinners
+  - `template` / `action` / `condition` → resizable textarea with YAML/Jinja placeholder
+  - `icon` → text input with `mdi:` placeholder
+- **Section accordions**: Blueprint `input` groups render as collapsible `<details>` sections
+- **Automation Name & Description fields** at the top of the form
+- **Live YAML preview**: Generated automation YAML updates as the user fills in fields (600 ms debounce, API call to `instantiate_blueprint`)
+- **Live editor→form sync**: While writing or editing a blueprint in the primary editor, the form re-parses and re-renders automatically after 1 second of idle time — filled values for unchanged inputs are preserved across re-renders
+- **Save dialog**: choose to append to `automations.yaml` (auto-reloads HA automations) or write to a new file
+- **Workspace persistence**: the form survives browser refresh — `blueprintFormActive` and `blueprintFormTabPath` are saved to settings and restored on load
+- **Tab close behaviour**: clicking × on the secondary pane's tab closes the form and returns to single-pane view; the blueprint YAML file remains open and unmodified
+- **Backend** (`api_misc.py`, `ai_generators.py`):
+  - `parse_blueprint_inputs(content)` → structured JSON of sections, inputs, selectors, and defaults
+  - `instantiate_blueprint(content, input_values, name, description)` → substitutes `!input` tags, returns ready-to-paste automation YAML with `alias` + `description` + UUID comment header
+  - `get_devices` / `get_areas` — new GET actions using HA device/area registries (async-safe)
+
+#### Blueprint Conversion — Smart Input Extraction ( Use ctrl+k/cmd+k and choose convert to blueprint) (`convert_automation_to_blueprint`)
+
+- **Pass 1 (existing)**: Entity IDs → `entity` selector inputs with friendly `"The {domain} entity for this automation"` descriptions
+- **Pass 2 — Numeric values**: Detects `above:`, `below:`, `temperature:`, `brightness:`, `brightness_pct:`, `position:`, `volume_level:`, `color_temp:`, `percentage:`, `humidity:` and extracts them as `number` selector inputs with appropriate `min`/`max`/`step`/`unit_of_measurement`. Values ≤ 1 without a decimal point (boolean-like) and template lines (`{{`) are skipped
+- **Pass 3 — Delay/for durations**: Block-form (`delay:\n  seconds: 10`) and string-form (`delay: "00:05:00"`) delays and `for:` blocks are extracted as `number` (seconds) inputs with names `delay_seconds` / `duration_seconds`
+- **Pass 4 — Time triggers**: `at: "19:00:00"` values are extracted as `time` selector inputs named `trigger_time` (incrementing suffix for multiples)
+- **Pass 5 — Automation mode**: The `mode:` field (e.g. `single`, `queued`, `parallel`) is extracted as a `select` input named `automation_mode` with all four valid options
+- **Pass 6 — Condition state values**: String values under `state:` keys in condition blocks are extracted as `text` inputs, skipping reserved values (`on`, `off`, `true`, `false`, `unknown`, `unavailable`)
+- Collision-safe naming: duplicate keys get `_2`, `_3` suffixes
+- `instantiate_blueprint()` now accepts and inserts a `description:` field into the generated automation
+- Users can select a part of an automation file and then convert to blueprint
+
+#### 🆕 SSH & PWA
+*   **Full PWA Support**: Blueprint Studio is now a Progressive Web App (PWA). You can install it as a standalone, full-screen app on iOS and Android for a native, distraction-free experience.
+*   **PWA Install Option**: Added PWA installation button in Settings > General tab to open Blueprint Studio in a new window where the PWA install prompt appears in the browser address bar - enables easy installation on all devices. (Requires HTTPS connection)
+*   **SSH Key Authentication for Terminal Hosts**: Save SSH hosts with public key authentication (RSA, Ed25519, ECDSA, DSS key types) including optional passphrases for encrypted keys. Supports automatic one-click connection to saved hosts.
+*   **SSH Password Authentication for Terminal Hosts**: Save SSH host passwords for direct one-click connection without manual password entry. Credentials securely stored in browser state.
+*   **Edit SSH Host Manager**: Added "Edit" button to modify existing SSH host configurations including name, host, port, username, authentication method, and credentials.
+*   **Delete SSH Host Manager**: Added "Delete" button to remove SSH hosts from the saved hosts list with automatic settings persistence.
+*   **Persistent SSH Host Configuration**: SSH hosts and all authentication details are fully saved across browser refreshes and app restarts with secure local storage.
+*   **Auto-Connect to SSH Hosts**: Terminal automatically attempts to connect to the last used SSH host on startup if credentials are available.
+*   **SSH Key Format Validation**: Validates SSH keys are in proper PEM format (checks for "-----BEGIN" header) before saving.
+*   **SSH Host Field Validation**: Validates that required fields (name, host) are provided when adding/editing hosts.
+*   **Backward Compatible SSH Host Migration**: Automatically migrates old SSH hosts without SSH key fields to new schema with proper defaults.
+
+#### 📝 Markdown & AI UI Enhancements
+*   **Side-by-Side Markdown Preview**: Automatically enables vertical split view when toggling preview for `.md` files, showing the editor on the left and live-rendered HTML on the right.
+*   **Throttled Live Updates**: Markdown preview now updates in real-time as you type, with a 300ms throttle for optimal performance.
+*   **Syntax Highlighting in Preview**: Integrated `highlight.js` with `marked.js` to provide full syntax highlighting for code blocks within Markdown previews and AI responses.
+*   **Unified AI Rendering**: The AI Copilot now uses the same modernized Markdown engine as the file preview, supporting bolding, tables, and task lists.
+*   **Code Block Copy Buttons**: Added hover-to-show copy buttons to all code blocks in both Markdown previews and AI chat responses for a smoother "copy-paste" workflow.
+*   **AI Chat Persistence**: Your AI chat history and sidebar visibility are now fully saved and restored across browser refreshes.
+
+#### 📁 Advanced SFTP Improvements
+*   **Full UI Parity**: The SFTP panel now matches the look and feel of the local file tree, including:
+    *   **Modified Status Dots**: Instantly see which remote files have unsaved changes.
+    *   **Selection Checkboxes**: Bulk delete and download support for remote files.
+    *   **Active Highlights**: The currently open remote file is highlighted in the tree.
+*   **Sidebar Integration**: Moved SFTP management to a dedicated full-height sidebar view for better organization and workflow consistency.
+*   **Header Connection Manager**: Replaced the connection list with a compact dropdown integrated directly into the sidebar header, maximizing vertical space for the file tree.
+*   **Contextual Header Actions**: Management buttons (Edit, Delete) now appear dynamically in the sidebar header only when a connection is active.
+*   **New Context Actions**: Added "Copy Path", "Copy Virtual Path", "Pin to top" (Favorites), and "Run in Terminal" options to remote items.
+*   **Remote ZIP Extraction**: Drag and drop a ZIP file onto an SFTP folder to extract it directly on the remote server.
+*   **Recursive Deletion**: Implemented efficient bulk deletion for remote folders and files.
+*   **Full Localization**: The SFTP panel, connection modals, and all tooltips now support all 10 project languages.
+
+#### 🔍 Powerful Global Search
+*   **Selective Search Modes**: New tabbed switcher to filter results between **All**, **Files Only**, or **Entities Only**.
+*   **Interactive Replacement**: 
+    *   **Single Match Replace**: Hover over a result to apply a replacement directly in the editor for review before saving.
+    *   **File Level Replace**: Update all occurrences within a single file with one click.
+*   **Result Dismissal**: Click "X" to hide specific matches or entire files from your search results to keep your workspace focused.
+*   **UI Alignment**: Improved readability with fixed-width line numbers and better padding.
+
+#### 🌍 Localization
+*   **Enhanced Multi-Language Engine**: Re-engineered the translation system to work seamlessly with the new modular architecture. Supports dynamic runtime switching for 10 core languages.
+
+#### 📁 Folder Upload & Extraction
+*   **Automatic macOS Cleanup**: ZIP uploads now automatically ignore `__MACOSX` and `.DS_Store` metadata folders during extraction for a cleaner filesystem.
+*   **Intelligent Refreshes**: Every file operation (save, delete, rename, unzip) now forces a full cache refresh, ensuring changes appear instantly even in Navigation (Lazy Loading) mode.
+*   **File Existence Handling**: Fixed backend bugs related to directory creation and improved unzipping reliability for deep folder structures.
+
+### Performance Improvements
+
+#### Media Streaming & Large File Downloads
+- **file_manager.py**: `serve_file()` now uses `web.FileResponse` for zero-copy serving with HTTP Range/206 support — required for `<video>` and `<audio>` seek
+- **file_manager.py**: `download_folder()` / `download_multi()` stream ZIP archives via `web.StreamResponse` + `BytesIO` instead of buffering the entire archive in memory
+- **api.py**: New `BlueprintStudioStreamView` at `/api/blueprint_studio/stream` — `requires_auth=False` with manual query-param token validation, dedicated to media streaming and folder downloads
+- **sftp_manager.py**: `read_file_raw()` returns raw bytes; SFTP files are served via `StreamResponse` (no base64 overhead)
+- **sftp.js**: `sftpStreamFile()` generates blob URLs for SFTP media playback
+- **asset-preview.js**: Video/audio previews use streaming URLs (local files) or blob URLs (SFTP)
+
+#### Multipart Upload — Bypass 16 MB Limit
+- **api.py**: New `BlueprintStudioUploadView` at `/api/blueprint_studio/upload`
+  - `requires_auth=True`; overrides HA's global 16 MB `client_max_size` via `request._client_max_size = 0`
+  - Reads multipart form data in chunks — no base64, no memory spike
+  - Handles both local (`_upload_local`) and SFTP (`_upload_sftp`) targets via a `connection` field
+- **sftp_manager.py**: `create_file_raw()` writes raw bytes directly to SFTP (no base64 decode step)
+- **downloads-uploads.js**: All binary uploads (local + SFTP) now route through `uploadFileMultipart()` / `uploadFileMultipartSftp()`; text files continue using the JSON POST path
+### 🐛 Bug Fixes
+
+#### Editor Indentation
+*   **Format Code respects indentation setting**: Prettier's Format Code action now uses your configured tab size and indent-with-tabs preference instead of always formatting to 2 spaces.
+*   **Settings panel stays in sync on file switch**: When opening a file with different indentation, the detected indent is now reflected in the Settings panel dropdown, not just the status bar.
+*   **Status bar shows correct indent when no file is open**: The status bar placeholder now reflects your saved indentation setting (e.g. "Spaces: 4") instead of always showing "Spaces: 2".
+*   **Added "Indent with Tabs" toggle to Settings panel**: The setting previously only accessible via the status bar picker is now also available in Settings → Editor, alongside the Tab Size dropdown.
+
+#### SFTP Stale Expanded-Folder Paths Persisting Across Reloads
+- **sftp.js**: `_refreshCurrentDir()` now emits `settings:save` after pruning stale expanded-folder entries, preventing them from being restored on next load
+- **sftp_manager.py**: `list_directory()` catches `FileNotFoundError` and logs at DEBUG rather than ERROR
+
+### Security Fixes
+
+#### Fixed Command Injection in SSH Spawn
+- **terminal_manager.py**: Escaped SSH command arguments using `shlex.quote()` to prevent shell metacharacter injection
+  - Prevents attacks like `username=foo; rm -rf /` from executing arbitrary commands
+  - Applied to host, username, and other user-controlled SSH parameters
+
+#### Fixed `requires_auth = False` on Main API
+- **api.py**: Changed `BlueprintStudioApiView` to `requires_auth = True`
+  - Replaced custom authentication bypass with HA's native auth middleware
+  - Leverages HA's built-in rate limiting and CSRF protection
+  - Removes reliance on fragile custom Bearer token validation
+
+#### Fixed Credentials Written to Disk in Plaintext
+- **terminal_manager.py**:
+  - Removed persistent plaintext SSH private key storage
+  - Fixed Paramiko wrapper script that embedded credentials in source code
+  - Implemented secure credential lifecycle (generated on-demand, cleaned up after use)
+  - Private keys no longer left indefinitely on disk
+
+
+#### SFTP Connection Pooling
+- **sftp_manager.py**: Implemented connection pool with TTL-based cache
+  - Keyed by `(host, port, username)` tuple
+  - Connections reused for 60 seconds, then cleaned up
+  - Eliminates redundant TCP+SSH handshakes per operation
+  - Significant latency reduction for directory browsing and bulk operations
+
+#### Remove Fake Filesystem Watcher
+- **websocket.py**: Removed `async_watch_filesystem()` loop that fired redundant "poll" heartbeat every 10 seconds
+  - The heartbeat was 100% redundant: real mutations already fire from `_fire_update()` in file_manager.py, and the frontend polls mtime independently every 10s
+  - Removed `_async_start_watcher()`, `async_stop_watcher()`, and `async_start_watcher_callback()` functions
+  - Removed unused imports: `asyncio`, `time`
+- **\_\_init\_\_.py**:
+  - Removed `async_stop_watcher` import and call in `async_unload_entry()`
+- **settings-sync.js**:
+  - Removed dead `startPollingForSettingsChanges()` function
+  - Removed unused `POLLING_INTERVAL_MS` constant
+
+#### WebSocket Reconnection for Long-Lived Sessions
+- **api.js**: Enhanced `initWebSocketSubscription()` to handle HA WebSocket reconnections
+  - Problem: Users idle 24+ hours would lose real-time updates when HA WebSocket dropped and reconnected
+  - Solution: Extracted subscribe logic into `_subscribeToUpdates(conn, retries)` helper with module-level `_wsConn` guard
+  - Registered `conn.addEventListener("ready", ...)` to auto-resubscribe on reconnect
+  - Users can now continue editing seamlessly across network interruptions and extended idle periods
+
+### Code Quality & Refactoring
+
+#### Split Monolithic API View
+- Extracted 822-line monolith into 5 domain-specific handler modules
+  - **api_files.py**: File operations (list, read, write, upload, search, etc.)
+  - **api_git.py**: Git/Gitea/GitHub handlers (45 functions)
+  - **api_terminal.py**: Terminal WebSocket view + exec handlers
+  - **api_sftp.py**: SFTP dispatcher with SFTP_ACTIONS frozenset
+  - **api_misc.py**: Settings, AI, syntax checkers, utilities
+  - **api.py**: Thin orchestrator (~190 lines) — class + dispatch tables only
+
+#### Deduplicate Extensions, Allow Any Upload, Add Missing Editor Types
+- **const.py**: Renamed `ALLOWED_EXTENSIONS` → `LISTED_EXTENSIONS` (controls visibility only, not access)
+  - Added 25+ missing types: `.ts`, `.tsx`, `.jsx`, `.xml`, `.toml`, `.env`, `.sql`, `.go`, `.rs`, `.c`, `.java`, `.php`, `.lua`, and more
+- **file_manager.py**: Removed allowlist gating from read/write/upload/search/replace operations
+- **sftp_manager.py**: Deleted duplicate extension sets, imports from `const.py`
+- **www/modules/**: Added editor modes, language names, icons for all new types
+
+#### Split ai_manager.py into Domain Modules
+- Split 2,320-line monolith into 5 focused modules
+  - **ai_constants.py**: Lookup tables — domains, actions, error patterns
+  - **ai_validators.py**: Syntax checkers — YAML, JSON, Python, JS, Jinja
+  - **ai_nlp.py**: NLP extraction — domain detection, entity matching, triggers
+  - **ai_generators.py**: YAML generation — automations, scripts, scenes
+  - **ai_manager.py**: Thin orchestrator — AIManager class with query routing
+
+
 ## [2.3.0] - 2026-02-23
 
 ### ✨ Terminal Integration, Themes & Workspace Persistence
