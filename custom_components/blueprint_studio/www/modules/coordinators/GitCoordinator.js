@@ -117,6 +117,16 @@ export function initGitCoordinator(callbacks) {
                 }
             }
         });
+
+        // Handle direct checkbox changes for git files (e.g. clicking the checkbox itself)
+        gitFilesContainer.addEventListener("change", (e) => {
+            if (e.target.classList.contains("git-file-checkbox")) {
+                const filePath = e.target.getAttribute("data-file-path");
+                if (filePath && functions.toggleFileSelection) {
+                    functions.toggleFileSelection(filePath);
+                }
+            }
+        });
     }
 
     // Gitea panel event delegation
@@ -181,6 +191,34 @@ export function initGitCoordinator(callbacks) {
         gitFilesContainer.addEventListener("touchstart", (e) => {
             // Placeholder for touch logic if needed, previously was in event-handlers.js
         }, { passive: true });
+    }
+
+    // Git panel actions delegation (handles dynamically created sync indicator buttons)
+    const gitPanel = document.getElementById("git-panel");
+    if (gitPanel) {
+        gitPanel.addEventListener("click", (e) => {
+            const btn = e.target.closest("button");
+            if (!btn) return;
+            if (btn.id === "btn-git-push-sync") {
+                gitPushImpl();
+            } else if (btn.id === "btn-git-pull-sync") {
+                gitPullImpl();
+            }
+        });
+    }
+
+    // Gitea panel actions delegation (handles dynamically created sync indicator buttons)
+    const giteaPanel = document.getElementById("gitea-panel");
+    if (giteaPanel) {
+        giteaPanel.addEventListener("click", (e) => {
+            const btn = e.target.closest("button");
+            if (!btn) return;
+            if (btn.id === "btn-gitea-push-sync") {
+                giteaPushImpl();
+            } else if (btn.id === "btn-gitea-pull-sync") {
+                giteaPullImpl();
+            }
+        });
     }
 
     // Git toolbar buttons
