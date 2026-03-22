@@ -126,6 +126,7 @@ export async function fetchWithAuth(url, options = {}) {
   }
 
   const result = await response.json();
+  if (Array.isArray(result)) return result;
   return { ...result, status: response.status };
 }
 
