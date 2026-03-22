@@ -62,6 +62,29 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('auth_callback')) return;
   if (event.request.url.includes('/api/')) return;
 
+  // Cache-first for versioned assets (?v= suffix).
+  // These are immutable for a given version — safe to serve directly from cache.
+  // When the version bumps, the new CACHE_NAME evicts the old entry automatically.
+  const url = new URL(event.request.url);
+  const isVersioned = url.searchParams.has('v');
+
+  if (isVersioned) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          });
+        });
+      })
+    );
+    return;
+  }
+
   // Network-first for JS/HTML (code updates must be immediate)
   // Stale-while-revalidate for static assets (fonts, images, CSS)
   const isCode = event.request.url.endsWith('.js') ||

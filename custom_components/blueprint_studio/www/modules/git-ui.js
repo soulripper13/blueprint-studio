@@ -49,6 +49,24 @@ export function updateGitPanel() {
   // Update badge
   badge.textContent = gitState.totalChanges;
 
+  // Update branch indicator in panel title
+  const titleText = panel.querySelector(".panel-title-text");
+  if (titleText && gitState.isInitialized && gitState.currentBranch && gitState.currentBranch !== "unknown") {
+    // Remove any existing branch chip to avoid duplicates
+    const existing = panel.querySelector(".git-branch-chip");
+    if (existing) existing.remove();
+    const chip = document.createElement("span");
+    chip.className = "git-branch-chip";
+    chip.title = `Current branch: ${gitState.currentBranch}`;
+    chip.style.cssText = "display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;margin-left:6px;color:var(--text-secondary);cursor:pointer;vertical-align:middle;";
+    chip.innerHTML = `<span class="material-icons" style="font-size:11px;">account_tree</span>${gitState.currentBranch}`;
+    chip.addEventListener("click", () => { import('./git-operations.js').then(m => m.showBranchManager()); });
+    titleText.after(chip);
+  } else if (titleText && (!gitState.isInitialized || gitState.currentBranch === "unknown")) {
+    const existing = panel.querySelector(".git-branch-chip");
+    if (existing) existing.remove();
+  }
+
   // Remove any existing sync indicators to prevent duplicates
   const oldIndicators = actions.querySelectorAll(".git-sync-indicator");
   oldIndicators.forEach(i => i.remove());
@@ -177,21 +195,35 @@ export function updateGitPanel() {
     `;
   }
 
-  // Rebase/Merge Stuck Detection
+  // Rebase/Merge Stuck Detection + Conflict Resolution UI
   let stuckWarningHtml = "";
-  if (typeof gitState.status === "string" && gitState.status && (
+  const isConflicted = typeof gitState.status === "string" && gitState.status && (
     gitState.status.toLowerCase().includes("rebasing") ||
     gitState.status.toLowerCase().includes("merging") ||
     gitState.status.toLowerCase().includes("unmerged") ||
     gitState.status.toLowerCase().includes("conflict")
-  )) {
+  );
+  if (isConflicted) {
+    const conflictFiles = gitState.conflictFiles || [];
+
+    const conflictRows = conflictFiles.map(f => `
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-color);">
+        <span style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;" title="${f}">${f.split("/").pop()}</span>
+        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+          <button class="btn-conflict-ours" data-path="${f}" style="padding: 3px 8px; font-size: 11px; background: var(--success-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Ours</button>
+          <button class="btn-conflict-theirs" data-path="${f}" style="padding: 3px 8px; font-size: 11px; background: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Theirs</button>
+        </div>
+      </div>
+    `).join("");
+
     stuckWarningHtml = `
-      <div style="margin: 8px; padding: 12px; background: rgba(244, 67, 54, 0.1); border: 1px solid var(--error-color); border-radius: 6px; font-size: 12px;">
+      <div id="conflict-resolution-panel" style="margin: 8px; padding: 12px; background: rgba(244, 67, 54, 0.1); border: 1px solid var(--error-color); border-radius: 6px; font-size: 12px;">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--error-color); font-weight: 600;">
           <span class="material-icons" style="font-size: 18px;">error_outline</span>
-          <span>Sync Blocked</span>
+          <span>Merge Conflicts</span>
         </div>
-        <p style="margin-bottom: 10px; color: var(--text-secondary);">A previous Pull operation failed or is in progress. You must resolve or abort it.</p>
+        <p style="margin-bottom: 10px; color: var(--text-secondary);">Resolve each conflict by choosing your version (Ours) or the incoming version (Theirs), then commit.</p>
+        ${conflictRows ? `<div style="margin-bottom: 10px;">${conflictRows}</div>` : ""}
         <button id="btn-abort-git" style="width: 100%; padding: 6px; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
           Abort & Reset Sync
         </button>

@@ -2,11 +2,43 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from ..const import VERSION
 from .util import json_response
 
 _LOGGER = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Short-lived in-memory cache for expensive HA state/registry reads.
+# These endpoints are called on every page load and panel open, but the
+# underlying data rarely changes within a few seconds.
+# ---------------------------------------------------------------------------
+class _HassCache:
+    """Simple TTL cache for HA state queries."""
+
+    _store: dict[str, tuple[float, object]] = {}
+    _ttl: float = 5.0  # seconds
+
+    @classmethod
+    def get(cls, key: str) -> object | None:
+        entry = cls._store.get(key)
+        if entry and (time.monotonic() - entry[0]) < cls._ttl:
+            return entry[1]
+        return None
+
+    @classmethod
+    def set(cls, key: str, value: object) -> None:
+        cls._store[key] = (time.monotonic(), value)
+
+    @classmethod
+    def invalidate(cls, key: str) -> None:
+        cls._store.pop(key, None)
+
+    @classmethod
+    def invalidate_all(cls) -> None:
+        cls._store.clear()
 
 
 # ========== Settings ==========
@@ -112,6 +144,15 @@ async def get_entities(hass, data):
     device_classes = data.get("device_classes")  # e.g. ["motion", "door"]
     ensure_domains = data.get("ensure_domains")  # e.g. ["camera", "device_tracker"]
 
+    # Only use the cache for unfiltered requests (the common page-load case).
+    # Filtered requests (AI autocomplete, entity pickers) are always fresh.
+    use_cache = not query and not domains and not device_classes and not ensure_domains
+    cache_key = "entities_all"
+    if use_cache:
+        cached = _HassCache.get(cache_key)
+        if cached is not None:
+            return json_response({"entities": cached})
+
     # Build entity_id → platform (integration) lookup from entity registry
     platform_map = {}
     try:
@@ -154,6 +195,10 @@ async def get_entities(hass, data):
     cap = 1000
     remaining = max(0, cap - len(ensured))
     entities = ensured + general[:remaining]
+
+    if use_cache:
+        _HassCache.set(cache_key, entities)
+
     return json_response({"entities": entities})
 
 
@@ -177,6 +222,9 @@ async def get_version(hass):
 
 async def get_devices(hass):
     """Return all registered devices with integration, manufacturer, and model."""
+    cached = _HassCache.get("devices")
+    if cached is not None:
+        return json_response({"success": True, "devices": cached})
     try:
         from homeassistant.helpers import device_registry as dr
         dev_reg = dr.async_get(hass)
@@ -191,6 +239,7 @@ async def get_devices(hass):
                 "model": d.model,
                 "integration": integration,
             })
+        _HassCache.set("devices", devices)
         return json_response({"success": True, "devices": devices})
     except Exception as e:
         _LOGGER.debug("get_devices failed: %s", e)
@@ -199,10 +248,14 @@ async def get_devices(hass):
 
 async def get_areas(hass):
     """Return all registered areas as id/name pairs."""
+    cached = _HassCache.get("areas")
+    if cached is not None:
+        return json_response({"success": True, "areas": cached})
     try:
         from homeassistant.helpers import area_registry as ar
         area_reg = ar.async_get(hass)
         areas = [{"id": a.id, "name": a.name} for a in area_reg.areas.values()]
+        _HassCache.set("areas", areas)
         return json_response({"success": True, "areas": areas})
     except Exception as e:
         _LOGGER.debug("get_areas failed: %s", e)
@@ -270,3 +323,39 @@ async def get_addons(hass):
     except Exception as e:
         _LOGGER.debug("get_addons failed: %s", e)
         return json_response({"success": True, "addons": []})
+
+
+async def get_services(hass):
+    """Return all registered HA services as domain.service strings with descriptions.
+
+    Uses a 30-second TTL cache — services change rarely and are only used for
+    editor autocomplete, so a brief staleness is acceptable.
+    """
+    cached = _HassCache.get("services")
+    if cached is not None:
+        return json_response({"success": True, "services": cached})
+
+    try:
+        raw = hass.services.async_services()
+        services = []
+        for domain, domain_services in raw.items():
+            for service_name, service_obj in domain_services.items():
+                description = ""
+                try:
+                    if hasattr(service_obj, "description"):
+                        description = service_obj.description or ""
+                except Exception:
+                    pass
+                services.append({
+                    "service": f"{domain}.{service_name}",
+                    "domain": domain,
+                    "name": service_name,
+                    "description": description,
+                })
+        services.sort(key=lambda s: s["service"])
+        # Store with a 30-second effective TTL (services rarely change)
+        _HassCache._store["services"] = (time.monotonic() - _HassCache._ttl + 30.0, services)
+        return json_response({"success": True, "services": services})
+    except Exception as e:
+        _LOGGER.debug("get_services failed: %s", e)
+        return json_response({"success": True, "services": []})

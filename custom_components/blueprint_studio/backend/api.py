@@ -34,6 +34,17 @@ from . import api_misc
 
 _LOGGER = logging.getLogger(__name__)
 
+# Actions that modify or delete data and should be restricted to admin users only.
+_ADMIN_ONLY_ACTIONS = frozenset({
+    "delete",
+    "delete_multi",
+    "git_force_push",
+    "git_hard_reset",
+    "git_delete_repo",
+    "git_delete_remote_branch",
+    "restart_home_assistant",
+})
+
 
 class BlueprintStudioApiView(HomeAssistantView):
     """View to handle API requests for Blueprint Studio."""
@@ -104,8 +115,9 @@ class BlueprintStudioApiView(HomeAssistantView):
             "get_areas":   lambda r, u, p, h: api_misc.get_areas(h),
             "get_labels":  lambda r, u, p, h: api_misc.get_labels(h),
             "get_floors":  lambda r, u, p, h: api_misc.get_floors(h),
-            "get_themes":  lambda r, u, p, h: api_misc.get_themes(h),
-            "get_addons":  lambda r, u, p, h: api_misc.get_addons(h),
+            "get_themes":   lambda r, u, p, h: api_misc.get_themes(h),
+            "get_addons":   lambda r, u, p, h: api_misc.get_addons(h),
+            "get_services": lambda r, u, p, h: api_misc.get_services(h),
         }
 
         handler = get_handlers.get(action)
@@ -194,6 +206,12 @@ class BlueprintStudioApiView(HomeAssistantView):
             "git_force_push": lambda d, h, u: api_git.git_force_push(self.git, d),
             "git_hard_reset": lambda d, h, u: api_git.git_hard_reset(self.git, self.file, d),
             "git_delete_remote_branch": lambda d, h, u: api_git.git_delete_remote_branch(self.git, d),
+            "git_checkout_branch": lambda d, h, u: api_git.git_checkout_branch(self.git, d),
+            "git_create_branch": lambda d, h, u: api_git.git_create_branch(self.git, d),
+            "git_delete_local_branch": lambda d, h, u: api_git.git_delete_local_branch(self.git, d),
+            "git_merge_branch": lambda d, h, u: api_git.git_merge_branch(self.git, d),
+            "git_get_conflict_files": lambda d, h, u: api_git.git_get_conflict_files(self.git),
+            "git_resolve_conflict": lambda d, h, u: api_git.git_resolve_conflict(self.git, d),
             "git_abort": lambda d, h, u: api_git.git_abort(self.git),
             "git_stage": lambda d, h, u: api_git.git_stage(self.git, d),
             "git_unstage": lambda d, h, u: api_git.git_unstage(self.git, d),
@@ -239,6 +257,15 @@ class BlueprintStudioApiView(HomeAssistantView):
         if not handler:
             _LOGGER.error("Blueprint Studio: Unknown POST action: %s", action)
             return json_message(f"Unknown action: {action}", status_code=400)
+
+        # Guard: certain destructive actions require an admin user.
+        if action in _ADMIN_ONLY_ACTIONS and not user.is_admin:
+            _LOGGER.warning(
+                "Blueprint Studio: non-admin user '%s' attempted restricted action '%s'",
+                user.name,
+                action,
+            )
+            return json_message("Admin privileges required for this action", status_code=403)
 
         try:
             result = handler(data, hass, user)
@@ -293,6 +320,8 @@ class BlueprintStudioStreamView(HomeAssistantView):
             return await api_files.serve_file(self.file, params)
         elif action == "download_folder":
             return await api_files.download_folder(self.file, params, request)
+        elif action == "search_stream":
+            return await api_files.search_stream(self.file, params, request)
         else:
             return web.Response(status=400, text="Unknown streaming action")
 

@@ -1,6 +1,5 @@
 /** SIDEBAR.JS | Purpose: * Manages sidebar visibility, view switching (files/git/gitea/search/settings), */
 import { state, elements } from './state.js';
-import { isMobile } from './utils.js';
 import { eventBus } from './event-bus.js';
 
 /**
@@ -8,12 +7,11 @@ import { eventBus } from './event-bus.js';
  */
 export function showSidebar() {
   state.sidebarVisible = true;
-  if (isMobile()) {
-    elements.sidebar.classList.add("visible");
-    elements.sidebarOverlay.classList.add("visible");
-  } else {
-    elements.sidebar.classList.remove("hidden");
-  }
+  // Always apply both class sets so rotating between portrait/landscape
+  // never leaves the sidebar in a mixed state.
+  elements.sidebar.classList.remove("hidden");
+  elements.sidebar.classList.add("visible");
+  elements.sidebarOverlay.classList.add("visible");
 }
 
 /**
@@ -21,12 +19,9 @@ export function showSidebar() {
  */
 export function hideSidebar() {
   state.sidebarVisible = false;
-  if (isMobile()) {
-    elements.sidebar.classList.remove("visible");
-    elements.sidebarOverlay.classList.remove("visible");
-  } else {
-    elements.sidebar.classList.add("hidden");
-  }
+  elements.sidebar.classList.remove("visible");
+  elements.sidebar.classList.add("hidden");
+  elements.sidebarOverlay.classList.remove("visible");
 }
 
 /**

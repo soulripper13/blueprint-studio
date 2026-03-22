@@ -129,6 +129,28 @@ class FileManager:
             self._file_cache = {}
             self._last_cache_update = 0
 
+    def subscribe_to_ha_events(self) -> None:
+        """Listen for HA filesystem events and invalidate the cache immediately.
+
+        HA fires 'folder_watcher' events when files in config_dir change.
+        This is more responsive than waiting for the 30s TTL to expire.
+        """
+        if not self.hass:
+            return
+
+        def _on_folder_watcher(event) -> None:
+            """Invalidate cache on any file-system change detected by HA."""
+            _LOGGER.debug(
+                "FileManager: folder_watcher event received (%s), invalidating cache",
+                event.data.get("event_type", "unknown"),
+            )
+            with self._cache_lock:
+                self._file_cache = {}
+                self._last_cache_update = 0
+
+        self.hass.bus.async_listen("folder_watcher", _on_folder_watcher)
+        _LOGGER.debug("FileManager: subscribed to folder_watcher events for cache invalidation")
+
     def list_files(self, show_hidden: bool = False) -> list[dict]:
         """List files recursively."""
         res = []
@@ -541,6 +563,92 @@ class FileManager:
             _LOGGER.error("Global search error: %s", e)
         return results[:2000]
 
+    async def global_search_stream(self, request: web.Request, query: str, case_sensitive: bool = False,
+                                    use_regex: bool = False, match_word: bool = False,
+                                    include: str = "", exclude: str = "") -> web.StreamResponse:
+        """Stream global search results as NDJSON (newline-delimited JSON).
+
+        Results are written to the response as each file is searched, so the
+        frontend receives and renders matches immediately rather than waiting
+        for the full scan to complete.
+        """
+        import json as _json
+        import re as _re
+        import fnmatch as _fnmatch
+        import concurrent.futures
+
+        response = web.StreamResponse()
+        response.content_type = "application/x-ndjson"
+        response.headers["Cache-Control"] = "no-cache"
+        await response.prepare(request)
+
+        try:
+            flags = 0 if case_sensitive else _re.IGNORECASE
+            search_pattern = query if use_regex else _re.escape(query)
+            if match_word:
+                search_pattern = rf"\b{search_pattern}\b"
+            pattern = _re.compile(search_pattern, flags)
+
+            include_patterns = [p.strip() for p in include.split(",") if p.strip()]
+            exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
+
+            root_dir = self._get_root_dir()
+            search_files = []
+            for root, dirs, files in os.walk(root_dir):
+                dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_PATTERNS]
+                for name in files:
+                    file_path = Path(root) / name
+                    rel_path = str(file_path.relative_to(root_dir))
+                    if file_path.suffix.lower() in BINARY_EXTENSIONS:
+                        continue
+                    if include_patterns and not any(_fnmatch.fnmatch(rel_path, p) or _fnmatch.fnmatch(name, p) for p in include_patterns):
+                        continue
+                    if exclude_patterns and any(_fnmatch.fnmatch(rel_path, p) or _fnmatch.fnmatch(name, p) for p in exclude_patterns):
+                        continue
+                    search_files.append((file_path, rel_path))
+
+            def search_single_file(args):
+                f_path, r_path = args
+                local_results = []
+                try:
+                    with open(f_path, "r", encoding="utf-8", errors="ignore") as f:
+                        for i, line in enumerate(f):
+                            if pattern.search(line):
+                                local_results.append({
+                                    "path": r_path,
+                                    "line": i + 1,
+                                    "content": line.strip()
+                                })
+                                if len(local_results) >= 100:
+                                    break
+                except (OSError, UnicodeDecodeError):
+                    pass
+                return local_results
+
+            total_sent = 0
+            max_results = 2000
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                futures = {executor.submit(search_single_file, f): f for f in search_files}
+                for future in concurrent.futures.as_completed(futures):
+                    if total_sent >= max_results:
+                        break
+                    file_results = future.result()
+                    if not file_results:
+                        continue
+                    for result in file_results:
+                        if total_sent >= max_results:
+                            break
+                        line = _json.dumps(result) + "\n"
+                        await response.write(line.encode())
+                        total_sent += 1
+
+        except Exception as e:
+            _LOGGER.error("Streaming search error: %s", e)
+
+        await response.write_eof()
+        return response
+
     def global_replace(self, query: str, replacement: str, case_sensitive: bool = False, use_regex: bool = False, match_word: bool = False, include: str = "", exclude: str = "") -> dict:
         """Perform global find and replace across files."""
         import re
@@ -620,6 +728,19 @@ class FileManager:
             if safe_path.suffix.lower() in BINARY_EXTENSIONS:
                 content = await self.hass.async_add_executor_job(safe_path.read_bytes)
                 return json_response({"content": base64.b64encode(content).decode(), "is_base64": True, "mime_type": mimetypes.guess_type(safe_path.name)[0] or "application/octet-stream", "mtime": safe_path.stat().st_mtime})
+            # Hard backend limit for text files — only blocks truly extreme sizes.
+            # The frontend handles the 2–10 MB range with its own warning dialog
+            # that lets the user choose to open anyway. This guard is a safety net
+            # for files so large they would crash the server response or the browser
+            # regardless of user intent.
+            max_text_size = 10 * 1024 * 1024  # 10 MB
+            file_size = safe_path.stat().st_size
+            if file_size > max_text_size:
+                return json_message(
+                    f"File is too large to open in the editor ({file_size // 1024} KB). "
+                    f"Maximum supported size for text files is {max_text_size // 1024} KB.",
+                    status_code=413,
+                )
             content = await self.hass.async_add_executor_job(safe_path.read_text, "utf-8")
             return json_response({"content": content, "is_base64": False, "mime_type": mimetypes.guess_type(safe_path.name)[0] or "text/plain;charset=utf-8", "mtime": safe_path.stat().st_mtime})
         except Exception as e: return json_message(str(e), status_code=500)

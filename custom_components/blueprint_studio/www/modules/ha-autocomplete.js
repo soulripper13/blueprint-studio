@@ -3,6 +3,7 @@ import { API_BASE, HA_SCHEMA } from './constants.js';
 import { fetchWithAuth } from './api.js';
 
 export let HA_ENTITIES = [];
+export let HA_SERVICES = [];
 
 export async function loadEntities() {
   try {
@@ -16,6 +17,17 @@ export async function loadEntities() {
     }
   } catch (e) {
     /*console.log*/ void("Failed to load entities for autocomplete", e);
+  }
+}
+
+export async function loadServices() {
+  try {
+    const data = await fetchWithAuth(`${API_BASE}?action=get_services`, { method: "GET" });
+    if (data.services) {
+      HA_SERVICES = data.services;
+    }
+  } catch (e) {
+    void("Failed to load services for autocomplete", e);
   }
 }
 
@@ -35,15 +47,16 @@ export function homeAssistantHint(editor, options) {
 
   let suggestions = [];
 
-  // Entity autocompletion (e.g. light.kitchen)
+  // Entity autocompletion (e.g. light.kitchen) — skip on action:/service: lines
   const lineText = currentLine.slice(0, cursor.ch);
-  const entityMatch = lineText.match(/([a-z0-9_]+)\.([a-z0-9_]*)$/);
+  const isServiceLine = /^\s*(action|service)\s*:\s*/.test(currentLine);
+  const entityMatch = !isServiceLine && lineText.match(/([a-z0-9_]+)\.([a-z0-9_]*)$/);
 
   if (entityMatch) {
     const fullMatch = entityMatch[0];
     const matchStart = cursor.ch - fullMatch.length;
     const matchedEntities = HA_ENTITIES.filter(e => e.entity_id.startsWith(fullMatch));
-    
+
     if (matchedEntities.length > 0) {
         suggestions = matchedEntities.map(e => ({
             text: e.entity_id,
@@ -52,7 +65,7 @@ export function homeAssistantHint(editor, options) {
             render: (elem, self, data) => {
                 const iconName = e.icon ? e.icon.replace('mdi:', '') : 'help-circle';
                 const iconHtml = `<span class="mdi mdi-${iconName}" style="margin-right: 6px; vertical-align: middle;"></span>`;
-                
+
                 elem.innerHTML = `
                   <div style="display: flex; align-items: center;">
                       ${iconHtml}
@@ -65,12 +78,46 @@ export function homeAssistantHint(editor, options) {
                 cm.replaceRange(data.text, { line: cursor.line, ch: matchStart }, { line: cursor.line, ch: end });
             }
         }));
-        
+
         return {
             list: suggestions,
             from: CodeMirror.Pos(cursor.line, matchStart),
             to: CodeMirror.Pos(cursor.line, end)
         };
+    }
+  }
+
+  // Service autocompletion — triggered when the line is an action:/service: key
+  if (isServiceLine && HA_SERVICES.length > 0) {
+    // The typed word starts after the colon
+    const afterColon = lineText.replace(/^\s*(action|service)\s*:\s*/, '');
+    const serviceQuery = afterColon.trimStart();
+    const serviceStart = cursor.ch - serviceQuery.length;
+    const matchedServices = HA_SERVICES.filter(s =>
+      s.service.startsWith(serviceQuery) || (serviceQuery.length === 0)
+    ).slice(0, 30);
+    if (matchedServices.length > 0) {
+      return {
+        list: matchedServices.map(s => ({
+          text: s.service,
+          displayText: s.service,
+          className: 'ha-hint-service',
+          render: (elem) => {
+            elem.innerHTML = `
+              <div style="display: flex; align-items: center; width: 100%;">
+                <span class="material-icons" style="font-size: 15px; margin-right: 6px; color: var(--accent-color); flex-shrink: 0;">play_circle</span>
+                <span>${s.service}</span>
+                ${s.description ? `<span class="ha-hint-description" style="margin-left: auto; font-size: 0.75em; opacity: 0.65; padding-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${s.description}</span>` : ''}
+              </div>
+            `;
+          },
+          hint: (cm) => {
+            cm.replaceRange(s.service, { line: cursor.line, ch: serviceStart }, { line: cursor.line, ch: end });
+          }
+        })),
+        from: CodeMirror.Pos(cursor.line, serviceStart),
+        to: CodeMirror.Pos(cursor.line, end)
+      };
     }
   }
 

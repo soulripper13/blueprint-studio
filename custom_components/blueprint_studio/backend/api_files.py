@@ -85,6 +85,21 @@ async def download_folder(file_manager, params, request):
     return await file_manager.download_folder(path, request)
 
 
+async def search_stream(file_manager, params, request):
+    """Stream search results as NDJSON — first result arrives before scan is complete."""
+    query = params.get("query", "")
+    if not query:
+        return json_message("Missing query", status_code=400)
+    return await file_manager.global_search_stream(
+        request, query,
+        params.get("case_sensitive", "false").lower() == "true",
+        params.get("use_regex", "false").lower() == "true",
+        params.get("match_word", "false").lower() == "true",
+        params.get("include", ""),
+        params.get("exclude", ""),
+    )
+
+
 # ========== POST Handlers ==========
 
 async def write_file(file_manager, data, hass):

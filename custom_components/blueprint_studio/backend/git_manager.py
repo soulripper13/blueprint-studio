@@ -729,6 +729,85 @@ class GitManager:
             _LOGGER.error("Error hard resetting: %s", err)
             return json_message(str(err), status_code=500)
 
+    async def checkout_branch(self, branch: str) -> web.Response:
+        """Switch to an existing local branch."""
+        try:
+            result = await self.hass.async_add_executor_job(self._run_git_command, ["checkout", branch])
+            if result["success"]:
+                return json_response({"success": True, "message": f"Switched to branch '{branch}'"})
+            return json_message(result["error"], status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error checking out branch: %s", err)
+            return json_message(str(err), status_code=500)
+
+    async def create_branch(self, name: str, checkout: bool = True) -> web.Response:
+        """Create a new branch from current HEAD, optionally switch to it."""
+        try:
+            if not name or not name.strip():
+                return json_message("Branch name is required", status_code=400)
+            args = ["checkout", "-b", name] if checkout else ["branch", name]
+            result = await self.hass.async_add_executor_job(self._run_git_command, args)
+            if result["success"]:
+                return json_response({"success": True, "message": f"Branch '{name}' created"})
+            return json_message(result["error"], status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error creating branch: %s", err)
+            return json_message(str(err), status_code=500)
+
+    async def delete_local_branch(self, branch: str, force: bool = False) -> web.Response:
+        """Delete a local branch."""
+        try:
+            flag = "-D" if force else "-d"
+            result = await self.hass.async_add_executor_job(self._run_git_command, ["branch", flag, branch])
+            if result["success"]:
+                return json_response({"success": True, "message": f"Branch '{branch}' deleted"})
+            return json_message(result["error"], status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error deleting local branch: %s", err)
+            return json_message(str(err), status_code=500)
+
+    async def merge_branch(self, branch: str) -> web.Response:
+        """Merge a branch into the current branch."""
+        try:
+            result = await self.hass.async_add_executor_job(self._run_git_command, ["merge", branch, "--no-edit"])
+            if result["success"]:
+                return json_response({"success": True, "message": f"Merged '{branch}' into current branch", "output": result["output"]})
+            return json_message(result["error"], status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error merging branch: %s", err)
+            return json_message(str(err), status_code=500)
+
+    async def get_conflict_files(self) -> web.Response:
+        """Get list of files with merge conflicts."""
+        try:
+            result = await self.hass.async_add_executor_job(self._run_git_command, ["diff", "--name-only", "--diff-filter=U"])
+            if result["success"]:
+                files = [f.strip() for f in result["output"].split("\n") if f.strip()]
+                return json_response({"success": True, "conflict_files": files})
+            return json_message(result["error"], status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error getting conflict files: %s", err)
+            return json_message(str(err), status_code=500)
+
+    async def resolve_conflict(self, path: str, resolution: str) -> web.Response:
+        """Resolve a merge conflict by accepting 'ours' or 'theirs'."""
+        try:
+            if not is_path_safe(self.config_dir, path):
+                return json_message(f"Invalid path: {path}", status_code=403)
+            if resolution == "ours":
+                result = await self.hass.async_add_executor_job(self._run_git_command, ["checkout", "--ours", path])
+            elif resolution == "theirs":
+                result = await self.hass.async_add_executor_job(self._run_git_command, ["checkout", "--theirs", path])
+            else:
+                return json_message("Resolution must be 'ours' or 'theirs'", status_code=400)
+            if result["success"]:
+                await self.hass.async_add_executor_job(self._run_git_command, ["add", path])
+                return json_response({"success": True, "message": f"Resolved conflict in '{path}' using {resolution}"})
+            return json_message(result["error"], status_code=500)
+        except Exception as err:
+            _LOGGER.error("Error resolving conflict: %s", err)
+            return json_message(str(err), status_code=500)
+
     async def delete_remote_branch(self, branch: str) -> web.Response:
         """Delete a branch on the remote repository."""
         try:

@@ -4,7 +4,7 @@ import { enableLongPressContextMenu } from './utils.js';
 /** FILE-TREE.JS | Purpose: * Handles file tree rendering, folder expansion/collapse, drag & drop, */
 import { state, elements, gitState } from './state.js';
 import { fetchWithAuth } from './api.js';
-import { API_BASE } from './constants.js';
+import { API_BASE, STREAM_BASE } from './constants.js';
 import {
   showToast,
   showGlobalLoading,
@@ -72,7 +72,8 @@ export function debouncedFilenameSearch() {
 }
 
 /**
- * Perform content search across all files
+ * Perform content search across all files using streaming NDJSON response.
+ * Results appear in the tree as each file is matched — no waiting for full scan.
  */
 export async function performContentSearch() {
   const query = state.searchQuery.trim();
@@ -84,32 +85,70 @@ export async function performContentSearch() {
     return;
   }
 
+  // Get auth token for the stream request
+  const token = window.pwaAuth?.getToken?.() || "";
+  const url = `${STREAM_BASE}?action=search_stream&query=${encodeURIComponent(query)}&authorization=${encodeURIComponent(token)}`;
+
   try {
-    const results = await fetchWithAuth(API_BASE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "global_search",
-        query: query,
-        case_sensitive: false,
-        use_regex: false
-      }),
-    });
+    state.contentSearchResults = new Set();
 
-    // If query changed while fetching (e.g. user cleared the box), discard results
-    if (state.searchQuery.trim() !== query) return;
+    const response = await fetch(url);
+    if (!response.ok || !response.body) {
+      // Fall back to regular search if stream not available
+      throw new Error("Stream unavailable");
+    }
 
-    if (results && Array.isArray(results)) {
-      state.contentSearchResults = new Set(results.map(r => r.path));
-    } else {
-      state.contentSearchResults = new Set();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      // If the user changed the query while streaming, abort
+      if (state.searchQuery.trim() !== query) {
+        reader.cancel();
+        return;
+      }
+
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop(); // keep incomplete last line
+
+      let hadNew = false;
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const result = JSON.parse(line);
+          state.contentSearchResults.add(result.path);
+          hadNew = true;
+        } catch {
+          // skip malformed line
+        }
+      }
+
+      // Re-render incrementally as results arrive
+      if (hadNew && state.searchQuery.trim() === query) {
+        renderFileTree();
+      }
     }
   } catch (e) {
-    console.error("Content search failed", e);
-    state.contentSearchResults = new Set();
+    // Fallback: regular non-streaming search
+    try {
+      const results = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "global_search", query, case_sensitive: false, use_regex: false }),
+      });
+      if (state.searchQuery.trim() !== query) return;
+      state.contentSearchResults = new Set(Array.isArray(results) ? results.map(r => r.path) : []);
+    } catch (e2) {
+      console.error("Content search failed", e2);
+      state.contentSearchResults = new Set();
+    }
   } finally {
     if (elements.fileSearch) elements.fileSearch.style.opacity = "1";
-    // Only render if query still matches (user hasn't cleared)
     if (state.searchQuery.trim() === query) {
       renderFileTree();
     }

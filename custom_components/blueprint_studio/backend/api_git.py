@@ -95,6 +95,30 @@ async def git_delete_remote_branch(git_manager, data):
     return await git_manager.delete_remote_branch(data.get("branch"))
 
 
+async def git_checkout_branch(git_manager, data):
+    return await git_manager.checkout_branch(data.get("branch"))
+
+
+async def git_create_branch(git_manager, data):
+    return await git_manager.create_branch(data.get("name"), data.get("checkout", True))
+
+
+async def git_delete_local_branch(git_manager, data):
+    return await git_manager.delete_local_branch(data.get("branch"), data.get("force", False))
+
+
+async def git_merge_branch(git_manager, data):
+    return await git_manager.merge_branch(data.get("branch"))
+
+
+async def git_get_conflict_files(git_manager):
+    return await git_manager.get_conflict_files()
+
+
+async def git_resolve_conflict(git_manager, data):
+    return await git_manager.resolve_conflict(data.get("path"), data.get("resolution"))
+
+
 async def git_abort(git_manager):
     return await git_manager.abort()
 

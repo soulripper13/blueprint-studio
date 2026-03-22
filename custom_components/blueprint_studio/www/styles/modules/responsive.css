@@ -718,9 +718,51 @@
         min-height: 44px;
       }
 
+      /* Git panel header — compact layout for narrow screens */
+      .git-panel-header {
+        flex-wrap: nowrap;
+        padding: 8px 10px;
+        gap: 4px;
+      }
+
+      .git-panel-title {
+        flex: 1;
+        min-width: 0; /* allow truncation */
+        overflow: hidden;
+      }
+
+      .git-panel-title > span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .git-panel-actions {
+        flex-shrink: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        /* Wider tap targets via padding instead of explicit size */
+        gap: 2px;
+      }
+
+      .git-panel-actions::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* 36px tap target: smaller than 44px default but still comfortable */
       .git-panel-btn {
-        min-width: 44px;
-        min-height: 44px;
+        min-width: 36px;
+        min-height: 36px;
+        width: 36px;
+        height: 36px;
+      }
+
+      /* Sync indicator buttons injected by git-ui.js / gitea-ui.js */
+      .git-sync-indicator {
+        min-width: 36px;
+        min-height: 36px;
       }
 
       .tab-close {
@@ -815,6 +857,26 @@
 
     /* Small Mobile Styles (max-width: 380px) */
     @media (max-width: 380px) {
+      /* Git panel footer: 2×2 grid so 4 buttons have room to breathe */
+      .git-panel-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .git-panel-footer button {
+        min-height: 40px;
+        font-size: 11px;
+        padding: 8px 4px;
+      }
+
+      /* Commit button spans full width as the primary action */
+      .git-panel-footer .btn-commit {
+        grid-column: 1 / -1;
+      }
+
+
       .toolbar {
         min-height: 38px;
         max-height: 40px;

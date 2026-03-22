@@ -180,6 +180,7 @@ export const gitState = {
     selectedFiles: new Set(),
     totalChanges: 0,
     collapsedGroups: new Set(),
+    conflictFiles: [],
 };
 
 export const giteaState = {
@@ -195,4 +196,5 @@ export const giteaState = {
     selectedFiles: new Set(),
     totalChanges: 0,
     collapsedGroups: new Set(),
+    conflictFiles: [],
 };

@@ -17,7 +17,9 @@ import {
     gitInit as gitInitImpl,
     abortGitOperation as abortGitOperationImpl,
     forcePush as forcePushImpl,
-    hardReset as hardResetImpl
+    hardReset as hardResetImpl,
+    showBranchManager as showBranchManagerImpl,
+    gitResolveConflict as gitResolveConflictImpl
 } from '../git-operations.js';
 import {
     giteaStatus as giteaStatusImpl,
@@ -83,6 +85,18 @@ export function initGitCoordinator(callbacks) {
                 return;
             }
 
+            // Handle Conflict Resolution buttons
+            const oursBtn = e.target.closest(".btn-conflict-ours");
+            if (oursBtn) {
+                gitResolveConflictImpl(oursBtn.dataset.path, "ours").then(() => gitStatusImpl(false, true));
+                return;
+            }
+            const theirsBtn = e.target.closest(".btn-conflict-theirs");
+            if (theirsBtn) {
+                gitResolveConflictImpl(theirsBtn.dataset.path, "theirs").then(() => gitStatusImpl(false, true));
+                return;
+            }
+
             // Handle empty state buttons
             const target = e.target.closest('button');
             if (target) {
@@ -95,6 +109,8 @@ export function initGitCoordinator(callbacks) {
                 } else if (target.id === "btn-git-connect-panel") {
                     if (functions.showGitSettings) functions.showGitSettings();
                 } else if (target.id === "btn-git-abort") {
+                    abortGitOperationImpl();
+                } else if (target.id === "btn-abort-git") {
                     abortGitOperationImpl();
                 } else if (target.id === "btn-git-force-push") {
                     forcePushImpl();
@@ -149,6 +165,18 @@ export function initGitCoordinator(callbacks) {
             if (diffBtn) {
                 const path = diffBtn.dataset.path;
                 if (functions.showDiffModal) functions.showDiffModal(path);
+                return;
+            }
+
+            // Handle Conflict Resolution buttons
+            const oursBtn = e.target.closest(".btn-conflict-ours");
+            if (oursBtn) {
+                gitResolveConflictImpl(oursBtn.dataset.path, "ours").then(() => giteaStatusImpl(false, true));
+                return;
+            }
+            const theirsBtn = e.target.closest(".btn-conflict-theirs");
+            if (theirsBtn) {
+                gitResolveConflictImpl(theirsBtn.dataset.path, "theirs").then(() => giteaStatusImpl(false, true));
                 return;
             }
 
@@ -244,6 +272,10 @@ export function initGitCoordinator(callbacks) {
     if (elements.btnGitRefresh) {
         elements.btnGitRefresh.addEventListener("click", () => gitStatusImpl(true));
     }
+    const btnGitBranches = document.getElementById("btn-git-branches");
+    if (btnGitBranches) {
+        btnGitBranches.addEventListener("click", () => showBranchManagerImpl());
+    }
     if (elements.btnGitHelp) {
         elements.btnGitHelp.addEventListener("click", () => {
             showModal({
@@ -316,6 +348,10 @@ export function initGitCoordinator(callbacks) {
     }
     if (elements.btnGiteaRefresh) {
         elements.btnGiteaRefresh.addEventListener("click", () => giteaStatusImpl(true));
+    }
+    const btnGiteaBranches = document.getElementById("btn-gitea-branches");
+    if (btnGiteaBranches) {
+        btnGiteaBranches.addEventListener("click", () => showBranchManagerImpl());
     }
     if (elements.btnGiteaHelp) {
         elements.btnGiteaHelp.addEventListener("click", () => {
@@ -452,5 +488,12 @@ export function initGitCoordinator(callbacks) {
     eventBus.on("git:refresh", () => {
         if (functions.updateGitPanel) functions.updateGitPanel();
         if (functions.updateGiteaPanel) functions.updateGiteaPanel();
+    });
+
+    // Toggle git panel collapse via keyboard shortcut (Ctrl+Shift+G)
+    eventBus.on("git:toggle-panel", () => {
+        state.gitPanelCollapsed = !state.gitPanelCollapsed;
+        if (functions.updateGitPanel) functions.updateGitPanel();
+        saveSettings();
     });
 }

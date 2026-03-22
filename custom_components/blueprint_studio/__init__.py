@@ -171,6 +171,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.http.register_view(panel_view)
     _LOGGER.info("Blueprint Studio: PWA views registered (standalone mode enabled)")
 
+    # Subscribe file manager to HA folder-watcher events so the list_all
+    # cache is invalidated immediately on any file change, not just on TTL.
+    api_view.file.hass = hass
+    api_view.file.subscribe_to_ha_events()
+
+    # Defer git status check — don't block HA startup waiting for git subprocess
+    async def _deferred_git_check():
+        try:
+            api_view.git.hass = hass
+            await api_view.git.get_status()
+        except Exception:
+            pass  # Non-critical; the panel will fetch status on first open
+
+    hass.async_create_task(_deferred_git_check())
+
     # Register WebSocket commands
     async_register_websockets(hass)
 

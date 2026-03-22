@@ -10,6 +10,7 @@ import {
 
 import {
   loadEntities,
+  loadServices,
   defineHAYamlMode,
   defineCSVMode,
   defineShowWhitespaceMode
@@ -223,8 +224,9 @@ export async function init() {
         console.warn("Failed to init WebSocket:", e);
       }),
 
-      // Load entities for autocomplete (independent)
-      Promise.resolve().then(() => loadEntities())
+      // Load entities and services for autocomplete (independent)
+      Promise.resolve().then(() => loadEntities()),
+      Promise.resolve().then(() => loadServices())
     ]);
 
     // Display version if fetched successfully

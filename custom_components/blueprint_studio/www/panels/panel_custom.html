@@ -23,8 +23,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
   <!-- Note: "default" theme is built into codemirror.min.css, no separate file needed -->
 
-  <!-- Local Material Icons (Bundled in studio_full.css) -->
-
   <!-- GitHub Octicons (for Git features) -->
   <link href="https://unpkg.com/@primer/octicons@19.8.0/dist/octicons.css" rel="stylesheet">
 
@@ -322,6 +320,9 @@
             <span class="git-panel-badge" id="git-changes-count">0</span>
           </div>
           <div class="git-panel-actions" id="git-panel-actions">
+            <button class="git-panel-btn" id="btn-git-branches" title="Branch Manager: Create, switch, merge, and delete branches">
+              <span class="material-icons" style="font-size: 18px;">account_tree</span>
+            </button>
             <button class="git-panel-btn" id="btn-git-help" title="Git Help: Learn how to use these features">
               <span class="material-icons" style="font-size: 18px;">help_outline</span>
             </button>
@@ -361,6 +362,9 @@
             <span class="git-panel-badge" id="gitea-changes-count" style="background: #fa8e14;">0</span>
           </div>
           <div class="git-panel-actions" id="gitea-panel-actions">
+            <button class="git-panel-btn" id="btn-gitea-branches" title="Branch Manager: Create, switch, merge, and delete branches">
+              <span class="material-icons" style="font-size: 18px;">account_tree</span>
+            </button>
             <button class="git-panel-btn" id="btn-gitea-help" title="Gitea Integration Help">
               <span class="material-icons" style="font-size: 18px;">help_outline</span>
             </button>
@@ -1047,6 +1051,14 @@
           <div class="shortcut-item">
             <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>B</kbd></span>
             <span class="shortcut-desc">Toggle Sidebar</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>`</kbd></span>
+            <span class="shortcut-desc">Toggle Terminal</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd></span>
+            <span class="shortcut-desc">Toggle Git Panel</span>
           </div>
           <div class="shortcut-item">
             <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>]</kbd></span>

@@ -80,6 +80,16 @@ export async function gitStatus(shouldFetch = false, silent = false) {
         ...gitState.files.untracked
       ].length;
 
+      // If git is in a conflict state, fetch the actual unmerged file list
+      const statusLower = gitState.status.toLowerCase();
+      const isConflicted = statusLower.includes("rebasing") || statusLower.includes("merging") ||
+        statusLower.includes("unmerged") || statusLower.includes("conflict");
+      if (isConflicted) {
+        gitState.conflictFiles = await gitGetConflictFiles();
+      } else {
+        gitState.conflictFiles = [];
+      }
+
       eventBus.emit('git:refresh');
 
       if (!silent) {
@@ -563,6 +573,327 @@ export async function gitPull() {
     setButtonLoading(elements.btnGitPull, false);
     showToast(t("toast.gitea_pull_failed", { error: error.message }), "error");
   }
+}
+
+/**
+ * Checkout (switch to) a local branch
+ */
+export async function gitCheckoutBranch(branch) {
+  try {
+    showGlobalLoading(`Switching to '${branch}'...`);
+    const data = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_checkout_branch", branch }),
+    });
+    hideGlobalLoading();
+    if (data.success) {
+      showToast(data.message, "success");
+      await gitStatus(false, true);
+      return true;
+    } else {
+      showToast("Checkout failed: " + (data.message || "Unknown error"), "error");
+      return false;
+    }
+  } catch (e) {
+    hideGlobalLoading();
+    showToast("Checkout failed: " + e.message, "error");
+    return false;
+  }
+}
+
+/**
+ * Create a new branch from current HEAD
+ */
+export async function gitCreateBranch() {
+  const name = await showModal({
+    title: "Create New Branch",
+    placeholder: "branch-name",
+    value: "",
+    hint: "Branch will be created from current HEAD and checked out",
+  });
+  if (!name || !name.trim()) return;
+
+  try {
+    showGlobalLoading(`Creating branch '${name}'...`);
+    const data = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_create_branch", name: name.trim(), checkout: true }),
+    });
+    hideGlobalLoading();
+    if (data.success) {
+      showToast(data.message, "success");
+      await gitStatus(false, true);
+    } else {
+      showToast("Create branch failed: " + (data.message || "Unknown error"), "error");
+    }
+  } catch (e) {
+    hideGlobalLoading();
+    showToast("Create branch failed: " + e.message, "error");
+  }
+}
+
+/**
+ * Delete a local branch
+ */
+export async function gitDeleteLocalBranch(branch) {
+  const confirmed = await showConfirmDialog({
+    title: "Delete Local Branch",
+    message: `<p>Delete local branch <b>${branch}</b>?</p><p>Unmerged commits will be lost.</p>`,
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    isDanger: true,
+  });
+  if (!confirmed) return;
+
+  try {
+    showGlobalLoading(`Deleting '${branch}'...`);
+    // Try normal delete first, fall back to force if needed
+    let data = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_delete_local_branch", branch, force: false }),
+    });
+    if (!data.success && data.message && data.message.includes("not fully merged")) {
+      hideGlobalLoading();
+      const force = await showConfirmDialog({
+        title: "Force Delete?",
+        message: `<p><b>${branch}</b> has unmerged commits. Force delete anyway?</p>`,
+        confirmText: "Force Delete",
+        cancelText: "Cancel",
+        isDanger: true,
+      });
+      if (!force) return;
+      showGlobalLoading(`Force deleting '${branch}'...`);
+      data = await fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "git_delete_local_branch", branch, force: true }),
+      });
+    }
+    hideGlobalLoading();
+    if (data.success) {
+      showToast(data.message, "success");
+      await gitStatus(false, true);
+    } else {
+      showToast("Delete failed: " + (data.message || "Unknown error"), "error");
+    }
+  } catch (e) {
+    hideGlobalLoading();
+    showToast("Delete failed: " + e.message, "error");
+  }
+}
+
+/**
+ * Merge a branch into current branch
+ */
+export async function gitMergeBranch(branch) {
+  const confirmed = await showConfirmDialog({
+    title: "Merge Branch",
+    message: `<p>Merge <b>${branch}</b> into <b>${gitState.currentBranch}</b>?</p>`,
+    confirmText: "Merge",
+    cancelText: "Cancel",
+  });
+  if (!confirmed) return;
+
+  try {
+    showGlobalLoading(`Merging '${branch}'...`);
+    const data = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_merge_branch", branch }),
+    });
+    hideGlobalLoading();
+    if (data.success) {
+      showToast(data.message, "success");
+      eventBus.emit('ui:reload-files');
+      await gitStatus(false, true);
+    } else {
+      showToast("Merge failed: " + (data.message || "Unknown error"), "error");
+      await gitStatus(false, true);
+    }
+  } catch (e) {
+    hideGlobalLoading();
+    showToast("Merge failed: " + e.message, "error");
+  }
+}
+
+/**
+ * Resolve a merge conflict (accept ours or theirs)
+ */
+export async function gitResolveConflict(path, resolution) {
+  try {
+    const data = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_resolve_conflict", path, resolution }),
+    });
+    if (data.success) {
+      showToast(data.message, "success");
+      return true;
+    } else {
+      showToast("Resolve failed: " + (data.message || "Unknown error"), "error");
+      return false;
+    }
+  } catch (e) {
+    showToast("Resolve failed: " + e.message, "error");
+    return false;
+  }
+}
+
+/**
+ * Get conflict files
+ */
+export async function gitGetConflictFiles() {
+  try {
+    const data = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "git_get_conflict_files" }),
+    });
+    if (data.success) return data.conflict_files || [];
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Open the branch manager modal
+ */
+export async function showBranchManager() {
+  if (!gitState.isInitialized) {
+    showToast("Git repository not initialized", "warning");
+    return;
+  }
+
+  // Refresh status silently to get latest branches
+  await gitStatus(false, true);
+
+  const allBranches = gitState.localBranches;
+  const current = gitState.currentBranch;
+  const remote = gitState.remoteBranches;
+
+  const branchRows = allBranches.map(b => {
+    const isCurrent = b === current;
+    const hasRemote = remote.includes(b);
+    return `
+      <tr data-branch="${b}" style="border-bottom: 1px solid var(--border-color);">
+        <td style="padding: 8px 12px; display: flex; align-items: center; gap: 8px;">
+          <span class="material-icons" style="font-size: 16px; color: ${isCurrent ? 'var(--success-color)' : 'var(--text-secondary)'};">
+            ${isCurrent ? 'radio_button_checked' : 'radio_button_unchecked'}
+          </span>
+          <span style="font-weight: ${isCurrent ? '600' : '400'};">${b}</span>
+          ${isCurrent ? '<span style="font-size: 10px; padding: 2px 6px; background: var(--success-color); color: white; border-radius: 10px;">current</span>' : ''}
+        </td>
+        <td style="padding: 8px 12px; color: var(--text-secondary); font-size: 12px;">
+          ${hasRemote ? '<span class="material-icons" style="font-size: 14px; vertical-align: middle;">cloud</span> remote' : 'local only'}
+        </td>
+        <td style="padding: 8px 12px; text-align: right;">
+          ${!isCurrent ? `
+            <button class="btn-branch-checkout" data-branch="${b}" style="padding: 4px 10px; font-size: 12px; background: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">Switch</button>
+            <button class="btn-branch-merge" data-branch="${b}" style="padding: 4px 10px; font-size: 12px; background: transparent; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; margin-right: 4px; color: var(--text-primary);">Merge</button>
+            <button class="btn-branch-delete" data-branch="${b}" style="padding: 4px 10px; font-size: 12px; background: transparent; border: 1px solid var(--error-color); border-radius: 4px; cursor: pointer; color: var(--error-color);">Delete</button>
+          ` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const modalHtml = `
+    <div id="branch-manager-modal" style="
+      position: fixed; inset: 0; z-index: 10000;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.5);
+    ">
+      <div style="
+        background: var(--bg-primary); border: 1px solid var(--border-color);
+        border-radius: 8px; padding: 0; min-width: 520px; max-width: 90vw;
+        max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;
+      ">
+        <div style="
+          padding: 16px 20px; border-bottom: 1px solid var(--border-color);
+          display: flex; align-items: center; justify-content: space-between;
+        ">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="material-icons" style="color: var(--accent-color);">account_tree</span>
+            <span style="font-weight: 600; font-size: 15px;">Branch Manager</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="btn-new-branch" style="
+              padding: 6px 14px; background: var(--accent-color); color: white;
+              border: none; border-radius: 4px; cursor: pointer; font-size: 13px;
+              display: flex; align-items: center; gap: 6px;
+            ">
+              <span class="material-icons" style="font-size: 16px;">add</span> New Branch
+            </button>
+            <button id="btn-branch-manager-close" style="
+              background: transparent; border: none; cursor: pointer; padding: 4px;
+              color: var(--text-secondary);
+            ">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+        </div>
+        <div style="overflow-y: auto; flex: 1;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: var(--bg-secondary); font-size: 12px; color: var(--text-secondary);">
+                <th style="padding: 8px 12px; text-align: left; font-weight: 600;">Branch</th>
+                <th style="padding: 8px 12px; text-align: left; font-weight: 600;">Remote</th>
+                <th style="padding: 8px 12px; text-align: right; font-weight: 600;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${branchRows || '<tr><td colspan="3" style="padding: 20px; text-align: center; color: var(--text-secondary);">No branches found</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = document.getElementById('branch-manager-modal');
+
+  const closeModal = () => modal.remove();
+
+  document.getElementById('btn-branch-manager-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  document.getElementById('btn-new-branch').addEventListener('click', async () => {
+    closeModal();
+    await gitCreateBranch();
+    await showBranchManager();
+  });
+
+  modal.querySelectorAll('.btn-branch-checkout').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const branch = btn.dataset.branch;
+      closeModal();
+      const ok = await gitCheckoutBranch(branch);
+      if (ok) await showBranchManager();
+    });
+  });
+
+  modal.querySelectorAll('.btn-branch-merge').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const branch = btn.dataset.branch;
+      closeModal();
+      await gitMergeBranch(branch);
+      await showBranchManager();
+    });
+  });
+
+  modal.querySelectorAll('.btn-branch-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const branch = btn.dataset.branch;
+      closeModal();
+      await gitDeleteLocalBranch(branch);
+      await showBranchManager();
+    });
+  });
 }
 
 /**

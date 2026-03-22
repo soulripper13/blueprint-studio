@@ -12,7 +12,8 @@ import {
   gitStage,
   gitUnstage,
   gitGetRemotes,
-  gitCleanLocks
+  gitCleanLocks,
+  gitGetConflictFiles
 } from './git-operations.js';
 import {
   updateGiteaPanel as updateGiteaPanelUI,
@@ -760,6 +761,16 @@ export async function giteaStatus(shouldFetch = false, silent = false) {
         ...giteaState.files.deleted,
         ...giteaState.files.untracked
       ].length;
+
+      // If git is in a conflict state, fetch the actual unmerged file list
+      const statusLower = giteaState.status.toLowerCase();
+      const isConflicted = statusLower.includes("rebasing") || statusLower.includes("merging") ||
+        statusLower.includes("unmerged") || statusLower.includes("conflict");
+      if (isConflicted) {
+        giteaState.conflictFiles = await gitGetConflictFiles();
+      } else {
+        giteaState.conflictFiles = [];
+      }
 
       eventBus.emit('git:refresh');
 

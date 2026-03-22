@@ -840,6 +840,33 @@ export function initializeEventHandlers() {
       return false;
     }
 
+    // Ctrl + ` - Toggle Terminal
+    if ((e.ctrlKey || e.metaKey) && (e.key === "`" || e.code === "Backquote") && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      toggleTerminalImpl();
+      return false;
+    }
+
+    // Ctrl + Shift + G - Toggle Git Panel collapse
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === "g" || e.code === "KeyG") && !e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      eventBus.emit('git:toggle-panel');
+      return false;
+    }
+
+    // Shift + Alt + F - Format / indent YAML
+    if (e.shiftKey && e.altKey && (e.key.toLowerCase() === "f" || e.code === "KeyF") && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      eventBus.emit('file:format');
+      return false;
+    }
+
     // F1 - Show Keyboard Shortcuts
     if (e.key === "F1") {
       e.preventDefault();
