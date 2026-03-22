@@ -2,9 +2,9 @@
 import { state, elements } from './state.js';
 import { HA_ENTITIES } from './ha-autocomplete.js';
 import { t } from './translations.js';
-import { fetchWithAuth } from './api.js';
+import { fetchWithAuth, getAuthToken } from './api.js';
 import { eventBus } from './event-bus.js';
-import { API_BASE } from './constants.js';
+import { API_BASE, STREAM_BASE } from './constants.js';
 import { 
   showToast, 
   showGlobalLoading, 
@@ -26,12 +26,64 @@ export async function performGlobalSearch(query, options = {}) {
   const activeTab = document.querySelector('.search-mode-tab.active');
   const mode = activeTab ? activeTab.dataset.mode : 'all';
 
-  try {
-      let fileResults = [];
-      let entityMatches = [];
+  // 2. Search Entities (if mode is all or entities) — done synchronously first
+  const entityMatches = (mode === 'all' || mode === 'entities')
+      ? HA_ENTITIES.filter(e =>
+            e.entity_id.toLowerCase().includes(query.toLowerCase()) ||
+            (e.friendly_name && e.friendly_name.toLowerCase().includes(query.toLowerCase()))
+        ).slice(0, 100)
+      : [];
 
-      // 1. Search Files (if mode is all or files)
-      if (mode === 'all' || mode === 'files') {
+  if (mode === 'entities') {
+      // Entities-only mode — render immediately without file search
+      if (elements.globalSearchLoading) elements.globalSearchLoading.style.display = "none";
+      state._lastGlobalSearchResults = [];
+      renderGlobalSearchResults([], entityMatches);
+      return;
+  }
+
+  // 1. Search Files using streaming NDJSON (same auth path as content search)
+  try {
+      const token = await getAuthToken() || "";
+      const params = new URLSearchParams({
+          action: "search_stream",
+          query: query,
+          authorization: token,
+      });
+      if (options.caseSensitive) params.set("case_sensitive", "true");
+      if (options.useRegex) params.set("use_regex", "true");
+      if (options.matchWord) params.set("match_word", "true");
+      if (options.include) params.set("include", options.include);
+      if (options.exclude) params.set("exclude", options.exclude);
+
+      const response = await fetch(`${STREAM_BASE}?${params}`);
+
+      if (!response.ok || !response.body) throw new Error("Stream unavailable");
+
+      const fileResults = [];
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+          for (const line of lines) {
+              if (!line.trim()) continue;
+              try { fileResults.push(JSON.parse(line)); } catch { /* skip */ }
+          }
+      }
+
+      if (elements.globalSearchLoading) elements.globalSearchLoading.style.display = "none";
+      state._lastGlobalSearchResults = fileResults;
+      renderGlobalSearchResults(fileResults, entityMatches);
+
+  } catch (streamErr) {
+      // Fallback: POST-based search
+      try {
           const data = await fetchWithAuth(API_BASE, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -45,27 +97,16 @@ export async function performGlobalSearch(query, options = {}) {
                   exclude: options.exclude || ""
               }),
           });
-          if (Array.isArray(data)) fileResults = data;
-      }
-
-      // 2. Search Entities (if mode is all or entities)
-      if (mode === 'all' || mode === 'entities') {
-          entityMatches = HA_ENTITIES.filter(e =>
-              e.entity_id.toLowerCase().includes(query.toLowerCase()) ||
-              (e.friendly_name && e.friendly_name.toLowerCase().includes(query.toLowerCase()))
-          ).slice(0, 100);
-      }
-
-      if (elements.globalSearchLoading) elements.globalSearchLoading.style.display = "none";
-
-      state._lastGlobalSearchResults = fileResults;
-      renderGlobalSearchResults(fileResults, entityMatches);
-
-  } catch (e) {
-      if (elements.globalSearchLoading) elements.globalSearchLoading.style.display = "none";
-      console.error("Search failed", e);
-      if (elements.globalSearchResults) {
-          elements.globalSearchResults.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--error-color);">Search failed: ${e.message}</div>`;
+          const fileResults = Array.isArray(data) ? data : [];
+          if (elements.globalSearchLoading) elements.globalSearchLoading.style.display = "none";
+          state._lastGlobalSearchResults = fileResults;
+          renderGlobalSearchResults(fileResults, entityMatches);
+      } catch (e) {
+          if (elements.globalSearchLoading) elements.globalSearchLoading.style.display = "none";
+          console.error("Search failed", e);
+          if (elements.globalSearchResults) {
+              elements.globalSearchResults.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--error-color);">Search failed: ${e.message}</div>`;
+          }
       }
   }
 }
