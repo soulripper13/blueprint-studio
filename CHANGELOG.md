@@ -5,7 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [Unreleased]
+
+## [2.4.2] - 2026-03-22
+
+### Added
+
+- **HA Service Autocomplete in Editor (3-A)** — The CodeMirror editor now offers live service name completions when typing on an `action:` or `service:` YAML key. All registered Home Assistant services are loaded at startup via a new `get_services` backend endpoint (backed by `hass.services.async_services()`). Results are cached for 30 seconds. When the cursor is on an `action:`/`service:` line, pressing `Ctrl+Space` or typing shows a dropdown of matching `domain.service` entries with their descriptions. Service lines are excluded from entity autocomplete to avoid mixed results.
+
+- **Git Branch Management UI (3-B)** — A full branch manager is now available in both the Git and Gitea panels. Click the `account_tree` icon in either panel header (or the branch chip next to the panel title) to open it. From there you can: list all local branches with their remote tracking status, switch (checkout) any local branch, create a new branch from current HEAD, merge any branch into the current branch, and delete local branches (with unmerged-commit safety check and force-delete fallback). All branch operations are wired to new backend endpoints (`git_checkout_branch`, `git_create_branch`, `git_delete_local_branch`, `git_merge_branch`).
+
+- **Conflict Resolution UI (3-C)** — When a merge or pull results in conflicts, both the Git and Gitea panels now show a "Merge Conflicts" section with per-file "Ours / Theirs" buttons instead of just a generic "Abort" button. Clicking "Ours" accepts the local version; "Theirs" accepts the incoming version. After resolving, stage and commit as normal. The "Abort & Reset Sync" button is still present to discard the merge entirely. Two new backend endpoints support this: `git_resolve_conflict` (wraps `git checkout --ours/--theirs` + `git add`) and `git_get_conflict_files` (wraps `git diff --name-only --diff-filter=U`). Conflict files are fetched from the backend during every status refresh and stored in `gitState.conflictFiles` / `giteaState.conflictFiles`, replacing a broken heuristic that intersected unstaged and modified file lists.
+
+- **Admin-only gate for destructive actions** — Deleting files, force-pushing, hard-resetting, deleting remote branches, and restarting Home Assistant now require the requesting user to be a Home Assistant administrator. Non-admin users receive a 403 response instead of being able to perform these operations.
+
+- **File-watch cache invalidation** — The file tree cache is now invalidated immediately when Home Assistant fires a `folder_watcher` event (requires the [folder_watcher integration](https://www.home-assistant.io/integrations/folder_watcher/)). Previously the cache could remain stale for up to 30 seconds after an external file change. The 30-second TTL fallback remains in place when the integration is not configured.
+
+- **HA state response cache** — `get_entities`, `get_areas`, and `get_devices` now use a 5-second in-memory cache. Repeat calls within that window (e.g. opening multiple panels in quick succession) are served instantly without re-iterating the HA state machine. Filtered entity requests (AI autocomplete, entity pickers) always bypass the cache to return fresh results.
+
+- **Deferred startup git check** — The git status check on integration load is now deferred via `hass.async_create_task`. All views are registered immediately and Blueprint Studio no longer adds to Home Assistant startup time.
+
+- **Keyboard shortcuts: Terminal, Git panel, Format YAML (4-D)** — Three new keyboard shortcuts added: `Ctrl+`` toggles the terminal panel (maps to the existing `toggleTerminal` function), `Ctrl+Shift+G` collapses/expands the Git panel, and `Shift+Alt+F` formats/indents the current YAML file. All three are documented in the keyboard shortcuts overlay (F1). The `Ctrl+Shift+G` shortcut fires a new `git:toggle-panel` event handled by `GitCoordinator`.
+
+- **Testing suite (4-E)** — Added `tests/test_ai_nlp.py` (80 tests) and `tests/test_ai_validators.py` (40 tests). The NLP tests cover all 7 extraction functions: `detect_domain`, `extract_area`, `extract_values` (12 domains), `detect_trigger_type` (13 trigger types), `extract_conditions` (11 condition types), `detect_additional_actions`, `extract_automation_name`, and `find_multi_domain_entities`. The validator tests cover `_detect_file_type`, `_detect_yaml_variant`, `_validate_entity_id`, `check_yaml`, `check_json`, `check_python`, and `check_blueprint`. All 120 tests pass on Python 3.14 without a Home Assistant install (HA and aiohttp are stubbed). Run with `python3 -m pytest tests/ -v`.
+
+### Fixed
+
+- **Sidebar burger menu unresponsive in portrait mode on iPad** — On iPad Pro 13 (and other tablets near the 1024px width boundary), rotating to portrait mode caused the sidebar toggle to stop working. The show/hide functions used `isMobile()` to decide which CSS class to apply (`visible` vs `hidden`), but `isMobile()` returns different values in portrait vs landscape. After rotating, the sidebar could end up with the wrong class for the active breakpoint, making the toggle appear to have no effect. The fix removes the `isMobile()` branch — both classes are now always applied consistently on every show/hide call, so orientation changes cannot leave the sidebar in a mixed state.
+
+- **Large text file guard** — Opening a text file larger than 10 MB in the editor now returns a clear error message instead of attempting to load the full content. The frontend's existing warning dialog continues to handle the 2–10 MB range, allowing the user to open or download at their discretion. Binary files (images, video, PDF) are unaffected — they continue to be served via the binary path with no size restriction.
+
+---
+
+
 
 ## [2.4.1] - 2026-03-21
 
@@ -756,6 +789,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 
 
 ## Version History
+- **2.4.2** - Better Merges, Faster Lookups, Stronger Access Control
 - **2.4.1** - Bug Fixes
 - **2.4.0** - PWA Power, Blueprint Magic, SFTP & SSH Supercharged
 - **2.3.0** - Terminal Integration & Workspace Persistence
@@ -780,7 +814,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.1...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.2...HEAD
+[2.4.2]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.2
 [2.4.1]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.1
 [2.4.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.0
 [2.3.0]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.3.0
