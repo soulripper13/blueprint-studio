@@ -663,52 +663,34 @@ export function initElements() {
 export function applyEditorSettings() {
     if (!state.editor && !state.primaryEditor) return;
 
-    // Apply font settings directly to editor instances (more efficient than querySelectorAll)
+    // Drive font via CSS custom properties — these cascade into .CodeMirror
+    // which has its own font-family/font-size rules that inline wrapper styles can't override
+    document.documentElement.style.setProperty('--editor-font-family', state.fontFamily);
+    document.documentElement.style.setProperty('--editor-font-size', state.fontSize + 'px');
+
+    // Refresh editors so CodeMirror recalculates character measurements
     if (state.primaryEditor) {
-      const primaryWrapper = state.primaryEditor.getWrapperElement();
-      if (primaryWrapper) {
-        primaryWrapper.style.fontSize = state.fontSize + 'px';
-        primaryWrapper.style.fontFamily = state.fontFamily;
-      }
       state.primaryEditor.setOption('lineNumbers', state.showLineNumbers);
       state.primaryEditor.setOption('lineWrapping', state.wordWrap);
-
-      state.primaryEditor.removeOverlay("show-whitespace");
-      if (state.showWhitespace) {
-        state.primaryEditor.addOverlay("show-whitespace");
-      }
+      state.primaryEditor.removeOverlay('show-whitespace');
+      if (state.showWhitespace) state.primaryEditor.addOverlay('show-whitespace');
+      state.primaryEditor.refresh();
     }
 
-    // Apply settings to secondary editor if it exists
     if (state.secondaryEditor) {
-      const secondaryWrapper = state.secondaryEditor.getWrapperElement();
-      if (secondaryWrapper) {
-        secondaryWrapper.style.fontSize = state.fontSize + 'px';
-        secondaryWrapper.style.fontFamily = state.fontFamily;
-      }
       state.secondaryEditor.setOption('lineNumbers', state.showLineNumbers);
       state.secondaryEditor.setOption('lineWrapping', state.wordWrap);
-
-      state.secondaryEditor.removeOverlay("show-whitespace");
-      if (state.showWhitespace) {
-        state.secondaryEditor.addOverlay("show-whitespace");
-      }
+      state.secondaryEditor.removeOverlay('show-whitespace');
+      if (state.showWhitespace) state.secondaryEditor.addOverlay('show-whitespace');
+      state.secondaryEditor.refresh();
     }
 
-    // Apply to state.editor for backward compatibility (if it's different from primary/secondary)
     if (state.editor && state.editor !== state.primaryEditor && state.editor !== state.secondaryEditor) {
-      const editorWrapper = state.editor.getWrapperElement();
-      if (editorWrapper) {
-        editorWrapper.style.fontSize = state.fontSize + 'px';
-        editorWrapper.style.fontFamily = state.fontFamily;
-      }
       state.editor.setOption('lineNumbers', state.showLineNumbers);
       state.editor.setOption('lineWrapping', state.wordWrap);
-
-      state.editor.removeOverlay("show-whitespace");
-      if (state.showWhitespace) {
-        state.editor.addOverlay("show-whitespace");
-      }
+      state.editor.removeOverlay('show-whitespace');
+      if (state.showWhitespace) state.editor.addOverlay('show-whitespace');
+      state.editor.refresh();
     }
 
     const minimapEl = document.getElementById('minimap');

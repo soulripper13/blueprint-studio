@@ -1,8 +1,8 @@
     .CodeMirror {
       height: 100% !important;
       width: 100% !important;
-      font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-      font-size: 14px;
+      font-family: var(--editor-font-family, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace);
+      font-size: var(--editor-font-size, 14px);
       line-height: 1.5;
     }
 

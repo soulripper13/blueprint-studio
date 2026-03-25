@@ -3,7 +3,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/dm-mono-400.woff2') format('woff2');
+  src: url('dm-mono-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -11,7 +11,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/code/dm-mono-500.woff2') format('woff2');
+  src: url('dm-mono-500.woff2') format('woff2');
 }
 
 @font-face {
@@ -19,7 +19,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/fira-code-400.woff2') format('woff2');
+  src: url('fira-code-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -27,7 +27,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/code/fira-code-500.woff2') format('woff2');
+  src: url('fira-code-500.woff2') format('woff2');
 }
 
 @font-face {
@@ -35,7 +35,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/code/fira-code-600.woff2') format('woff2');
+  src: url('fira-code-600.woff2') format('woff2');
 }
 
 @font-face {
@@ -43,7 +43,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/jetbrains-mono-400.woff2') format('woff2');
+  src: url('jetbrains-mono-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -51,7 +51,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/code/jetbrains-mono-500.woff2') format('woff2');
+  src: url('jetbrains-mono-500.woff2') format('woff2');
 }
 
 @font-face {
@@ -59,7 +59,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/code/jetbrains-mono-600.woff2') format('woff2');
+  src: url('jetbrains-mono-600.woff2') format('woff2');
 }
 
 @font-face {
@@ -67,7 +67,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/roboto-mono-400.woff2') format('woff2');
+  src: url('roboto-mono-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -75,7 +75,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/code/roboto-mono-500.woff2') format('woff2');
+  src: url('roboto-mono-500.woff2') format('woff2');
 }
 
 @font-face {
@@ -83,7 +83,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/code/roboto-mono-600.woff2') format('woff2');
+  src: url('roboto-mono-600.woff2') format('woff2');
 }
 
 @font-face {
@@ -91,7 +91,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/source-code-pro-400.woff2') format('woff2');
+  src: url('source-code-pro-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -99,7 +99,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/code/source-code-pro-500.woff2') format('woff2');
+  src: url('source-code-pro-500.woff2') format('woff2');
 }
 
 @font-face {
@@ -107,7 +107,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/code/source-code-pro-600.woff2') format('woff2');
+  src: url('source-code-pro-600.woff2') format('woff2');
 }
 
 @font-face {
@@ -115,7 +115,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/ubuntu-mono-400.woff2') format('woff2');
+  src: url('ubuntu-mono-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -123,7 +123,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../fonts/code/ubuntu-mono-700.woff2') format('woff2');
+  src: url('ubuntu-mono-700.woff2') format('woff2');
 }
 
 @font-face {
@@ -131,7 +131,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/azeret-mono-400.woff2') format('woff2');
+  src: url('azeret-mono-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -139,7 +139,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/code/azeret-mono-500.woff2') format('woff2');
+  src: url('azeret-mono-500.woff2') format('woff2');
 }
 
 @font-face {
@@ -147,7 +147,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/code/azeret-mono-600.woff2') format('woff2');
+  src: url('azeret-mono-600.woff2') format('woff2');
 }
 
 @font-face {
@@ -155,7 +155,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/libertinus-mono-400.woff2') format('woff2');
+  src: url('libertinus-mono-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -163,7 +163,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/code/reddit-mono-400.woff2') format('woff2');
+  src: url('reddit-mono-400.woff2') format('woff2');
 }
 
 @font-face {
@@ -171,7 +171,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/code/reddit-mono-500.woff2') format('woff2');
+  src: url('reddit-mono-500.woff2') format('woff2');
 }
 
 @font-face {
@@ -179,5 +179,5 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/code/reddit-mono-600.woff2') format('woff2');
+  src: url('reddit-mono-600.woff2') format('woff2');
 }
