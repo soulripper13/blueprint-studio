@@ -19,6 +19,15 @@ let closeBtn = null;
 let sshSelect = null;
 let initPromise = null;
 
+function insertTerminalIntoBody() {
+  const statusBar = document.querySelector('.status-bar');
+  if (statusBar) {
+    document.body.insertBefore(terminalContainer, statusBar);
+  } else {
+    document.body.appendChild(terminalContainer);
+  }
+}
+
 /**
  * Build SSH command for a host configuration
  * Supports both password and key-based authentication
@@ -97,17 +106,13 @@ export async function initTerminal() {
         terminalContainer.id = 'terminal-panel';
         terminalContainer.className = 'terminal-panel';
         terminalContainer.style.cssText = `
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             height: 300px;
+            min-height: 100px;
             background: var(--bg-primary);
             border-top: 1px solid var(--border-color);
-            z-index: 999;
+            flex-shrink: 0;
             display: ${state.terminalVisible ? 'flex' : 'none'};
             flex-direction: column;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
         `;
 
         // Resize Handle
@@ -144,7 +149,8 @@ export async function initTerminal() {
 
         function doDrag(e) {
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            const newHeight = window.innerHeight - clientY;
+            const rect = terminalContainer.getBoundingClientRect();
+            const newHeight = rect.bottom - clientY;
             if (newHeight > 100 && newHeight < window.innerHeight - 50) {
                 terminalContainer.style.height = newHeight + 'px';
                 if (fitAddon) fitAddon.fit();
@@ -257,7 +263,7 @@ export async function initTerminal() {
         termDiv.style.cssText = 'flex: 1; padding: 4px; overflow: hidden; background: var(--bg-primary);';
         terminalContainer.appendChild(termDiv);
 
-        document.body.appendChild(terminalContainer);
+        insertTerminalIntoBody();
 
         // Init xterm
         const style = getComputedStyle(document.documentElement);
@@ -436,17 +442,13 @@ export function setTerminalMode(mode) {
 
     } else {
         terminalContainer.style.cssText = `
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             height: 300px;
+            min-height: 100px;
             background: var(--bg-primary);
             border-top: 1px solid var(--border-color);
-            z-index: 999;
+            flex-shrink: 0;
             display: ${state.terminalVisible ? 'flex' : 'none'};
             flex-direction: column;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
         `;
         
         if (header) header.style.display = 'flex';
@@ -460,7 +462,7 @@ export function setTerminalMode(mode) {
         if (closeBtn) closeBtn.style.display = '';
 
         if (terminalContainer.parentNode !== document.body) {
-            document.body.appendChild(terminalContainer);
+            insertTerminalIntoBody();
         }
     }
     setTimeout(fitTerminal, 50);
@@ -486,7 +488,7 @@ export async function toggleTerminal(forceState = null) {
         terminalContainer.style.display = state.terminalVisible ? 'flex' : 'none';
         if (state.terminalVisible) {
             if (terminalContainer.parentNode !== document.body) {
-                document.body.appendChild(terminalContainer);
+                insertTerminalIntoBody();
             }
             setTimeout(fitTerminal, 50);
         }

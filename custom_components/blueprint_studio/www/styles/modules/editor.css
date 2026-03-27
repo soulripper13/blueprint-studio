@@ -108,6 +108,37 @@
       bottom: 0;
     }
 
+    /* Minimap */
+    .editor-minimap {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 110px;
+      z-index: 5;
+      cursor: pointer;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      image-rendering: pixelated;
+    }
+
+    /* Shrink CodeMirror when minimap is visible */
+    .editor-container.minimap-visible #codemirror-wrapper,
+    .editor-container.minimap-visible #codemirror-wrapper-secondary {
+      right: 110px;
+    }
+
+    /* Viewport highlight on minimap */
+    .minimap-viewport {
+      position: absolute;
+      right: 0;
+      width: 110px;
+      background: rgba(255, 255, 255, 0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      pointer-events: none;
+      z-index: 6;
+    }
+
     /* Split View */
     .split-container {
       flex: 1;

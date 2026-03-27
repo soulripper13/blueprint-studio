@@ -34,6 +34,7 @@ import {
     applyCustomSyntaxColors,
     resetModalToDefault
 } from './ui.js';
+import { applyMinimapState } from './minimap.js';
 import {
     updateToolbarState
 } from './toolbar.js';
@@ -503,6 +504,9 @@ export function activateTab(tab, skipSave = false) {
 
     state.activeTab = tab;
 
+    // Update minimap visibility for the newly active tab
+    applyMinimapState(state.primaryEditor, state.secondaryEditor, state.showMinimap, tab);
+
     // Handle Binary Preview
     if (tab.isBinary) {
         if (targetEditor) {
@@ -729,6 +733,7 @@ export async function closeTab(data, force = false) {
         activateTab(state.openTabs[nextIndex]);
       } else {
         state.activeTab = null;
+        applyMinimapState(state.primaryEditor, state.secondaryEditor, state.showMinimap, null);
         if (state.editor) state.editor.getWrapperElement().style.display = "none";
         if (state.secondaryEditor) state.secondaryEditor.getWrapperElement().style.display = "none";
         if (elements.welcomeScreen) elements.welcomeScreen.style.display = "flex";

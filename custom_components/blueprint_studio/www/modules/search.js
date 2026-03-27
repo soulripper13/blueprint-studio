@@ -2,6 +2,7 @@ import { t } from './translations.js';
 /** SEARCH.JS | Purpose: * Handles in-editor find and replace functionality within a single file. */
 import { state, elements } from './state.js';
 import { showToast } from './ui.js';
+import { setMinimapSearch, setMinimapActiveLine } from './minimap.js';
 
 /**
  * Build effective search query/pattern based on current search options
@@ -32,7 +33,7 @@ export function updateSearchHighlights(query) {
     state.searchOverlay = null;
   }
 
-  if (!query) return;
+  if (!query) { setMinimapSearch(null, false); return; }
 
   const pattern = buildSearchQuery(query);
   if (!pattern) return; // Invalid regex
@@ -55,6 +56,7 @@ export function updateSearchHighlights(query) {
   };
 
   state.editor.addOverlay(state.searchOverlay);
+  setMinimapSearch(pattern, state.searchCaseSensitive);
 }
 
 /**
@@ -173,6 +175,7 @@ export function closeSearchWidget() {
     state.editor.removeOverlay(state.searchOverlay);
     state.searchOverlay = null;
   }
+  setMinimapSearch(null, false);
   // Clear active mark
   if (state.activeMatchMark) {
     state.activeMatchMark.clear();
@@ -247,6 +250,7 @@ export function doFind(reverse = false) {
   if (found) {
     state.editor.setSelection(cursor.from(), cursor.to());
     state.editor.scrollIntoView({from: cursor.from(), to: cursor.to()}, 20);
+    setMinimapActiveLine(cursor.from().line);
   } else {
     showToast(t("toast.no_match_found"), "info", 1500);
   }

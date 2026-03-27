@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Minimap** — A VS Code-style minimap is now available in the editor. It renders a scaled-down, syntax-coloured overview of the entire file on the right side of the editor, with a semi-transparent viewport indicator showing your current scroll position. Click or drag anywhere on the minimap to jump to that part of the file. The minimap works in both the primary and secondary (split-view) editor panes. Toggle it on or off in **Settings → Editor → Minimap**.
+
 - **Developer Tools panel** — A native floating Developer Tools panel (toolbar button + command palette) brings HA's developer tools experience inside Blueprint Studio without leaving the editor. Four tabs:
   - **Actions** — Search all registered HA actions by name or description. The dropdown is grouped by domain and filtered to the selected action's domain. Selecting an action builds a per-field form using the full metadata from each integration's `services.yaml` (loaded via `async_get_all_descriptions`): number fields with a defined range render as sliders synced to a number input, enum fields render as dropdowns (e.g. Flash: Long / Short), boolean fields render as true/false selects, and entity fields include a domain-filtered autocomplete datalist. A YAML mode toggle switches to a raw textarea for full manual control. Both modes call `call_service` on the backend.
   - **Template** — Jinja2 template renderer with live debounced output (600 ms). Results appear in a side-by-side pane; `Ctrl+Enter` forces an immediate render. Powered by `homeassistant.helpers.template.Template` on the backend.

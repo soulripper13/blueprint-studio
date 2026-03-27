@@ -4,6 +4,7 @@ import { THEME_PRESETS, ACCENT_COLORS, SYNTAX_THEMES } from './constants.js';
 import { lightenColor } from './utils.js';
 import { t } from './translations.js';
 import { eventBus } from './event-bus.js';
+import { applyMinimapState } from './minimap.js';
 
 const HA_VAR_MAPPING = {
     '--bg-primary': '--primary-background-color',
@@ -697,6 +698,8 @@ export function applyEditorSettings() {
     if (minimapEl) {
       minimapEl.style.display = state.showMinimap ? 'block' : 'none';
     }
+
+    applyMinimapState(state.primaryEditor, state.secondaryEditor, state.showMinimap, state.activeTab);
 }
 
 export function applyLayoutSettings() {

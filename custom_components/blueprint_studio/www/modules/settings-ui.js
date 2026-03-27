@@ -300,6 +300,17 @@ export async function showAppSettings() {
               </label>
             </div>
 
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 4px;">Minimap</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Show a scaled-down overview of the file on the right side of the editor</div>
+              </div>
+              <label class="toggle-switch" style="margin-left: 16px;">
+                <input type="checkbox" id="minimap-toggle" ${state.showMinimap ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
             <div class="git-settings-label" style="margin-top: 20px;">${t("settings.editor.autosave")}</div>
 
             <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider-color);">
@@ -1144,6 +1155,17 @@ export async function showAppSettings() {
         eventBus.emit('ui:refresh-editor');
 
         showToast(t(state.showWhitespace ? "toast.whitespace_shown" : "toast.whitespace_hidden"), "success");
+      });
+    }
+
+    // Handle Minimap
+    const minimapToggle = document.getElementById("minimap-toggle");
+    if (minimapToggle) {
+      minimapToggle.addEventListener("change", async (e) => {
+        state.showMinimap = e.target.checked;
+        eventBus.emit('ui:refresh-editor');
+        await saveSettingsImpl();
+        showToast(state.showMinimap ? "Minimap enabled" : "Minimap disabled", "success");
       });
     }
 
