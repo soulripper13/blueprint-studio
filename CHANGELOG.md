@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Blueprint converter: `addon:` data key is now parameterised** — The automation-to-blueprint converter now extracts `addon:` values under action `data:` blocks (e.g. `hassio.addon_restart`, `hassio.addon_start`) into an `addon_id` input with a `text` selector, defaulting to the slug found in the automation. Previously the add-on ID was left hardcoded in the generated blueprint body.
+
+- **Blueprint converter: per-day time inputs named after trigger id** — When a time trigger has a sibling `id:` key (e.g. `id: mon_off`), the generated input is now named `mon_off_time` instead of the generic `trigger_time_N`. This makes weekly-schedule blueprints self-documenting and gives each day's off-time a meaningful label in the blueprint form.
+
 - **Updated autocomplete and snippets to use modern `action:` syntax** — All 48 autocomplete suggestions in the service/action list, the `snip:automation` and `snip:script` templates, and the validator error examples have been updated from the legacy `service:` key to the modern `action:` key introduced in Home Assistant 2024.8. The user guide hint text has also been updated accordingly.
 
 - **Nested trigger groups: snippet added and validator false-positive fixed (HA 2024.10+)** — A new `snip:trigger_group` snippet inserts a ready-to-use `trigger: or` group with two sub-triggers. The YAML validator no longer raises a `legacy_trigger` warning for `- trigger: or`, `- trigger: and`, or `- trigger: not` lines — these are valid HA 2024.10+ nested trigger group syntax, not legacy `platform:` usage.

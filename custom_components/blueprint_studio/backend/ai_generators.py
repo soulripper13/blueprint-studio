@@ -736,28 +736,53 @@ def convert_automation_to_blueprint(content: str, name: str = "") -> str:
         )
 
     # --- Pass 4: Extract time triggers ---
+    # When a trigger has a neighbouring `id:` key (e.g. `id: mon_off`), the
+    # input is named after that id (e.g. `mon_off_time`) so the blueprint is
+    # self-documenting.  Generic sequential names are used as fallback.
     time_n = 0
-    time_pat = _re.compile(r'^\s+at:\s*[\'"]?(\d{1,2}:\d{2}(?::\d{2})?)[\'"]?', _re.MULTILINE)
-    for match in time_pat.finditer(content):
-        time_val = match.group(1)
-        time_n += 1
-        base_name = "trigger_time"
-        input_name = base_name if time_n == 1 else f"{base_name}_{time_n}"
-        while input_name in used_names:
+    time_pat = _re.compile(r'^(\s+)at:\s*[\'"]?(\d{1,2}:\d{2}(?::\d{2})?)[\'"]?', _re.MULTILINE)
+    _lines = content.splitlines()
+
+    for match in list(time_pat.finditer(content)):
+        time_val = match.group(2)
+        # Locate the line index of this match within content
+        match_line_idx = content.count('\n', 0, match.start())
+        # Search ±6 lines for a sibling `id:` key (single-value form only)
+        id_val = None
+        for li in range(max(0, match_line_idx - 6), min(len(_lines), match_line_idx + 7)):
+            id_m = _re.match(r'^\s+id:\s*[\'"]?([a-zA-Z0-9_]+)[\'"]?\s*$', _lines[li])
+            if id_m:
+                id_val = id_m.group(1)
+                break
+
+        if id_val:
+            input_name = f"{id_val}_time"
+            sfx = 2
+            while input_name in used_names:
+                input_name = f"{id_val}_time_{sfx}"; sfx += 1
+        else:
             time_n += 1
-            input_name = f"{base_name}_{time_n}"
+            base_name = "trigger_time"
+            input_name = base_name if time_n == 1 else f"{base_name}_{time_n}"
+            while input_name in used_names:
+                time_n += 1
+                input_name = f"{base_name}_{time_n}"
+
         used_names.add(input_name)
         # Normalize to HH:MM:SS
         if len(time_val.split(':')) == 2:
             time_val_full = f"{time_val}:00"
         else:
             time_val_full = time_val
-        content = content.replace(f'at: {match.group(1)}', f'at: !input {input_name}', 1)
-        content = content.replace(f"at: '{match.group(1)}'", f'at: !input {input_name}', 1)
-        content = content.replace(f'at: "{match.group(1)}"', f'at: !input {input_name}', 1)
+        content = content.replace(f'at: {match.group(2)}', f'at: !input {input_name}', 1)
+        content = content.replace(f"at: '{match.group(2)}'", f'at: !input {input_name}', 1)
+        content = content.replace(f'at: "{match.group(2)}"', f'at: !input {input_name}', 1)
+        # Rebuild _lines after mutation so subsequent line-index lookups stay correct
+        _lines = content.splitlines()
+        friendly = input_name.replace('_', ' ').title()
         input_block_lines.append(
             f"    {input_name}:\n"
-            f"      name: {input_name.replace('_', ' ').title()}\n"
+            f"      name: {friendly}\n"
             f"      description: Time to trigger\n"
             f"      default: \"{time_val_full}\"\n"
             f"      selector:\n"
@@ -1093,6 +1118,7 @@ def convert_automation_to_blueprint(content: str, name: str = "") -> str:
         'fan_mode':           ('fan_mode',            'Climate fan mode'),
         'swing_mode':         ('swing_mode',          'Climate swing mode'),
         'direction':          ('fan_direction',        'Fan direction'),
+        'addon':              ('addon_id',             'Add-on ID (slug) to target'),
     }
     # Number-type service data keys: (base_name, description, min, max, step, unit)
     _SERVICE_DATA_NUMBER = {
