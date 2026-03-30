@@ -205,7 +205,8 @@ LIBRARIES = [
         "current": "12.0.0",
         "files": [
             {
-                "url": "https://cdn.jsdelivr.net/npm/marked@{version}/marked.min.js",
+                # marked ≥ 13 moved the bundle to lib/marked.umd.min.js
+                "url": "https://cdn.jsdelivr.net/npm/marked@{version}/lib/marked.umd.min.js",
                 "dest": "marked/marked.min.js",
             },
         ],
@@ -216,7 +217,8 @@ LIBRARIES = [
         "current": "3.2.0",
         "files": [
             {
-                "url": "https://cdn.jsdelivr.net/npm/marked-gfm-heading-id@{version}/src/index.umd.js",
+                # moved from src/index.umd.js → lib/index.umd.js
+                "url": "https://cdn.jsdelivr.net/npm/marked-gfm-heading-id@{version}/lib/index.umd.js",
                 "dest": "marked/marked-gfm-heading-id.umd.js",
             },
         ],
@@ -227,7 +229,8 @@ LIBRARIES = [
         "current": "1.1.9",
         "files": [
             {
-                "url": "https://cdn.jsdelivr.net/npm/marked-mangle@{version}/src/index.umd.js",
+                # moved from src/index.umd.js → lib/index.umd.js
+                "url": "https://cdn.jsdelivr.net/npm/marked-mangle@{version}/lib/index.umd.js",
                 "dest": "marked/marked-mangle.umd.js",
             },
         ],
@@ -238,7 +241,8 @@ LIBRARIES = [
         "current": "2.1.4",
         "files": [
             {
-                "url": "https://cdn.jsdelivr.net/npm/marked-highlight@{version}/src/index.umd.js",
+                # moved from src/index.umd.js → lib/index.umd.js
+                "url": "https://cdn.jsdelivr.net/npm/marked-highlight@{version}/lib/index.umd.js",
                 "dest": "marked/marked-highlight.umd.js",
             },
         ],
