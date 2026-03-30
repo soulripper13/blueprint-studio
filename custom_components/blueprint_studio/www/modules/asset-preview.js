@@ -183,7 +183,7 @@ function renderImagePreview(tab, filename) {
  * Renders PDF preview with page navigation using PDF.js
  * (Required because native <object> tags are often blocked by Home Assistant's sandbox)
  */
-function renderPdfPreview(tab, filename) {
+async function renderPdfPreview(tab, filename) {
   elements.assetPreview.style.padding = "0";
 
   const binaryString = atob(tab.content);
@@ -192,8 +192,8 @@ function renderPdfPreview(tab, filename) {
     bytes[i] = binaryString.charCodeAt(i);
   }
 
-  // Setup PDF.js
-  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  // Setup PDF.js (loaded as ES module)
+  const pdfjsLib = await import('/local/blueprint_studio/vendor/pdfjs/pdf.min.js');
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/local/blueprint_studio/vendor/pdfjs/pdf.worker.min.js';
 
   elements.assetPreview.innerHTML = `
