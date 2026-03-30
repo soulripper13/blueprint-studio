@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **PDF.js migrated to ES module loading** — PDF.js is no longer loaded as a classic `<script>` tag. It is now imported on demand via a dynamic `import()` when a PDF file is opened. This allows keeping PDF.js up to date (4.6.82 → 4.10.38) as newer versions require ES module context.
+
+- **Vendor library updates** — Updated bundled frontend libraries: CodeMirror 5.65.19 → 5.65.20, highlight.js 11.10.0 → 11.11.1, PDF.js 4.6.82 → 4.10.38, Prettier 3.3.3 → 3.8.1, Acorn 8.12.1 → 8.16.0, xterm.js 5.5.0 → 6.0.0, xterm-addon-fit 0.10.0 → 0.11.0, xterm-addon-web-links 0.11.0 → 0.12.0, Primer Octicons 19.12.0 → 19.23.1, marked 12.0.0 → 17.0.5, marked-gfm-heading-id 3.2.0 → 4.1.3, marked-mangle 1.1.9 → 1.1.12, marked-highlight 2.1.4 → 2.2.3.
+
 - **Split view moved to Editor settings** — The split view toggle is now in **Settings → Editor → Behavior** alongside word wrap, line numbers, minimap, and other editor options. The BETA label has been removed. It was previously in the Advanced tab. — Each depth level in the file tree (both local and SFTP) now indents by 24 px instead of 16 px, making it easier to tell which level a file belongs to when many folders are expanded.
 
 - **File tree: empty folders now show an `(empty)` placeholder** — When an expanded folder contains no files or subfolders, an italic "(empty)" label is shown at the correct indent level, matching the existing behaviour in the SFTP tree.
