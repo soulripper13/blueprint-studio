@@ -673,6 +673,9 @@ export function applyEditorSettings() {
     if (state.primaryEditor) {
       state.primaryEditor.setOption('lineNumbers', state.showLineNumbers);
       state.primaryEditor.setOption('lineWrapping', state.wordWrap);
+      state.primaryEditor.setOption('indentUnit', state.tabSize);
+      state.primaryEditor.setOption('tabSize', state.tabSize);
+      state.primaryEditor.setOption('indentWithTabs', state.indentWithTabs);
       state.primaryEditor.removeOverlay('show-whitespace');
       if (state.showWhitespace) state.primaryEditor.addOverlay('show-whitespace');
       state.primaryEditor.refresh();
@@ -681,6 +684,9 @@ export function applyEditorSettings() {
     if (state.secondaryEditor) {
       state.secondaryEditor.setOption('lineNumbers', state.showLineNumbers);
       state.secondaryEditor.setOption('lineWrapping', state.wordWrap);
+      state.secondaryEditor.setOption('indentUnit', state.tabSize);
+      state.secondaryEditor.setOption('tabSize', state.tabSize);
+      state.secondaryEditor.setOption('indentWithTabs', state.indentWithTabs);
       state.secondaryEditor.removeOverlay('show-whitespace');
       if (state.showWhitespace) state.secondaryEditor.addOverlay('show-whitespace');
       state.secondaryEditor.refresh();
@@ -689,6 +695,9 @@ export function applyEditorSettings() {
     if (state.editor && state.editor !== state.primaryEditor && state.editor !== state.secondaryEditor) {
       state.editor.setOption('lineNumbers', state.showLineNumbers);
       state.editor.setOption('lineWrapping', state.wordWrap);
+      state.editor.setOption('indentUnit', state.tabSize);
+      state.editor.setOption('tabSize', state.tabSize);
+      state.editor.setOption('indentWithTabs', state.indentWithTabs);
       state.editor.removeOverlay('show-whitespace');
       if (state.showWhitespace) state.editor.addOverlay('show-whitespace');
       state.editor.refresh();
