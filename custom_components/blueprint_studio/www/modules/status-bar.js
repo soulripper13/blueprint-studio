@@ -60,21 +60,29 @@ function showTabSizePicker(event) {
         state.indentWithTabs = !state.indentWithTabs;
         if (state.primaryEditor) {
           state.primaryEditor.setOption("indentWithTabs", state.indentWithTabs);
+          state.primaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
         if (state.secondaryEditor) {
           state.secondaryEditor.setOption("indentWithTabs", state.indentWithTabs);
+          state.secondaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
+        // Sync settings panel checkbox
+        const toggle = document.getElementById("indent-with-tabs-toggle");
+        if (toggle) toggle.checked = state.indentWithTabs;
       } else if (size) {
         // Change tab size
         state.tabSize = parseInt(size);
         if (state.primaryEditor) {
-          state.primaryEditor.setOption("indentUnit", state.tabSize);
           state.primaryEditor.setOption("tabSize", state.tabSize);
+          state.primaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
         if (state.secondaryEditor) {
-          state.secondaryEditor.setOption("indentUnit", state.tabSize);
           state.secondaryEditor.setOption("tabSize", state.tabSize);
+          state.secondaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
+        // Sync settings panel dropdown
+        const select = document.getElementById("tab-size-select");
+        if (select) select.value = state.tabSize;
       }
 
       // Save settings

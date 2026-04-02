@@ -5,6 +5,7 @@ import { fetchWithAuth } from './api.js';
 import { eventBus } from './event-bus.js';
 import { API_BASE, THEME_PRESETS, ACCENT_COLORS, SYNTAX_THEMES } from './constants.js';
 import { showToast, showConfirmDialog } from './ui.js';
+import { updateStatusBar } from './status-bar.js';
 import { t, initTranslations } from './translations.js';
 import { showAddConnectionDialog, showEditConnectionDialog, deleteConnection } from './sftp.js';
 
@@ -1109,15 +1110,16 @@ export async function showAppSettings() {
 
         // Apply to all editors immediately
         if (state.primaryEditor) {
-          state.primaryEditor.setOption("indentUnit", state.tabSize);
           state.primaryEditor.setOption("tabSize", state.tabSize);
+          state.primaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
         if (state.secondaryEditor) {
-          state.secondaryEditor.setOption("indentUnit", state.tabSize);
           state.secondaryEditor.setOption("tabSize", state.tabSize);
+          state.secondaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
 
         await saveSettingsImpl();
+        updateStatusBar();
         showToast(t("toast.tab_size_set", { size: state.tabSize }), "success");
       });
     }
@@ -1130,12 +1132,15 @@ export async function showAppSettings() {
 
         if (state.primaryEditor) {
           state.primaryEditor.setOption("indentWithTabs", state.indentWithTabs);
+          state.primaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
         if (state.secondaryEditor) {
           state.secondaryEditor.setOption("indentWithTabs", state.indentWithTabs);
+          state.secondaryEditor.setOption("indentUnit", state.indentWithTabs ? 1 : state.tabSize);
         }
 
         await saveSettingsImpl();
+        updateStatusBar();
         showToast(`Indent with tabs: ${state.indentWithTabs ? 'ON' : 'OFF'}`, "success");
       });
     }

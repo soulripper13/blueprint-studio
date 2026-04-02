@@ -49,6 +49,7 @@ import {
     parseSftpPath as parseSftpPathImpl,
     openSftpFile as openSftpFileImpl
 } from './sftp.js';
+import { getEditorConfigIndent } from './editorconfig.js';
 
 /**
  * Pause all playing <video> and <audio> elements in the asset preview containers.
@@ -430,7 +431,7 @@ eventBus.on("ui:refresh-tabs", () => {
 /**
  * Activates a tab, restoring its state into the editor
  */
-export function activateTab(tab, skipSave = false) {
+export async function activateTab(tab, skipSave = false) {
     // Hide welcome screen
     if (elements.welcomeScreen) {
       elements.welcomeScreen.style.display = "none";
@@ -611,16 +612,18 @@ export function activateTab(tab, skipSave = false) {
           }
 
           const hasIndentedContent = tab.content && tab.content.split('\n').length > 2 && /^\s+/m.test(tab.content);
-          const indent = hasIndentedContent
-            ? detectIndentation(tab.content)
-            : { tabs: state.indentWithTabs || false, size: state.tabSize || 2 };
+          // 1. EditorConfig wins if present
+          // 2. Otherwise detect from content + file-type defaults
+          const ecIndent = await getEditorConfigIndent(tab.path || "");
+          const indent = ecIndent || (hasIndentedContent
+            ? detectIndentation(tab.content, tab.path || "")
+            : detectIndentation("", tab.path || ""));
 
           targetEditor.setOption("indentWithTabs", indent.tabs);
-          targetEditor.setOption("indentUnit", indent.size);
+          targetEditor.setOption("indentUnit", indent.tabs ? 1 : indent.size);
           targetEditor.setOption("tabSize", indent.size);
-          // Keep state in sync so settings panel and status bar agree
-          state.tabSize = indent.size;
-          state.indentWithTabs = indent.tabs;
+          // Update status bar to reflect this file's indentation without
+          // overwriting the user's saved global preference in state.
 
           targetEditor.off("change", handleEditorChange);
           targetEditor.setValue(tab.content);

@@ -64,6 +64,7 @@ import {
     downloadSelectedItems as downloadSelectedItemsImpl,
     triggerUpload as triggerUploadImpl
 } from '../downloads-uploads.js';
+import { invalidateEditorConfigCache } from '../editorconfig.js';
 
 let isLoadingFiles = false;
 const fileContentCache = new Map();
@@ -90,6 +91,12 @@ export async function saveFile(path, content) {
       if (response.success && response.mtime) {
           const tab = state.openTabs.find(t => t.path === path);
           if (tab) tab.mtime = response.mtime;
+      }
+
+      // Invalidate editorconfig cache for this directory if an .editorconfig was saved
+      if (path.endsWith('.editorconfig')) {
+          const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+          invalidateEditorConfigCache(dir);
       }
 
       // Refresh files to get updated size

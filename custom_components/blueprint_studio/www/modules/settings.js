@@ -23,8 +23,11 @@ export async function loadSettings() {
     const localStored = localStorage.getItem(STORAGE_KEY);
     const localSettings = localStored ? JSON.parse(localStored) : {};
 
-    // 3. Migration: If server is empty but local exists, migrate to server
+    // 3. Prefer whichever copy is newer (localStorage wins if it has a more recent _savedAt).
+    // This handles the case where the user reloads the page before the server POST completes.
     let settings = serverSettings;
+    const serverTs = serverSettings._savedAt || 0;
+    const localTs = localSettings._savedAt || 0;
     if (Object.keys(serverSettings).length === 0 && (Object.keys(localSettings).length > 0 || localStorage.getItem("onboardingCompleted"))) {
       // Migrating settings to server...
       settings = { ...localSettings };
@@ -38,6 +41,15 @@ export async function loadSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "save_settings", settings: settings }),
       });
+    } else if (localTs > serverTs && Object.keys(localSettings).length > 0) {
+      // localStorage is newer than server — use it and push it back to server.
+      // This recovers from a page reload that interrupted the server POST.
+      settings = localSettings;
+      fetchWithAuth(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save_settings", settings: settings }),
+      }).catch(e => console.warn("Settings re-sync to server failed:", e));
     }
 
     // 4. Apply to State
@@ -365,6 +377,7 @@ export async function saveSettings() {
     };
 
     // Save to server
+    settings._savedAt = Date.now();
     const savePromise = fetchWithAuth(API_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

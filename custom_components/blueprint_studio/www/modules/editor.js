@@ -172,7 +172,7 @@ export function createEditor(container = null, isPrimary = true) {
     autoCloseBrackets: true,
     styleActiveLine: true,
     foldGutter: true,
-    indentUnit: state.tabSize || 2,
+    indentUnit: state.indentWithTabs ? 1 : (state.tabSize || 2),
     tabSize: state.tabSize || 2,
     indentWithTabs: state.indentWithTabs || false,
     gutters: state.showLineNumbers ? ["CodeMirror-linenumbers", "CodeMirror-foldgutter", "CodeMirror-lint-markers"] : ["CodeMirror-foldgutter", "CodeMirror-lint-markers"],
@@ -228,6 +228,28 @@ export function createEditor(container = null, isPrimary = true) {
       "Cmd-Alt-[": (cm) => cm.execCommand("foldAll"),
       "Ctrl-Alt-]": (cm) => cm.execCommand("unfoldAll"),
       "Cmd-Alt-]": (cm) => cm.execCommand("unfoldAll"),
+
+      "Backspace": (cm) => {
+        // Smart backspace: delete to the previous indent stop, like VS Code.
+        // Only applies when there is no selection and the cursor is in leading whitespace.
+        if (cm.somethingSelected()) return CodeMirror.Pass;
+        const cursor = cm.getCursor();
+        const lineText = cm.getLine(cursor.line);
+        const leadingWhitespace = lineText.slice(0, cursor.ch);
+        // Only act when everything to the left of cursor is whitespace
+        if (!leadingWhitespace || /\S/.test(leadingWhitespace)) return CodeMirror.Pass;
+        const useTab = cm.getOption("indentWithTabs");
+        if (useTab) {
+          // Tab-indent mode: one tab character per Backspace is already correct default behavior.
+          return CodeMirror.Pass;
+        }
+        // Space-indent mode: snap back to the previous tab stop.
+        const spaces = cm.getOption("indentUnit");
+        const col = cursor.ch;
+        const deleteCount = ((col - 1) % spaces) + 1;
+        const from = { line: cursor.line, ch: col - deleteCount };
+        cm.replaceRange("", from, cursor);
+      },
 
       "Ctrl-Space": (cm) => {
         cm.showHint({ hint: homeAssistantHint });
@@ -288,19 +310,24 @@ export function createEditor(container = null, isPrimary = true) {
 
       const spaces = activeEditor.getOption("indentUnit");
       const useTab = activeEditor.getOption("indentWithTabs");
+      const hasSelection = activeEditor.somethingSelected();
 
       if (e.shiftKey) {
-        // Shift+Tab = unindent
-        if (activeEditor.somethingSelected()) {
-          activeEditor.indentSelection("subtract");
-        }
+        // Shift+Tab = unindent current line(s) — always, even with no selection.
+        activeEditor.indentSelection("subtract");
       } else {
-        // Tab = indent
-        if (activeEditor.somethingSelected()) {
+        if (hasSelection) {
+          // Any selection → indent all touched lines, never replace selected text.
           activeEditor.indentSelection("add");
         } else {
-          const indent = useTab ? "\t" : " ".repeat(spaces);
-          activeEditor.replaceSelection(indent);
+          // No selection → insert to next tab stop (spaces) or a literal tab.
+          if (useTab) {
+            activeEditor.replaceSelection("\t");
+          } else {
+            const col = activeEditor.getCursor().ch;
+            const toNextStop = spaces - (col % spaces) || spaces;
+            activeEditor.replaceSelection(" ".repeat(toNextStop));
+          }
         }
       }
     };
@@ -631,53 +658,99 @@ export function yamlLinter(content, updateLinting) {
 }
 
 /**
- * Detects indentation style and size from content
+ * Detects indentation style and size from content.
+ * Uses GCD of indent-level changes between consecutive lines, which reliably
+ * identifies the indent step even in deeply nested files.
+ * Falls back to file-type defaults when detection is inconclusive.
+ * @param {string} content - File content
+ * @param {string} [filePath] - File path, used for file-type defaults
  */
-export function detectIndentation(content) {
+export function detectIndentation(content, filePath = "") {
+  // File-type defaults — applied when content detection is inconclusive.
+  // These mirror VS Code language-specific defaults.
+  const ext = filePath.split(".").pop().toLowerCase();
+  const TYPE_DEFAULTS = {
+    yaml: { tabs: false, size: 2 },
+    yml:  { tabs: false, size: 2 },
+    json: { tabs: false, size: 2 },
+    toml: { tabs: false, size: 2 },
+    py:   { tabs: false, size: 4 },
+    js:   { tabs: false, size: 2 },
+    ts:   { tabs: false, size: 2 },
+    css:  { tabs: false, size: 2 },
+    html: { tabs: false, size: 2 },
+    sh:   { tabs: false, size: 4 },
+    go:   { tabs: true,  size: state.tabSize },
+    rs:   { tabs: false, size: 4 },
+  };
+  const typeDefault = TYPE_DEFAULTS[ext] || null;
+
   if (!content) {
-    return { tabs: state.indentWithTabs, size: state.tabSize };
+    return typeDefault || { tabs: state.indentWithTabs, size: state.tabSize };
   }
 
-  const lines = content.split("\n").slice(0, 100); // Check first 100 lines
-  let tabs = 0;
-  let spaces = 0;
-  const spaceCounts = {};
+  function gcd(a, b) {
+    while (b) { const t = b; b = a % b; a = t; }
+    return a;
+  }
 
-  lines.forEach(line => {
+  const lines = content.split("\n").slice(0, 200);
+  let tabLines = 0;
+  let spaceLines = 0;
+  let prevSpaceIndent = 0;
+  // Track frequency of each delta to filter out noise (e.g. block-scalar continuations)
+  const deltaFreq = {};
+
+  for (const line of lines) {
+    if (!line.trim()) continue; // skip blank lines
+
     const indentMatch = line.match(/^(\s+)/);
-    if (indentMatch) {
-      const indent = indentMatch[1];
-      if (indent.includes("\t")) {
-        tabs++;
-      } else {
-        // Ignore lines that are just whitespace
-        if (indent.length === line.length) return;
-
-        spaces++;
-        const count = indent.length;
-        if (count > 0) {
-          spaceCounts[count] = (spaceCounts[count] || 0) + 1;
-        }
-      }
+    if (!indentMatch) {
+      prevSpaceIndent = 0;
+      continue;
     }
-  });
 
-  if (tabs > spaces) {
-    return { tabs: true, size: 4 }; // Default tab size 4
+    const indent = indentMatch[1];
+
+    if (indent[0] === "\t") {
+      tabLines++;
+      prevSpaceIndent = 0;
+      continue;
+    }
+
+    // Space-indented line
+    spaceLines++;
+    const depth = indent.length;
+    const delta = Math.abs(depth - prevSpaceIndent);
+    if (delta > 0) {
+      deltaFreq[delta] = (deltaFreq[delta] || 0) + 1;
+    }
+    prevSpaceIndent = depth;
   }
 
-  // Find most common indentation jump
-  let bestSize = state.tabSize || 2;  // Default to user preference, not hardcoded 2
-  let maxFreq = 0;
-  for (const [size, freq] of Object.entries(spaceCounts)) {
-    if (freq > maxFreq) {
-      maxFreq = freq;
-      bestSize = parseInt(size);
-    }
+  if (tabLines > spaceLines) {
+    return { tabs: true, size: state.tabSize };
   }
 
-  // Home Assistant standard is 2, so if it's 0 or weird, default to user preference
-  return { tabs: false, size: bestSize || state.tabSize };
+  // Only include deltas that appear more than once — single occurrences are
+  // likely block-scalar continuations or other one-off indentation quirks.
+  const reliableDeltas = Object.entries(deltaFreq)
+    .filter(([, freq]) => freq > 1)
+    .map(([delta]) => parseInt(delta));
+
+  let indentGcd = 0;
+  for (const delta of reliableDeltas) {
+    indentGcd = indentGcd === 0 ? delta : gcd(indentGcd, delta);
+  }
+
+  // Exclude 1 — almost never an intentional indent size.
+  const VALID = [2, 3, 4, 8];
+  const detected = VALID.includes(indentGcd) ? indentGcd : null;
+
+  if (detected) return { tabs: false, size: detected };
+
+  // Fall back to file-type default, then user preference.
+  return typeDefault || { tabs: state.indentWithTabs, size: state.tabSize };
 }
 
 /**
