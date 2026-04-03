@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **EditorConfig fetch logging 404 errors to console** — When no `.editorconfig` exists (the common case), three 404 requests were logged as errors on every file open. The editorconfig fetcher now uses a raw `fetch` call instead of `fetchWithAuth`, silently returning `null` on any non-ok response. Results are cached so subsequent file opens make no network requests for directories already confirmed as missing.
 
+- **Collapsing a folder with an active file collapsed the entire file tree** — In navigation mode, clicking a folder to collapse it set `currentNavigationPath` to that folder, causing the tree to redraw showing only that folder's subtree (making everything else disappear). The navigation path is now only updated when *expanding* a folder, not when collapsing it.
+
 ### Changed
 
 - **PDF.js migrated to ES module loading** — PDF.js is no longer loaded as a classic `<script>` tag. It is now imported on demand via a dynamic `import()` when a PDF file is opened. This allows keeping PDF.js up to date (4.6.82 → 4.10.38) as newer versions require ES module context.
