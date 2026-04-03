@@ -12,11 +12,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Hosts management in Settings → Integrations** — A new "Hosts" section lets you add, edit, and delete SSH/SFTP hosts from one central place. Hosts are shared across the SFTP panel and the terminal SSH dropdown, so you only need to configure a connection once. Each host shows its name, address, port, username, and auth method (password or key) at a glance.
 
+- **`.editorconfig` support** — When a file is opened, Blueprint Studio now walks up the directory tree looking for `.editorconfig` files (stopping at `root = true`), exactly as VS Code does. `indent_style` and `indent_size` rules are applied to the editor for that file. Results are cached per directory for the session. Saving a `.editorconfig` file invalidates the cache for its directory so the new rules take effect immediately on the next file open.
+
+- **Smart Backspace** — Pressing Backspace in leading whitespace now deletes back to the previous indent stop (like VS Code), rather than one character at a time. For example, with 2-space indentation, pressing Backspace at column 4 removes 2 spaces at once. Applies only in space-indent mode; tab-indent mode is unchanged.
+
 ### Fixed
 
 - **No SSH host key verification (MITM)** — SFTP and Paramiko-based SSH terminal sessions previously used `AutoAddPolicy`, which accepted any server key unconditionally — including changed keys on subsequent connections. Host key verification is now enforced using a Trust-On-First-Use (TOFU) policy: the server key is trusted and saved to `<config_dir>/.ssh/known_hosts` on first contact, and any key change on a later connection raises an error to prevent silent man-in-the-middle attacks. Both SFTP and terminal sessions share the same `known_hosts` file.
 
 - **Indentation size not persisting across sessions** — Tab size (e.g. 2 spaces) was saved correctly but not re-applied to the editor on startup. `applyEditorSettings` was missing `indentUnit`, `tabSize`, and `indentWithTabs` options, so the editor would revert to its default indentation until the setting was manually toggled. These options are now applied consistently on every settings load.
+
+- **Settings not surviving a page reload** — If the page was reloaded before the server POST completed (e.g. immediately after changing tab size), the new value was lost. Settings are now stamped with a `_savedAt` timestamp in both localStorage and the server. On load, if localStorage is newer than the server copy, localStorage wins and is immediately re-synced to the server.
+
+- **Status bar and settings panel out of sync** — Changing indentation via the status bar picker did not update the Settings panel dropdown/checkbox, and vice versa. Both now stay in sync: the status bar picker updates the settings panel DOM elements, and the settings panel handlers call `updateStatusBar()` after saving.
+
+- **`indentWithTabs` ignored when applying indentation** — When "Indent with Tabs" was enabled, `indentUnit` was incorrectly set to `tabSize` (e.g. 4) instead of `1`. CodeMirror's `indentUnit` must be `1` when using tabs so that `indentSelection` adds/removes one tab character per level. Fixed in `applyEditorSettings`, both settings panel handlers, the status bar picker, and `createEditor`.
+
+- **Opening a file overwrote global indent preference** — Per-file indentation detection was writing the detected `tabSize` and `indentWithTabs` back to `state`, so switching files would permanently change the user's saved preference for the session. Detection now sets editor options directly without touching `state`.
+
+- **`applyEditorSettings` stomping per-file indent on visibility change** — When switching back to the browser tab, `settings:loaded` fired and `applyEditorSettings` reset the editor to the global preference, overriding the per-file detected or `.editorconfig`-specified indentation. Indent options are now skipped in `applyEditorSettings` when a file is already open.
+
+- **Indentation auto-detection producing "Spaces 1"** — The previous detection algorithm counted absolute indent depths, which caused GCD to collapse to 1 on files with YAML block scalars or multi-level jumps. Detection now uses frequency-filtered GCD of indent *changes* between consecutive lines, and excludes size `1` as a valid result. Single-occurrence deltas (e.g. block scalar continuations) are ignored.
+
+- **Tab-indented files defaulting to size 4 regardless of user preference** — When a file was detected as tab-indented, `tabSize` was hardcoded to 4. It now uses `state.tabSize` (the user's saved preference).
+
+- **`activateTab` not declared `async`** — Adding `await getEditorConfigIndent(...)` inside `activateTab` caused a `SyntaxError: Unexpected reserved word` crash on load. `activateTab` is now correctly declared `async`.
+
+- **EditorConfig fetch logging 404 errors to console** — When no `.editorconfig` exists (the common case), three 404 requests were logged as errors on every file open. The editorconfig fetcher now uses a raw `fetch` call instead of `fetchWithAuth`, silently returning `null` on any non-ok response. Results are cached so subsequent file opens make no network requests for directories already confirmed as missing.
 
 ### Changed
 
