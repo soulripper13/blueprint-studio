@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.5] - 2026-04-09
+
 - **Autocomplete toggle in Editor settings** — A new toggle in Settings → Editor → Behavior lets you disable the YAML autocomplete suggestions that appear as you type. Enabled by default.
 
 - **Autocomplete service completion offset fix** — When completing an `action:` or `service:` line with leading whitespace after the colon, the replacement range was calculated incorrectly, leaving a fragment of the old text. The start offset now accounts for the full (untrimmed) text after the colon.
@@ -899,6 +901,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 
 
 ## Version History
+- **2.4.5** - Smart Indentation, .editorconfig Support, Modern YAML Syntax & Bug Fixes
 - **2.4.4** - Hosts Management & Editor Improvements
 - **2.4.3** - Modern Actions, Developer Tools Panel & Minimap
 - **2.4.2** - Better Merges, Faster Lookups, Stronger Access Control
@@ -926,7 +929,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.4...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.5...HEAD
+[2.4.5]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
 [2.4.4]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
 [2.4.3]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.3
 [2.4.2]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.2
