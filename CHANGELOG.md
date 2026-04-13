@@ -909,6 +909,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 
 
 ## Version History
+- **2.4.6** - Bug Fix for yaml anchors and UUIDs no longer flagged as invalid entity IDs
 - **2.4.5** - Smart Indentation, .editorconfig Support, Modern YAML Syntax & Bug Fixes
 - **2.4.4** - Hosts Management & Editor Improvements
 - **2.4.3** - Modern Actions, Developer Tools Panel & Minimap
@@ -937,7 +938,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.5...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.6...HEAD
+[2.4.6]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
 [2.4.5]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
 [2.4.4]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
 [2.4.3]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.3
