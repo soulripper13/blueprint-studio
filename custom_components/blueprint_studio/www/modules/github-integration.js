@@ -493,14 +493,40 @@ export async function showGitExclusions() {
 
       modalTitle.textContent = "Manage Git Exclusions";
 
+      // Helper: match a single path segment or full path against a gitignore pattern
+      function matchesGlob(pattern, filePath) {
+        const fileName = filePath.split("/").pop();
+        // *.ext  or  *name  or  prefix*  — single-segment wildcard
+        if (pattern.startsWith("*") && !pattern.includes("/")) {
+          const suffix = pattern.slice(1); // e.g. ".db"
+          return fileName.endsWith(suffix);
+        }
+        if (pattern.endsWith("*") && !pattern.includes("/")) {
+          const prefix = pattern.slice(0, -1);
+          return fileName.startsWith(prefix);
+        }
+        // **/*.ext — matches any depth
+        if (pattern.startsWith("**/")) {
+          const sub = pattern.slice(3);
+          return matchesGlob(sub, filePath);
+        }
+        return false;
+      }
+
       // Helper to check if a path or any of its parents are ignored
       function isPathIgnored(path) {
-        if (ignoredLines.has(path) || ignoredLines.has(path + "/")) return true;
+        for (const line of ignoredLines) {
+          // Exact match (with or without trailing slash)
+          const stripped = line.replace(/\/$/, "");
+          if (stripped === path || stripped + "/" === path) return true;
 
-        const parts = path.split("/");
-        for (let i = 1; i < parts.length; i++) {
-          const parentPath = parts.slice(0, i).join("/");
-          if (ignoredLines.has(parentPath) || ignoredLines.has(parentPath + "/")) return true;
+          // Glob pattern match
+          if (line.includes("*") && matchesGlob(line, path)) return true;
+
+          // Parent directory match
+          if (!line.includes("*")) {
+            if (path.startsWith(stripped + "/")) return true;
+          }
         }
         return false;
       }
@@ -770,12 +796,25 @@ export async function showGitExclusions() {
         const sortedIgnoreList = Array.from(rawIgnoreList).sort();
         const optimizedIgnoreList = [];
 
+        // Collect existing glob patterns so we don't add redundant explicit paths
+        const existingGlobs = Array.from(ignoredLines).filter(l => l.includes("*"));
+
         for (const path of sortedIgnoreList) {
           let covered = false;
+          // Already covered by a parent path being ignored
           for (const existing of optimizedIgnoreList) {
             if (path.startsWith(existing + "/") || path === existing) {
               covered = true;
               break;
+            }
+          }
+          // Already covered by an existing glob pattern in .gitignore
+          if (!covered) {
+            for (const glob of existingGlobs) {
+              if (matchesGlob(glob, path)) {
+                covered = true;
+                break;
+              }
             }
           }
           if (!covered) {
@@ -789,10 +828,13 @@ export async function showGitExclusions() {
           // Keep comments and empty lines
           if (!trimmed || trimmed.startsWith("#")) return true;
 
+          // Always preserve glob/wildcard patterns
+          if (trimmed.includes("*")) return true;
+
           // Clean the line from trailing slashes for comparison
           const path = trimmed.replace(/\/$/, "");
 
-          // 1. Remove if specifically included now
+          // 1. Remove if specifically included now (and not a glob)
           if (itemsToInclude.has(path)) return false;
 
           // 2. Remove if already covered by an optimized ignore path
