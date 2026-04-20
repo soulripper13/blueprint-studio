@@ -1,6 +1,7 @@
 """File management for Blueprint Studio."""
 from __future__ import annotations
 
+import asyncio
 import base64
 import fnmatch
 import io
@@ -575,7 +576,6 @@ class FileManager:
         import json as _json
         import re as _re
         import fnmatch as _fnmatch
-        import concurrent.futures
 
         response = web.StreamResponse()
         response.content_type = "application/x-ndjson"
@@ -593,19 +593,24 @@ class FileManager:
             exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
 
             root_dir = self._get_root_dir()
-            search_files = []
-            for root, dirs, files in os.walk(root_dir):
-                dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_PATTERNS]
-                for name in files:
-                    file_path = Path(root) / name
-                    rel_path = str(file_path.relative_to(root_dir))
-                    if file_path.suffix.lower() in BINARY_EXTENSIONS:
-                        continue
-                    if include_patterns and not any(_fnmatch.fnmatch(rel_path, p) or _fnmatch.fnmatch(name, p) for p in include_patterns):
-                        continue
-                    if exclude_patterns and any(_fnmatch.fnmatch(rel_path, p) or _fnmatch.fnmatch(name, p) for p in exclude_patterns):
-                        continue
-                    search_files.append((file_path, rel_path))
+
+            def _collect_files():
+                collected = []
+                for root, dirs, files in os.walk(root_dir):
+                    dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_PATTERNS]
+                    for name in files:
+                        file_path = Path(root) / name
+                        rel_path = str(file_path.relative_to(root_dir))
+                        if file_path.suffix.lower() in BINARY_EXTENSIONS:
+                            continue
+                        if include_patterns and not any(_fnmatch.fnmatch(rel_path, p) or _fnmatch.fnmatch(name, p) for p in include_patterns):
+                            continue
+                        if exclude_patterns and any(_fnmatch.fnmatch(rel_path, p) or _fnmatch.fnmatch(name, p) for p in exclude_patterns):
+                            continue
+                        collected.append((file_path, rel_path))
+                return collected
+
+            search_files = await self.hass.async_add_executor_job(_collect_files)
 
             def search_single_file(args):
                 f_path, r_path = args
@@ -628,20 +633,20 @@ class FileManager:
             total_sent = 0
             max_results = 2000
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-                futures = {executor.submit(search_single_file, f): f for f in search_files}
-                for future in concurrent.futures.as_completed(futures):
+            loop = asyncio.get_event_loop()
+            futures = [loop.run_in_executor(None, search_single_file, f) for f in search_files]
+            for coro in asyncio.as_completed(futures):
+                if total_sent >= max_results:
+                    break
+                file_results = await coro
+                if not file_results:
+                    continue
+                for result in file_results:
                     if total_sent >= max_results:
                         break
-                    file_results = future.result()
-                    if not file_results:
-                        continue
-                    for result in file_results:
-                        if total_sent >= max_results:
-                            break
-                        line = _json.dumps(result) + "\n"
-                        await response.write(line.encode())
-                        total_sent += 1
+                    line = _json.dumps(result) + "\n"
+                    await response.write(line.encode())
+                    total_sent += 1
 
         except Exception as e:
             _LOGGER.error("Streaming search error: %s", e)
