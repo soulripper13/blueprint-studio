@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Blocking I/O on the event loop during file search** — `global_search_stream` called `os.walk` synchronously on the HA event loop, causing "Detected blocking call to walk/scandir" log warnings. The directory traversal is now offloaded to `hass.async_add_executor_job`, and individual file reads use `asyncio.get_event_loop().run_in_executor` with `asyncio.as_completed`, keeping the event loop free throughout the entire search operation.
+
+- **Navigation mode file tree not loading or listing files** — When navigating back to a previous folder, the directory data was never fetched, leaving the tree stuck on a permanent loading spinner. `navigateBack` now awaits `loadDirectory` when the target path is not cached, mirroring the existing behaviour of `navigateToFolder`. Additionally, if the app restores a deep `currentNavigationPath` from saved settings on startup and that path is not yet loaded, `renderFileTree` now fires `loadDirectory` automatically instead of showing a spinner that never resolves.
+
+- **Manage Git Exclusions reopens with wrong checkbox states** — Files covered by glob patterns in `.gitignore` (e.g. `*.db`, `*.db-shm`) were always shown as checked (included) because the `isPathIgnored` helper only performed exact string matches. It now evaluates wildcard patterns, so files matched by a glob correctly appear unchecked (excluded) when the dialog is reopened.
+
+- **Glob patterns in `.gitignore` stripped or made redundant on save** — When files matched by a glob (e.g. `home-assistant_v2.db` matched by `*.db`) appeared as checked due to the above bug, saving the dialog would add them as explicit paths to the ignore list alongside the glob. The save logic now always preserves wildcard lines unconditionally, and skips adding an explicit path entry if an existing glob pattern already covers it.
+
 ## [2.4.6] - 2026-04-11
 
 - **YAML anchors and aliases no longer flagged as invalid entity IDs** — When `entity_id:` was assigned a YAML alias (`*alias_name`) or an anchor declaration was captured (`&anchor_name`), the validator incorrectly treated the token as a malformed entity ID. These are now recognised as YAML syntax and skipped.
