@@ -4,10 +4,511 @@ import { saveSettings } from './settings.js';
 import { fetchWithAuth } from './api.js';
 import { eventBus } from './event-bus.js';
 import { API_BASE, THEME_PRESETS, ACCENT_COLORS, SYNTAX_THEMES } from './constants.js';
-import { showToast, showConfirmDialog } from './ui.js';
+import { showToast, showConfirmDialog, setButtonLoading } from './ui.js';
 import { updateStatusBar } from './status-bar.js';
 import { t, initTranslations } from './translations.js';
 import { showAddConnectionDialog, showEditConnectionDialog, deleteConnection } from './sftp.js';
+
+const CUSTOM_MODEL_OPTION_VALUE = "__custom__";
+
+const AI_MODEL_PRESETS = {
+  "cloud:gemini": [
+    "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+  ],
+  "cloud:openai": [
+    "gpt-5.2",
+    "gpt-5.2-pro",
+    "gpt-5.2-chat-latest",
+    "gpt-5.1",
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "o3",
+    "o3-pro",
+    "o3-deep-research",
+    "o4-mini",
+    "o4-mini-deep-research",
+    "o1-pro",
+  ],
+  "cloud:claude": [
+    "claude-sonnet-4-5-20250929",
+    "claude-haiku-4-5-20251001",
+    "claude-opus-4-5-20251101",
+  ],
+  "local:ollama": [],
+  "local:lm-studio": [],
+  "local:custom": [],
+};
+
+const AI_MODEL_PICKERS = {
+  "cloud:gemini": {
+    sourceKey: "cloud:gemini",
+    stateKey: "aiModel",
+    selectId: "gemini-model-select",
+    inputId: "gemini-model-custom",
+    buttonId: "btn-fetch-gemini-models",
+    statusId: "gemini-model-fetch-status",
+    fetchSupported: true,
+    inputLabel: "Custom Model Name",
+    inputPlaceholder: "gemini-2.5-pro",
+    helpText: "Choose a built-in Gemini model or type any Gemini model name manually.",
+  },
+  "cloud:openai": {
+    sourceKey: "cloud:openai",
+    stateKey: "aiModel",
+    selectId: "openai-model-select",
+    inputId: "openai-model-custom",
+    buttonId: "btn-fetch-openai-models",
+    statusId: "openai-model-fetch-status",
+    fetchSupported: true,
+    inputLabel: "Custom Model Name",
+    inputPlaceholder: "gpt-4.1 or deepseek-chat",
+    helpText: "Use the dropdown for known models, or type any OpenAI-compatible model name from your relay.",
+  },
+  "cloud:claude": {
+    sourceKey: "cloud:claude",
+    stateKey: "aiModel",
+    selectId: "claude-model-select",
+    inputId: "claude-model-custom",
+    buttonId: "btn-fetch-claude-models",
+    statusId: "claude-model-fetch-status",
+    fetchSupported: false,
+    inputLabel: "Custom Model Name",
+    inputPlaceholder: "claude-sonnet-4-5-20250929",
+    helpText: "Anthropic does not expose a model-list endpoint here. Use the preset list or type a model name manually.",
+  },
+  "local:ollama": {
+    sourceKey: "local:ollama",
+    stateKey: "ollamaModel",
+    selectId: "ollama-model-select",
+    inputId: "ollama-model",
+    buttonId: "btn-fetch-ollama-models",
+    statusId: "ollama-model-fetch-status",
+    fetchSupported: true,
+    inputLabel: "Model Name",
+    inputPlaceholder: "codellama:7b",
+    helpText: "Fetch installed Ollama models, or type a tag manually.",
+  },
+  "local:lm-studio": {
+    sourceKey: "local:lm-studio",
+    stateKey: "lmStudioModel",
+    selectId: "lm-studio-model-select",
+    inputId: "lm-studio-model",
+    buttonId: "btn-fetch-lm-studio-models",
+    statusId: "lm-studio-model-fetch-status",
+    fetchSupported: true,
+    inputLabel: "Model Name (optional)",
+    inputPlaceholder: "Leave blank to use loaded model",
+    helpText: "Fetch models from the LM Studio OpenAI-compatible server, or type a model name manually.",
+  },
+  "local:custom": {
+    sourceKey: "local:custom",
+    stateKey: "customAiModel",
+    selectId: "custom-ai-model-select",
+    inputId: "custom-ai-model",
+    buttonId: "btn-fetch-custom-models",
+    statusId: "custom-ai-model-fetch-status",
+    fetchSupported: true,
+    inputLabel: "Model Name",
+    inputPlaceholder: "model-name",
+    helpText: "Fetch models from your custom OpenAI-compatible endpoint, or type a model name manually.",
+  },
+};
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function uniqueModels(values = []) {
+  const toModelName = (value) => {
+    if (value && typeof value === "object") {
+      return String(value.id || value.label || value.name || value.model || "").trim();
+    }
+    return String(value || "").trim();
+  };
+
+  return [...new Set(
+    values
+      .map((value) => toModelName(value))
+      .filter(Boolean)
+  )];
+}
+
+function ensureAiModelFetchState() {
+  if (!state.aiDiscoveredModels) {
+    state.aiDiscoveredModels = {};
+  }
+  if (!state.aiModelFetchMeta) {
+    state.aiModelFetchMeta = {};
+  }
+
+  Object.keys(AI_MODEL_PRESETS).forEach((sourceKey) => {
+    if (!Array.isArray(state.aiDiscoveredModels[sourceKey])) {
+      state.aiDiscoveredModels[sourceKey] = [];
+    }
+    if (!state.aiModelFetchMeta[sourceKey]) {
+      state.aiModelFetchMeta[sourceKey] = {
+        loading: false,
+        error: "",
+        fetchedAt: null,
+        count: 0,
+      };
+    }
+  });
+}
+
+function getModelPickerConfig(sourceKey) {
+  ensureAiModelFetchState();
+  return AI_MODEL_PICKERS[sourceKey];
+}
+
+function getModelValue(sourceKey) {
+  const config = getModelPickerConfig(sourceKey);
+  return String(state[config.stateKey] || "").trim();
+}
+
+function setModelValue(sourceKey, value) {
+  const config = getModelPickerConfig(sourceKey);
+  state[config.stateKey] = String(value || "").trim();
+}
+
+function getCombinedModelOptions(sourceKey, currentValue = "") {
+  ensureAiModelFetchState();
+  return uniqueModels([
+    ...(AI_MODEL_PRESETS[sourceKey] || []),
+    ...(state.aiDiscoveredModels[sourceKey] || []),
+    currentValue,
+  ]);
+}
+
+function getModelSelectMarkup(sourceKey, currentValue = "") {
+  const options = getCombinedModelOptions(sourceKey, currentValue);
+  const hasMatchingOption = currentValue && options.includes(currentValue);
+  const customSelected = !hasMatchingOption;
+
+  return [
+    `<option value="${CUSTOM_MODEL_OPTION_VALUE}" ${customSelected ? 'selected' : ''}>Custom model (type below)</option>`,
+    ...options.map((modelName) => `<option value="${escapeHtml(modelName)}" ${currentValue === modelName ? 'selected' : ''}>${escapeHtml(modelName)}</option>`),
+  ].join('');
+}
+
+function getFetchStatusText(sourceKey) {
+  ensureAiModelFetchState();
+  const meta = state.aiModelFetchMeta[sourceKey] || {};
+  if (meta.loading) {
+    return "Fetching model list...";
+  }
+  if (meta.error) {
+    return meta.error;
+  }
+  if (meta.fetchedAt) {
+    return `Fetched ${meta.count || 0} model${meta.count === 1 ? "" : "s"}.`;
+  }
+  if (sourceKey === "cloud:claude") {
+    return "Use the preset list or type a model name manually.";
+  }
+  return "Pick from the list or fetch models from the endpoint.";
+}
+
+function renderModelPicker(sourceKey, currentValue = "") {
+  const config = getModelPickerConfig(sourceKey);
+
+  return `
+    <div style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px;">
+      <div style="flex: 1;">
+        <div style="font-size: 12px; margin-bottom: 4px;">Available Models</div>
+        <select id="${config.selectId}" class="git-settings-input" style="width: 100%;">
+          ${getModelSelectMarkup(sourceKey, currentValue)}
+        </select>
+      </div>
+      <button
+        id="${config.buttonId}"
+        type="button"
+        ${config.fetchSupported ? "" : "disabled"}
+        style="height: 34px; padding: 0 12px; border-radius: 4px; border: 1px solid var(--border-color); background: ${config.fetchSupported ? 'var(--bg-secondary)' : 'var(--bg-tertiary)'}; color: ${config.fetchSupported ? 'var(--text-primary)' : 'var(--text-secondary)'}; cursor: ${config.fetchSupported ? 'pointer' : 'not-allowed'}; white-space: nowrap;"
+      >
+        Fetch Models
+      </button>
+    </div>
+    <div id="${config.statusId}" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">${escapeHtml(getFetchStatusText(sourceKey))}</div>
+    <div style="font-size: 12px; margin-bottom: 4px;">${config.inputLabel}</div>
+    <input
+      type="text"
+      id="${config.inputId}"
+      class="git-settings-input"
+      style="width: 100%; margin-bottom: 8px;"
+      value="${escapeHtml(currentValue)}"
+      placeholder="${escapeHtml(config.inputPlaceholder)}"
+    >
+    <div style="font-size: 11px; color: var(--text-secondary); padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
+      ${config.helpText}
+    </div>
+  `;
+}
+
+function normalizeOpenAiCompatibleBaseUrl(baseUrl, fallbackUrl = "") {
+  let normalized = String(baseUrl || fallbackUrl || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  normalized = normalized.replace(/\/+$/g, "");
+  normalized = normalized.replace(/\/chat\/completions$/i, "");
+  normalized = normalized.replace(/\/responses$/i, "");
+  normalized = normalized.replace(/\/models$/i, "");
+
+  if (!/\/v1$/i.test(normalized)) {
+    normalized = `${normalized}/v1`;
+  }
+
+  return normalized;
+}
+
+function buildOllamaTagsUrl(baseUrl) {
+  let normalized = String(baseUrl || "http://localhost:11434").trim();
+  normalized = normalized.replace(/\/+$/g, "");
+  normalized = normalized.replace(/\/api\/tags$/i, "");
+  normalized = normalized.replace(/\/api$/i, "");
+  return `${normalized}/api/tags`;
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    let message = `HTTP ${response.status}`;
+    try {
+      const errorJson = await response.json();
+      message = errorJson.error?.message || errorJson.message || message;
+    } catch (error) {
+      try {
+        const errorText = await response.text();
+        if (errorText) {
+          message = errorText;
+        }
+      } catch (_ignored) {}
+    }
+    throw new Error(message);
+  }
+  return response.json();
+}
+
+async function fetchModelsViaBackend(sourceKey, payload) {
+  try {
+    const result = await fetchWithAuth(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "ai_get_models",
+        ...payload,
+      }),
+    });
+    if (Array.isArray(result?.models)) {
+      return uniqueModels(result.models);
+    }
+    return null;
+  } catch (error) {
+    if (/unknown action/i.test(error.message || "")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function fetchModelsDirectly(sourceKey, payload) {
+  if (sourceKey === "local:ollama") {
+    const data = await fetchJson(buildOllamaTagsUrl(payload.baseUrl));
+    return (data.models || []).map((model) => model.name).filter(Boolean);
+  }
+
+  if (sourceKey === "cloud:gemini") {
+    if (!payload.apiKey) {
+      throw new Error("Enter a Gemini API key first.");
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(payload.apiKey)}`;
+    const data = await fetchJson(url);
+    return (data.models || [])
+      .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes("generateContent"))
+      .map((model) => String(model.name || "").replace(/^models\//, ""))
+      .filter(Boolean);
+  }
+
+  if (sourceKey === "cloud:claude") {
+    throw new Error("Claude model auto-discovery is not available in this UI.");
+  }
+
+  const baseUrl = normalizeOpenAiCompatibleBaseUrl(payload.baseUrl, payload.fallbackBaseUrl);
+  if (!baseUrl) {
+    throw new Error("Enter an endpoint URL first.");
+  }
+
+  const headers = {};
+  if (payload.apiKey) {
+    headers.Authorization = `Bearer ${payload.apiKey}`;
+  }
+
+  const data = await fetchJson(`${baseUrl}/models`, { headers });
+  return (data.data || []).map((model) => model.id).filter(Boolean);
+}
+
+function getDirectFetchPayload(sourceKey) {
+  const getInputValue = (id, fallback = "") => String(document.getElementById(id)?.value || fallback).trim();
+
+  switch (sourceKey) {
+    case "cloud:gemini":
+      return {
+        apiKey: getInputValue("gemini-api-key", state.geminiApiKey),
+      };
+    case "cloud:openai":
+      return {
+        baseUrl: getInputValue("openai-base-url", state.openaiBaseUrl),
+        fallbackBaseUrl: "https://api.openai.com/v1",
+        apiKey: getInputValue("openai-api-key", state.openaiApiKey),
+      };
+    case "local:ollama":
+      return {
+        baseUrl: getInputValue("ollama-url", state.ollamaUrl),
+      };
+    case "local:lm-studio":
+      return {
+        baseUrl: getInputValue("lm-studio-url", state.lmStudioUrl),
+        fallbackBaseUrl: "http://localhost:1234/v1",
+      };
+    case "local:custom":
+      return {
+        baseUrl: getInputValue("custom-ai-url", state.customAiUrl),
+        apiKey: getInputValue("openai-api-key", state.openaiApiKey),
+      };
+    default:
+      return {};
+  }
+}
+
+function getBackendFetchPayload(sourceKey) {
+  const getInputValue = (id, fallback = "") => String(document.getElementById(id)?.value || fallback).trim();
+  const aiType = sourceKey.startsWith("cloud:") ? "cloud" : "local-ai";
+  const cloudProvider = sourceKey.startsWith("cloud:") ? sourceKey.split(":")[1] : undefined;
+  const localAiProvider = sourceKey.startsWith("local:") ? sourceKey.split(":")[1] : getInputValue("local-ai-provider-select", state.localAiProvider);
+  const cloudProviderValue = getInputValue("cloud-provider-select", state.cloudProvider);
+
+  const cloudModelValue = (() => {
+    if (cloudProviderValue === "gemini") return getInputValue("gemini-model-custom", state.aiModel);
+    if (cloudProviderValue === "openai") return getInputValue("openai-model-custom", state.aiModel);
+    if (cloudProviderValue === "claude") return getInputValue("claude-model-custom", state.aiModel);
+    return state.aiModel;
+  })();
+
+  return {
+    ai_type: aiType,
+    cloud_provider: cloudProvider,
+    ai_model: getModelValue(sourceKey),
+    settings: {
+      aiType,
+      cloudProvider: cloudProviderValue,
+      aiModel: cloudModelValue,
+      localAiProvider,
+      geminiApiKey: getInputValue("gemini-api-key", state.geminiApiKey),
+      openaiApiKey: getInputValue("openai-api-key", state.openaiApiKey),
+      openaiBaseUrl: getInputValue("openai-base-url", state.openaiBaseUrl),
+      claudeApiKey: getInputValue("claude-api-key", state.claudeApiKey),
+      ollamaUrl: getInputValue("ollama-url", state.ollamaUrl),
+      ollamaModel: getInputValue("ollama-model", state.ollamaModel),
+      lmStudioUrl: getInputValue("lm-studio-url", state.lmStudioUrl),
+      lmStudioModel: getInputValue("lm-studio-model", state.lmStudioModel),
+      customAiUrl: getInputValue("custom-ai-url", state.customAiUrl),
+      customAiModel: getInputValue("custom-ai-model", state.customAiModel),
+    },
+  };
+}
+
+function updateModelPickerUi(sourceKey) {
+  const config = getModelPickerConfig(sourceKey);
+  const currentValue = getModelValue(sourceKey);
+  const select = document.getElementById(config.selectId);
+  const input = document.getElementById(config.inputId);
+  const button = document.getElementById(config.buttonId);
+  const status = document.getElementById(config.statusId);
+  const meta = state.aiModelFetchMeta[sourceKey] || {};
+
+  if (select) {
+    select.innerHTML = getModelSelectMarkup(sourceKey, currentValue);
+  }
+
+  if (input && input.value !== currentValue) {
+    input.value = currentValue;
+  }
+
+  if (button) {
+    setButtonLoading(button, !!meta.loading);
+    button.disabled = !config.fetchSupported || !!meta.loading;
+    button.textContent = meta.loading ? "Fetching..." : "Fetch Models";
+    button.style.cursor = button.disabled ? "not-allowed" : "pointer";
+    button.style.opacity = button.disabled ? "0.7" : "1";
+  }
+
+  if (status) {
+    status.textContent = getFetchStatusText(sourceKey);
+    status.style.color = meta.error ? "var(--error-color)" : "var(--text-secondary)";
+  }
+}
+
+function syncAllModelPickers() {
+  Object.keys(AI_MODEL_PICKERS).forEach((sourceKey) => updateModelPickerUi(sourceKey));
+}
+
+async function refreshModelList(sourceKey) {
+  const config = getModelPickerConfig(sourceKey);
+  if (!config.fetchSupported) {
+    updateModelPickerUi(sourceKey);
+    return;
+  }
+
+  ensureAiModelFetchState();
+  state.aiModelFetchMeta[sourceKey] = {
+    ...state.aiModelFetchMeta[sourceKey],
+    loading: true,
+    error: "",
+  };
+  updateModelPickerUi(sourceKey);
+
+  try {
+    const backendPayload = getBackendFetchPayload(sourceKey);
+    let models = await fetchModelsViaBackend(sourceKey, backendPayload);
+    if (!models) {
+      models = await fetchModelsDirectly(sourceKey, getDirectFetchPayload(sourceKey));
+    }
+
+    const unique = uniqueModels(models);
+    state.aiDiscoveredModels[sourceKey] = unique;
+    state.aiModelFetchMeta[sourceKey] = {
+      loading: false,
+      error: "",
+      fetchedAt: Date.now(),
+      count: unique.length,
+    };
+    updateModelPickerUi(sourceKey);
+    showToast(`Fetched ${unique.length} model${unique.length === 1 ? "" : "s"}.`, "success");
+  } catch (error) {
+    state.aiModelFetchMeta[sourceKey] = {
+      ...state.aiModelFetchMeta[sourceKey],
+      loading: false,
+      error: error.message || "Failed to fetch models.",
+    };
+    updateModelPickerUi(sourceKey);
+    showToast(error.message || "Failed to fetch models.", "error");
+  }
+}
 
 /**
  * Show the application settings modal
@@ -51,6 +552,14 @@ export async function showAppSettings() {
     const themePresetOptions = Object.entries(THEME_PRESETS).map(([key, preset]) =>
       `<option value="${key}" ${state.themePreset === key ? 'selected' : ''}>${preset.name}</option>`
     ).join('');
+
+    ensureAiModelFetchState();
+    const ollamaModelPicker = renderModelPicker("local:ollama", state.ollamaModel || "");
+    const lmStudioModelPicker = renderModelPicker("local:lm-studio", state.lmStudioModel || "");
+    const customModelPicker = renderModelPicker("local:custom", state.customAiModel || "");
+    const geminiModelPicker = renderModelPicker("cloud:gemini", state.cloudProvider === 'gemini' ? state.aiModel || "" : "");
+    const openaiModelPicker = renderModelPicker("cloud:openai", state.cloudProvider === 'openai' ? state.aiModel || "" : "");
+    const claudeModelPicker = renderModelPicker("cloud:claude", state.cloudProvider === 'claude' ? state.aiModel || "" : "");
 
     modalBody.innerHTML = `
       <div class="settings-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">
@@ -543,7 +1052,7 @@ export async function showAppSettings() {
                   <input type="radio" name="ai-type" value="local-ai" ${state.aiType === 'local-ai' ? 'checked' : ''} style="margin-right: 8px;">
                   <div>
                     <div style="font-weight: 500; font-size: 13px;">Local AI</div>
-                    <div style="font-size: 11px; color: var(--text-secondary);">Use locally-running LLMs (Ollama, LM Studio, etc.)</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">Use local or self-hosted LLM servers such as Ollama, LM Studio, or your own LAN endpoint.</div>
                   </div>
                 </label>
 
@@ -551,7 +1060,7 @@ export async function showAppSettings() {
                   <input type="radio" name="ai-type" value="cloud" ${state.aiType === 'cloud' ? 'checked' : ''} style="margin-right: 8px;">
                   <div>
                     <div style="font-weight: 500; font-size: 13px;">Cloud AI</div>
-                    <div style="font-size: 11px; color: var(--text-secondary);">Use cloud AI services (Gemini, OpenAI, Claude)</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">Use hosted providers such as Gemini, OpenAI, Claude, or an OpenAI-compatible relay.</div>
                   </div>
                 </label>
               </div>
@@ -568,7 +1077,7 @@ export async function showAppSettings() {
                 <select id="local-ai-provider-select" class="git-settings-input" style="width: 100%; margin-bottom: 12px;">
                   <option value="ollama" ${state.localAiProvider === 'ollama' ? 'selected' : ''}>Ollama</option>
                   <option value="lm-studio" ${state.localAiProvider === 'lm-studio' ? 'selected' : ''}>LM Studio</option>
-                  <option value="custom" ${state.localAiProvider === 'custom' ? 'selected' : ''}>Custom Endpoint</option>
+                  <option value="custom" ${state.localAiProvider === 'custom' ? 'selected' : ''}>Custom Local Endpoint</option>
                 </select>
 
                 <!-- Ollama Config -->
@@ -576,8 +1085,7 @@ export async function showAppSettings() {
                   <div style="font-size: 12px; margin-bottom: 4px;">Ollama URL</div>
                   <input type="text" id="ollama-url" class="git-settings-input" style="width: 100%; margin-bottom: 8px;" value="${state.ollamaUrl || 'http://localhost:11434'}" placeholder="http://localhost:11434">
 
-                  <div style="font-size: 12px; margin-bottom: 4px;">Ollama Model</div>
-                  <input type="text" id="ollama-model" class="git-settings-input" style="width: 100%; margin-bottom: 8px;" value="${state.ollamaModel || 'codellama:7b'}" placeholder="codellama:7b">
+                  ${ollamaModelPicker}
 
                   <div style="font-size: 11px; color: var(--text-secondary); padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
                     Install Ollama from <a href="https://ollama.ai" target="_blank" style="color: var(--accent-color);">ollama.ai</a> and run: <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">ollama run codellama:7b</code>
@@ -589,8 +1097,7 @@ export async function showAppSettings() {
                   <div style="font-size: 12px; margin-bottom: 4px;">LM Studio URL</div>
                   <input type="text" id="lm-studio-url" class="git-settings-input" style="width: 100%; margin-bottom: 8px;" value="${state.lmStudioUrl || 'http://localhost:1234'}" placeholder="http://localhost:1234">
 
-                  <div style="font-size: 12px; margin-bottom: 4px;">Model Name (optional)</div>
-                  <input type="text" id="lm-studio-model" class="git-settings-input" style="width: 100%; margin-bottom: 8px;" value="${state.lmStudioModel || ''}" placeholder="Leave blank to use loaded model">
+                  ${lmStudioModelPicker}
 
                   <div style="font-size: 11px; color: var(--text-secondary); padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
                     Download LM Studio from <a href="https://lmstudio.ai" target="_blank" style="color: var(--accent-color);">lmstudio.ai</a> and start the local server.
@@ -599,14 +1106,13 @@ export async function showAppSettings() {
 
                 <!-- Custom AI Config -->
                 <div id="custom-ai-config" style="display: ${state.localAiProvider === 'custom' ? 'block' : 'none'};">
-                  <div style="font-size: 12px; margin-bottom: 4px;">API Endpoint URL</div>
+                  <div style="font-size: 12px; margin-bottom: 4px;">Endpoint URL</div>
                   <input type="text" id="custom-ai-url" class="git-settings-input" style="width: 100%; margin-bottom: 8px;" value="${state.customAiUrl || ''}" placeholder="http://localhost:8000">
 
-                  <div style="font-size: 12px; margin-bottom: 4px;">Model Name</div>
-                  <input type="text" id="custom-ai-model" class="git-settings-input" style="width: 100%; margin-bottom: 8px;" value="${state.customAiModel || ''}" placeholder="model-name">
+                  ${customModelPicker}
 
                   <div style="font-size: 11px; color: var(--text-secondary); padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
-                    Must support OpenAI-compatible API format with <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">/v1/chat/completions</code> endpoint.
+                    Use this for local or self-hosted servers that already expose an OpenAI-compatible <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">/v1/chat/completions</code> endpoint. If you want OpenAI or an OpenAI-compatible relay with an API key, use Cloud AI -> OpenAI below.
                   </div>
                 </div>
               </div>
@@ -616,46 +1122,24 @@ export async function showAppSettings() {
                 <div style="font-weight: 500; margin-bottom: 8px; font-size: 13px;">Cloud Provider</div>
                 <select id="cloud-provider-select" class="git-settings-input" style="width: 100%; margin-bottom: 12px;">
                   <option value="gemini" ${state.cloudProvider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
-                  <option value="openai" ${state.cloudProvider === 'openai' ? 'selected' : ''}>OpenAI</option>
+                  <option value="openai" ${state.cloudProvider === 'openai' ? 'selected' : ''}>OpenAI / Compatible Endpoint</option>
                   <option value="claude" ${state.cloudProvider === 'claude' ? 'selected' : ''}>Anthropic Claude</option>
                 </select>
+
+                <div id="openai-provider-help" style="display: ${state.cloudProvider === 'openai' ? 'block' : 'none'}; margin-bottom: 12px; font-size: 11px; color: var(--text-secondary); padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
+                  Leave Base URL empty to use the official OpenAI API. Set a Base URL if you want to route requests through a custom relay, proxy, or any OpenAI-compatible endpoint.
+                </div>
 
                 <!-- Cloud Model Selection -->
                 <div style="font-size: 12px; margin-bottom: 4px;">AI Model</div>
                 <div id="gemini-model-container" style="display: ${state.cloudProvider === 'gemini' ? 'block' : 'none'}; margin-bottom: 12px;">
-                  <select id="gemini-model-select" class="git-settings-input" style="width: 100%;">
-                    <option value="gemini-3-pro-preview" ${state.aiModel === 'gemini-3-pro-preview' ? 'selected' : ''}>Gemini 3 Pro (Preview)</option>
-                    <option value="gemini-3-flash-preview" ${state.aiModel === 'gemini-3-flash-preview' ? 'selected' : ''}>Gemini 3 Flash (Preview)</option>
-                    <option value="gemini-2.5-pro" ${state.aiModel === 'gemini-2.5-pro' ? 'selected' : ''}>Gemini 2.5 Pro</option>
-                    <option value="gemini-2.5-flash" ${state.aiModel === 'gemini-2.5-flash' ? 'selected' : ''}>Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-flash-lite" ${state.aiModel === 'gemini-2.5-flash-lite' ? 'selected' : ''}>Gemini 2.5 Flash-Lite</option>
-                  </select>
+                  ${geminiModelPicker}
                 </div>
                 <div id="openai-model-container" style="display: ${state.cloudProvider === 'openai' ? 'block' : 'none'}; margin-bottom: 12px;">
-                  <select id="openai-model-select" class="git-settings-input" style="width: 100%;">
-                    <option value="gpt-5.2" ${state.aiModel === 'gpt-5.2' ? 'selected' : ''}>GPT-5.2 (Agentic)</option>
-                    <option value="gpt-5.2-pro" ${state.aiModel === 'gpt-5.2-pro' ? 'selected' : ''}>GPT-5.2 Pro (Reasoning)</option>
-                    <option value="gpt-5.2-chat-latest" ${state.aiModel === 'gpt-5.2-chat-latest' ? 'selected' : ''}>GPT-5.2 Chat Latest</option>
-                    <option value="gpt-5.1" ${state.aiModel === 'gpt-5.1' ? 'selected' : ''}>GPT-5.1</option>
-                    <option value="gpt-5" ${state.aiModel === 'gpt-5' ? 'selected' : ''}>GPT-5 (Flagship)</option>
-                    <option value="gpt-5-mini" ${state.aiModel === 'gpt-5-mini' ? 'selected' : ''}>GPT-5 Mini</option>
-                    <option value="gpt-5-nano" ${state.aiModel === 'gpt-5-nano' ? 'selected' : ''}>GPT-5 Nano</option>
-                    <option value="gpt-4.1" ${state.aiModel === 'gpt-4.1' ? 'selected' : ''}>GPT-4.1</option>
-                    <option value="gpt-4.1-mini" ${state.aiModel === 'gpt-4.1-mini' ? 'selected' : ''}>GPT-4.1 Mini</option>
-                    <option value="o3" ${state.aiModel === 'o3' ? 'selected' : ''}>o3</option>
-                    <option value="o3-pro" ${state.aiModel === 'o3-pro' ? 'selected' : ''}>o3-pro</option>
-                    <option value="o3-deep-research" ${state.aiModel === 'o3-deep-research' ? 'selected' : ''}>o3-deep-research</option>
-                    <option value="o4-mini" ${state.aiModel === 'o4-mini' ? 'selected' : ''}>o4-mini</option>
-                    <option value="o4-mini-deep-research" ${state.aiModel === 'o4-mini-deep-research' ? 'selected' : ''}>o4-mini-deep-research</option>
-                    <option value="o1-pro" ${state.aiModel === 'o1-pro' ? 'selected' : ''}>o1-pro</option>
-                  </select>
+                  ${openaiModelPicker}
                 </div>
                 <div id="claude-model-container" style="display: ${state.cloudProvider === 'claude' ? 'block' : 'none'}; margin-bottom: 12px;">
-                  <select id="claude-model-select" class="git-settings-input" style="width: 100%;">
-                    <option value="claude-sonnet-4-5-20250929" ${state.aiModel === 'claude-sonnet-4-5-20250929' ? 'selected' : ''}>Claude 4.5 Sonnet</option>
-                    <option value="claude-haiku-4-5-20251001" ${state.aiModel === 'claude-haiku-4-5-20251001' ? 'selected' : ''}>Claude 4.5 Haiku</option>
-                    <option value="claude-opus-4-5-20251101" ${state.aiModel === 'claude-opus-4-5-20251101' ? 'selected' : ''}>Claude 4.5 Opus</option>
-                  </select>
+                  ${claudeModelPicker}
                 </div>
 
                 <!-- Cloud API Keys -->
@@ -670,6 +1154,9 @@ export async function showAppSettings() {
                 </div>
 
                 <div id="openai-api-section" style="display: ${state.cloudProvider === 'openai' ? 'block' : 'none'};">
+                  <div style="font-size: 12px; margin-bottom: 4px;">Base URL (optional)</div>
+                  <input type="text" id="openai-base-url" class="git-settings-input" style="width: 100%; margin-bottom: 8px;" value="${state.openaiBaseUrl || ''}" placeholder="Leave blank for https://api.openai.com/v1">
+
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <div style="font-size: 12px;">OpenAI API Key</div>
                     <a href="https://platform.openai.com/api-keys" target="_blank" style="font-size: 11px; color: var(--accent-color); text-decoration: none; display: flex; align-items: center;">
@@ -1394,142 +1881,118 @@ export async function showAppSettings() {
       });
     });
 
-    // Handle Local AI Provider selection
+    const CLOUD_PROVIDER_DEFAULT_MODELS = {
+      gemini: "gemini-2.0-flash-exp",
+      openai: "gpt-4o",
+      claude: "claude-sonnet-4-5-20250929",
+    };
+
     const localAiProviderSelect = document.getElementById("local-ai-provider-select");
     const ollamaConfig = document.getElementById("ollama-config");
     const lmStudioConfig = document.getElementById("lm-studio-config");
     const customAiConfig = document.getElementById("custom-ai-config");
-
-    if (localAiProviderSelect) {
-      localAiProviderSelect.addEventListener("change", (e) => {
-        const provider = e.target.value;
-        state.localAiProvider = provider;
-
-        // Show/hide provider configs
-        if (ollamaConfig) ollamaConfig.style.display = provider === 'ollama' ? 'block' : 'none';
-        if (lmStudioConfig) lmStudioConfig.style.display = provider === 'lm-studio' ? 'block' : 'none';
-        if (customAiConfig) customAiConfig.style.display = provider === 'custom' ? 'block' : 'none';
-
-        saveSettingsImpl();
-      });
-    }
-
-    // Handle Ollama inputs
-    const ollamaUrlInput = document.getElementById("ollama-url");
-    if (ollamaUrlInput) {
-      ollamaUrlInput.addEventListener("change", (e) => {
-        state.ollamaUrl = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    const ollamaModelInput = document.getElementById("ollama-model");
-    if (ollamaModelInput) {
-      ollamaModelInput.addEventListener("change", (e) => {
-        state.ollamaModel = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    // Handle LM Studio inputs
-    const lmStudioUrlInput = document.getElementById("lm-studio-url");
-    if (lmStudioUrlInput) {
-      lmStudioUrlInput.addEventListener("change", (e) => {
-        state.lmStudioUrl = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    const lmStudioModelInput = document.getElementById("lm-studio-model");
-    if (lmStudioModelInput) {
-      lmStudioModelInput.addEventListener("change", (e) => {
-        state.lmStudioModel = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    // Handle Custom AI inputs
-    const customAiUrlInput = document.getElementById("custom-ai-url");
-    if (customAiUrlInput) {
-      customAiUrlInput.addEventListener("change", (e) => {
-        state.customAiUrl = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    const customAiModelInput = document.getElementById("custom-ai-model");
-    if (customAiModelInput) {
-      customAiModelInput.addEventListener("change", (e) => {
-        state.customAiModel = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    // Handle Cloud Provider selection
     const cloudProviderSelect = document.getElementById("cloud-provider-select");
     const geminiModelContainer = document.getElementById("gemini-model-container");
     const openaiModelContainer = document.getElementById("openai-model-container");
     const claudeModelContainer = document.getElementById("claude-model-container");
+    const openaiProviderHelp = document.getElementById("openai-provider-help");
     const geminiSection = document.getElementById("gemini-api-section");
     const openaiSection = document.getElementById("openai-api-section");
     const claudeSection = document.getElementById("claude-api-section");
 
+    const updateLocalProviderUi = (provider) => {
+      if (ollamaConfig) ollamaConfig.style.display = provider === 'ollama' ? 'block' : 'none';
+      if (lmStudioConfig) lmStudioConfig.style.display = provider === 'lm-studio' ? 'block' : 'none';
+      if (customAiConfig) customAiConfig.style.display = provider === 'custom' ? 'block' : 'none';
+    };
+
+    const updateCloudProviderUi = (provider) => {
+      if (geminiModelContainer) geminiModelContainer.style.display = provider === 'gemini' ? 'block' : 'none';
+      if (openaiModelContainer) openaiModelContainer.style.display = provider === 'openai' ? 'block' : 'none';
+      if (claudeModelContainer) claudeModelContainer.style.display = provider === 'claude' ? 'block' : 'none';
+      if (geminiSection) geminiSection.style.display = provider === 'gemini' ? 'block' : 'none';
+      if (openaiSection) openaiSection.style.display = provider === 'openai' ? 'block' : 'none';
+      if (claudeSection) claudeSection.style.display = provider === 'claude' ? 'block' : 'none';
+      if (openaiProviderHelp) openaiProviderHelp.style.display = provider === 'openai' ? 'block' : 'none';
+    };
+
+    const bindTextSetting = (inputId, stateKey, transform = (value) => value) => {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.addEventListener("change", (e) => {
+        state[stateKey] = transform(e.target.value);
+        saveSettingsImpl();
+      });
+    };
+
+    const bindModelPicker = (sourceKey) => {
+      const config = getModelPickerConfig(sourceKey);
+      const select = document.getElementById(config.selectId);
+      const input = document.getElementById(config.inputId);
+      const button = document.getElementById(config.buttonId);
+
+      if (select) {
+        select.addEventListener("change", async (e) => {
+          if (e.target.value === CUSTOM_MODEL_OPTION_VALUE) {
+            if (input) input.focus();
+            updateModelPickerUi(sourceKey);
+            return;
+          }
+
+          setModelValue(sourceKey, e.target.value);
+          updateModelPickerUi(sourceKey);
+          await saveSettingsImpl();
+        });
+      }
+
+      if (input) {
+        input.addEventListener("input", (e) => {
+          setModelValue(sourceKey, e.target.value);
+          updateModelPickerUi(sourceKey);
+        });
+
+        input.addEventListener("change", async (e) => {
+          setModelValue(sourceKey, e.target.value);
+          updateModelPickerUi(sourceKey);
+          await saveSettingsImpl();
+        });
+      }
+
+      if (button) {
+        button.addEventListener("click", async () => {
+          await refreshModelList(sourceKey);
+        });
+      }
+
+      updateModelPickerUi(sourceKey);
+    };
+
+    if (localAiProviderSelect) {
+      localAiProviderSelect.addEventListener("change", async (e) => {
+        state.localAiProvider = e.target.value;
+        updateLocalProviderUi(state.localAiProvider);
+        updateModelPickerUi(`local:${state.localAiProvider}`);
+        await saveSettingsImpl();
+      });
+    }
+
+    bindTextSetting("ollama-url", "ollamaUrl");
+    bindTextSetting("lm-studio-url", "lmStudioUrl");
+    bindTextSetting("custom-ai-url", "customAiUrl");
+
+    ["local:ollama", "local:lm-studio", "local:custom", "cloud:gemini", "cloud:openai", "cloud:claude"].forEach(bindModelPicker);
+    updateLocalProviderUi(state.localAiProvider);
+    updateCloudProviderUi(state.cloudProvider);
+    syncAllModelPickers();
+
     if (cloudProviderSelect) {
-      cloudProviderSelect.addEventListener("change", (e) => {
+      cloudProviderSelect.addEventListener("change", async (e) => {
         const provider = e.target.value;
         state.cloudProvider = provider;
-
-        // Show/hide model containers
-        if (geminiModelContainer) geminiModelContainer.style.display = provider === 'gemini' ? 'block' : 'none';
-        if (openaiModelContainer) openaiModelContainer.style.display = provider === 'openai' ? 'block' : 'none';
-        if (claudeModelContainer) claudeModelContainer.style.display = provider === 'claude' ? 'block' : 'none';
-
-        // Show/hide API key sections
-        if (geminiSection) geminiSection.style.display = provider === 'gemini' ? 'block' : 'none';
-        if (openaiSection) openaiSection.style.display = provider === 'openai' ? 'block' : 'none';
-        if (claudeSection) claudeSection.style.display = provider === 'claude' ? 'block' : 'none';
-
-        // Set default models
-        if (provider === 'gemini') {
-          state.aiModel = "gemini-2.0-flash-exp";
-          const geminiSelect = document.getElementById("gemini-model-select");
-          if (geminiSelect) geminiSelect.value = state.aiModel;
-        } else if (provider === 'openai') {
-          state.aiModel = "gpt-4o";
-          const openaiSelect = document.getElementById("openai-model-select");
-          if (openaiSelect) openaiSelect.value = state.aiModel;
-        } else if (provider === 'claude') {
-          state.aiModel = "claude-sonnet-4-5-20250929";
-          const claudeSelect = document.getElementById("claude-model-select");
-          if (claudeSelect) claudeSelect.value = state.aiModel;
-        }
-
-        saveSettingsImpl();
-      });
-    }
-
-    // Handle Cloud Model selection
-    const geminiModelSelect = document.getElementById("gemini-model-select");
-    if (geminiModelSelect) {
-      geminiModelSelect.addEventListener("change", (e) => {
-        state.aiModel = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    const openaiModelSelect = document.getElementById("openai-model-select");
-    if (openaiModelSelect) {
-      openaiModelSelect.addEventListener("change", (e) => {
-        state.aiModel = e.target.value;
-        saveSettingsImpl();
-      });
-    }
-
-    const claudeModelSelect = document.getElementById("claude-model-select");
-    if (claudeModelSelect) {
-      claudeModelSelect.addEventListener("change", (e) => {
-        state.aiModel = e.target.value;
-        saveSettingsImpl();
+        state.aiModel = CLOUD_PROVIDER_DEFAULT_MODELS[provider];
+        updateCloudProviderUi(provider);
+        syncAllModelPickers();
+        await saveSettingsImpl();
       });
     }
 
@@ -1550,6 +2013,14 @@ export async function showAppSettings() {
       });
     }
 
+    const openaiBaseUrlInput = document.getElementById("openai-base-url");
+    if (openaiBaseUrlInput) {
+      openaiBaseUrlInput.addEventListener("change", (e) => {
+        state.openaiBaseUrl = e.target.value.trim();
+        saveSettingsImpl();
+      });
+    }
+
     const claudeKeyInput = document.getElementById("claude-api-key");
     if (claudeKeyInput) {
       claudeKeyInput.addEventListener("change", (e) => {
@@ -1562,32 +2033,36 @@ export async function showAppSettings() {
     const btnSaveAI = document.getElementById("btn-save-ai-settings");
     if (btnSaveAI) {
       btnSaveAI.addEventListener("click", async () => {
+        const readValue = (inputId, fallback = "") => String(document.getElementById(inputId)?.value || fallback).trim();
+
         // Save all AI settings from inputs
         state.aiType = document.querySelector('input[name="ai-type"]:checked')?.value || 'rule-based';
 
         // Local AI settings
         state.localAiProvider = document.getElementById("local-ai-provider-select")?.value || 'ollama';
-        state.ollamaUrl = document.getElementById("ollama-url")?.value || 'http://localhost:11434';
-        state.ollamaModel = document.getElementById("ollama-model")?.value || 'codellama:7b';
-        state.lmStudioUrl = document.getElementById("lm-studio-url")?.value || 'http://localhost:1234';
-        state.lmStudioModel = document.getElementById("lm-studio-model")?.value || '';
-        state.customAiUrl = document.getElementById("custom-ai-url")?.value || '';
-        state.customAiModel = document.getElementById("custom-ai-model")?.value || '';
+        state.ollamaUrl = readValue("ollama-url", 'http://localhost:11434') || 'http://localhost:11434';
+        state.ollamaModel = readValue("ollama-model", 'codellama:7b') || 'codellama:7b';
+        state.lmStudioUrl = readValue("lm-studio-url", 'http://localhost:1234') || 'http://localhost:1234';
+        state.lmStudioModel = readValue("lm-studio-model", '');
+        state.customAiUrl = readValue("custom-ai-url", '');
+        state.customAiModel = readValue("custom-ai-model", '');
 
         // Cloud AI settings
         state.cloudProvider = document.getElementById("cloud-provider-select")?.value || 'gemini';
         if (state.cloudProvider === 'gemini') {
-          state.aiModel = document.getElementById("gemini-model-select")?.value || 'gemini-2.0-flash-exp';
+          state.aiModel = readValue("gemini-model-custom", CLOUD_PROVIDER_DEFAULT_MODELS.gemini) || CLOUD_PROVIDER_DEFAULT_MODELS.gemini;
         } else if (state.cloudProvider === 'openai') {
-          state.aiModel = document.getElementById("openai-model-select")?.value || 'gpt-4o';
+          state.aiModel = readValue("openai-model-custom", CLOUD_PROVIDER_DEFAULT_MODELS.openai) || CLOUD_PROVIDER_DEFAULT_MODELS.openai;
         } else if (state.cloudProvider === 'claude') {
-          state.aiModel = document.getElementById("claude-model-select")?.value || 'claude-sonnet-4-5-20250929';
+          state.aiModel = readValue("claude-model-custom", CLOUD_PROVIDER_DEFAULT_MODELS.claude) || CLOUD_PROVIDER_DEFAULT_MODELS.claude;
         }
 
-        state.geminiApiKey = document.getElementById("gemini-api-key")?.value || '';
-        state.openaiApiKey = document.getElementById("openai-api-key")?.value || '';
-        state.claudeApiKey = document.getElementById("claude-api-key")?.value || '';
+        state.geminiApiKey = readValue("gemini-api-key", '');
+        state.openaiApiKey = readValue("openai-api-key", '');
+        state.openaiBaseUrl = readValue("openai-base-url", '');
+        state.claudeApiKey = readValue("claude-api-key", '');
 
+        syncAllModelPickers();
         await saveSettingsImpl();
         showToast(t("toast.ai_settings_applied"), "success");
       });

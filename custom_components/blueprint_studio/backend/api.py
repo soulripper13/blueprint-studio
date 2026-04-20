@@ -238,6 +238,7 @@ class BlueprintStudioApiView(HomeAssistantView):
             "gitea_create_repo": lambda d, h, u: api_git.gitea_create_repo(self.git, d),
             # AI
             "ai_query": lambda d, h, u: api_misc.ai_query(self.ai, d),
+            "ai_get_models": lambda d, h, u: api_misc.ai_get_models(self.ai, d),
             # GitHub
             "github_create_repo": lambda d, h, u: api_git.github_create_repo(self.git, d),
             "github_set_default_branch": lambda d, h, u: api_git.github_set_default_branch(self.git, d),

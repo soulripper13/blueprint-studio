@@ -96,6 +96,7 @@ export async function loadSettings() {
     state.syntaxTheme = settings.syntaxTheme || 'custom';
     state.geminiApiKey = settings.geminiApiKey || null;
     state.openaiApiKey = settings.openaiApiKey || null;
+    state.openaiBaseUrl = settings.openaiBaseUrl || "";
     state.claudeApiKey = settings.claudeApiKey || null;
 
     // New UI customization settings
@@ -230,6 +231,7 @@ export async function loadSettings() {
     state.aiModel = settings.aiModel || "gemini-2.0-flash-exp";
     state.geminiApiKey = settings.geminiApiKey || "";
     state.openaiApiKey = settings.openaiApiKey || "";
+    state.openaiBaseUrl = settings.openaiBaseUrl || "";
     state.claudeApiKey = settings.claudeApiKey || "";
 
     state._savedOpenTabs = settings.openTabs || localSettings.openTabs || [];
@@ -319,6 +321,7 @@ export async function saveSettings() {
       aiModel: state.aiModel,
       geminiApiKey: state.geminiApiKey,
       openaiApiKey: state.openaiApiKey,
+      openaiBaseUrl: state.openaiBaseUrl,
       claudeApiKey: state.claudeApiKey,
       // New UI customization settings
       themePreset: state.themePreset,

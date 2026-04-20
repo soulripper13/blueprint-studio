@@ -122,6 +122,17 @@ async def ai_query(ai_manager, data):
     )
 
 
+async def ai_get_models(ai_manager, data):
+    """Return model options for the current AI configuration."""
+    settings_override = data.get("settings") if isinstance(data.get("settings"), dict) else data
+    return await ai_manager.get_models(
+        data.get("ai_type"),
+        data.get("cloud_provider"),
+        data.get("ai_model"),
+        settings_override,
+    )
+
+
 # ========== Utility ==========
 
 async def restart_home_assistant(hass):
