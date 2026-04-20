@@ -354,7 +354,10 @@ export function renderFileTree() {
   const currentData = state.loadedDirectories.get(currentPath);
 
   if (!currentData) {
-    // No data loaded yet - show loading
+    // No data loaded yet — trigger load (e.g. on settings restore) and show spinner
+    if (!state.loadingDirectories.has(currentPath)) {
+      loadDirectory(currentPath); // fire-and-forget; re-renders in its finally block
+    }
     const loadingItem = document.createElement("div");
     loadingItem.className = "loading-item";
     loadingItem.innerHTML = `
@@ -1057,11 +1060,15 @@ export async function navigateToFolder(folderPath) {
 /**
  * Navigate back to previous folder
  */
-export function navigateBack() {
+export async function navigateBack() {
   if (state.navigationHistory.length === 0) return;
 
   const previousPath = state.navigationHistory.pop();
   state.currentNavigationPath = previousPath;
+
+  if (!state.loadedDirectories.has(previousPath)) {
+    await loadDirectory(previousPath);
+  }
 
   renderFileTree();
   updateFolderNavigationBreadcrumb();
