@@ -345,7 +345,18 @@ async function fetchModelsDirectly(sourceKey, payload) {
   }
 
   if (sourceKey === "cloud:claude") {
-    throw new Error("Claude model auto-discovery is not available in this UI.");
+    if (!payload.apiKey) {
+      throw new Error("Enter a Claude API key first.");
+    }
+    const data = await fetchJson("https://api.anthropic.com/v1/models", {
+      headers: {
+        "x-api-key": payload.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+    });
+    return (data?.models || data?.data || [])
+      .map((m) => m.id || m.name)
+      .filter(Boolean);
   }
 
   const baseUrl = normalizeOpenAiCompatibleBaseUrl(payload.baseUrl, payload.fallbackBaseUrl);
@@ -366,6 +377,10 @@ function getDirectFetchPayload(sourceKey) {
   const getInputValue = (id, fallback = "") => String(document.getElementById(id)?.value || fallback).trim();
 
   switch (sourceKey) {
+    case "cloud:claude":
+      return {
+        apiKey: getInputValue("claude-api-key", state.claudeApiKey),
+      };
     case "cloud:gemini":
       return {
         apiKey: getInputValue("gemini-api-key", state.geminiApiKey),
