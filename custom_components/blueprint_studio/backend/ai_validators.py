@@ -47,6 +47,11 @@ def _has_jinja_template(value: str) -> bool:
     return '{{' in value or '{%' in value
 
 
+def _is_yaml_block_scalar_indicator(value: str) -> bool:
+    """Return True when a YAML value is a block scalar marker such as ``>`` or ``|-.``"""
+    return bool(re.fullmatch(r"[>|][+-]?", value))
+
+
 def _detect_file_type(file_path: str, content: str) -> str:
     """Detect file type like VS Code does.
 
@@ -440,12 +445,13 @@ def check_yaml(content: str, strict_mode: bool = True) -> web.Response:
         entity_match = re.search(r"entity_id:\s+([^\s\n]+)", line)
         if entity_match:
             entity_id = entity_match.group(1).strip('"\'')
-            error = _validate_entity_id(entity_id, line_num, line)
-            if error:
-                if error["type"] == "malformed_entity_id":
-                    syntax_errors.append(error)
-                else:
-                    best_practice_warnings.append(error)
+            if not _is_yaml_block_scalar_indicator(entity_id):
+                error = _validate_entity_id(entity_id, line_num, line)
+                if error:
+                    if error["type"] == "malformed_entity_id":
+                        syntax_errors.append(error)
+                    else:
+                        best_practice_warnings.append(error)
 
         # NEW-1: data_template: deprecated
         if re.search(YAML_ERROR_PATTERNS["deprecated_data_template"]["pattern"], line):
