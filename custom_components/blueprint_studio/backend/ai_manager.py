@@ -153,7 +153,7 @@ class AIManager:
     ) -> web.Response:
         """Execute an HTTP JSON request and normalize success/error handling."""
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
                 async with session.post(url, headers=headers, json=payload) as response:
                     response_text = await response.text()
                     try:
@@ -195,7 +195,7 @@ class AIManager:
     ) -> tuple[Any | None, web.Response | None]:
         """Execute an HTTP GET request and return decoded JSON or an error response."""
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
                 async with session.get(url, headers=headers) as response:
                     response_text = await response.text()
                     try:
@@ -344,6 +344,24 @@ class AIManager:
             })
         return models
 
+    def _parse_anthropic_models(self, response_data: Any) -> list[dict[str, Any]]:
+        """Parse Anthropic /v1/models responses."""
+        if not isinstance(response_data, dict):
+            return []
+
+        models: list[dict[str, Any]] = []
+        for item in response_data.get("data", []):
+            if not isinstance(item, dict):
+                continue
+            model_id = str(item.get("id") or "").strip()
+            if not model_id:
+                continue
+            models.append({
+                "id": model_id,
+                "label": item.get("display_name") or model_id,
+            })
+        return models
+
     def _parse_ollama_models(self, response_data: Any) -> list[dict[str, Any]]:
         """Parse Ollama /api/tags responses."""
         if not isinstance(response_data, dict):
@@ -448,11 +466,22 @@ class AIManager:
                     "gemini-2.5-flash-lite",
                 ]
             elif provider == "claude":
-                raw_models = [
-                    "claude-sonnet-4-5-20250929",
-                    "claude-haiku-4-5-20251001",
-                    "claude-opus-4-5-20251101",
-                ]
+                key = settings.get("claudeApiKey")
+                if not key:
+                    return json_message("No API key for Claude", status_code=400)
+                payload, error_response = await self._get_json_payload(
+                    "Claude",
+                    "https://api.anthropic.com/v1/models",
+                    {
+                        "x-api-key": key,
+                        "anthropic-version": "2023-06-01",
+                        "Content-Type": "application/json",
+                    },
+                )
+                if error_response:
+                    return error_response
+                raw_models = self._parse_anthropic_models(payload)
+                source = "remote"
             else:
                 return json_message(f"Unknown provider: {provider}", status_code=400)
         else:
