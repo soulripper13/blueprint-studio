@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Folded or literal templated `entity_id` values no longer flagged as malformed** — The YAML validator previously scanned `entity_id: >` and `entity_id: |` as though the block scalar marker itself were the entity ID, producing a false "Malformed entity_id: '>'" or `'|'` error on valid multi-line Jinja templates. Block scalar indicators are now recognised and skipped so the templated value can pass cleanly.
+
 - **Custom AI gateway support** — The AI Copilot can now route requests through any OpenAI-compatible endpoint, including local providers such as Ollama and LM Studio. Configure a custom base URL and model in Settings → AI, and use the new "Fetch Models" button to discover available models directly from the endpoint. All AI HTTP requests now enforce a 60-second timeout so a slow or unreachable endpoint fails cleanly instead of hanging indefinitely. (PR #61 by xyiqq)
 
 - **Blocking I/O on the event loop during file search** — `global_search_stream` called `os.walk` synchronously on the HA event loop, causing "Detected blocking call to walk/scandir" log warnings. The directory traversal is now offloaded to `hass.async_add_executor_job`, and individual file reads use `asyncio.get_event_loop().run_in_executor` with `asyncio.as_completed`, keeping the event loop free throughout the entire search operation.
