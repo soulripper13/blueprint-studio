@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.7] - 2026-04-23
+
 - **Folded or literal templated `entity_id` values no longer flagged as malformed** — The YAML validator previously scanned `entity_id: >` and `entity_id: |` as though the block scalar marker itself were the entity ID, producing a false "Malformed entity_id: '>'" or `'|'` error on valid multi-line Jinja templates. Block scalar indicators are now recognised and skipped so the templated value can pass cleanly.
 
 - **Custom AI gateway support** — The AI Copilot can now route requests through any OpenAI-compatible endpoint, including local providers such as Ollama and LM Studio. Configure a custom base URL and model in Settings → AI, and use the new "Fetch Models" button to discover available models directly from the endpoint. All AI HTTP requests now enforce a 60-second timeout so a slow or unreachable endpoint fails cleanly instead of hanging indefinitely. (PR #61 by xyiqq)
@@ -919,6 +921,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 
 
 ## Version History
+- **2.4.7** - Custom AI & Stability Improvements
 - **2.4.6** - Bug Fix for yaml anchors and UUIDs no longer flagged as invalid entity IDs
 - **2.4.5** - Smart Indentation, .editorconfig Support, Modern YAML Syntax & Bug Fixes
 - **2.4.4** - Hosts Management & Editor Improvements
@@ -948,9 +951,10 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.6...HEAD
-[2.4.6]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
-[2.4.5]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.7...HEAD
+[2.4.7]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.7
+[2.4.6]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.6
+[2.4.5]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.5
 [2.4.4]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.4
 [2.4.3]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.3
 [2.4.2]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.2
