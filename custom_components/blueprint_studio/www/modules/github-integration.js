@@ -463,7 +463,7 @@ export async function showGitExclusions() {
       let gitignoreContent = "";
       try {
         const response = await fetchWithAuth(`${API_BASE}?action=read_file&path=.gitignore&_t=${Date.now()}`);
-        if (response.success) {
+        if (response?.content !== undefined && !response.is_base64) {
           gitignoreContent = response.content;
         }
       } catch (e) {
