@@ -598,7 +598,7 @@ export async function activateTab(tab, skipSave = false) {
             }
           }
 
-          const isReadOnly = tab.path.endsWith(".gitignore") || tab.path.endsWith(".lock");
+          const isReadOnly = tab.path.endsWith(".lock");
           targetEditor.setOption("readOnly", isReadOnly);
 
           const fileName = tab.path;
