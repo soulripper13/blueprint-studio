@@ -33,6 +33,7 @@ export const state = {
   lazyLoadingEnabled: true, // Enable lazy loading by default
   loadedDirectories: new Map(), // Cache: path -> {folders: [], files: []}
   loadingDirectories: new Set(), // Track which directories are currently loading
+  failedDirectories: new Set(), // Paths whose lazy load failed; prevents spinner retry loops
   // Folder navigation (NEW - for browse-style navigation)
   currentNavigationPath: "", // Current folder being viewed (empty = root)
   navigationHistory: [], // History stack for back button
