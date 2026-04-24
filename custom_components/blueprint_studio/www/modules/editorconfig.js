@@ -32,9 +32,9 @@ async function fetchEditorConfig(dirPath) {
   try {
     const token = await getToken();
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const url = `${API_BASE}?action=read_file&path=${encodeURIComponent(filePath)}`;
+    const url = `${API_BASE}?action=read_file&path=${encodeURIComponent(filePath)}&optional=true`;
     const response = await fetch(url, { headers, credentials: 'same-origin' });
-    if (!response.ok) return null;  // 404 or any error — silent
+    if (!response.ok) return null;
     const result = await response.json();
     if (!result?.content) return null;
     return parseEditorConfig(result.content);
