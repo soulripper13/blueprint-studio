@@ -148,7 +148,14 @@ export function isMobile() {
 }
 
 export function isTouchDevice() {
-  return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  return (
+    navigator.maxTouchPoints > 0 ||
+    ('ontouchstart' in window) ||
+    (window.matchMedia && (
+      window.matchMedia('(pointer: coarse)').matches ||
+      window.matchMedia('(any-pointer: coarse)').matches
+    ))
+  );
 }
 
 export function formatBytes(bytes, decimals = 2) {
@@ -609,6 +616,5 @@ export function enableLongPressContextMenu(element) {
         }
     }, { passive: true });
 }
-
 
 
