@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Cross-device settings no longer get overwritten by stale browser cache** — Settings loading no longer lets any browser’s `localStorage` override the server copy just because its `_savedAt` timestamp is newer. Local recovery is now limited to a short same-device window using a per-browser `_clientId`, and the resolved settings are written back to local storage after load so old caches stop reviving outdated state from another device.
+
+- **Optional `.editorconfig` reads no longer spam 404 errors in the browser console** — The frontend now requests `.editorconfig` files with an `optional=true` flag, and the backend returns a normal JSON response when the file is missing instead of an HTTP 404. This keeps the console clean when opening files in directories that do not define an `.editorconfig`.
+
+- **Collapsible tree folders no longer appear empty until a manual refresh** — In lazy-loaded tree mode, a folder could already be present in `loadedDirectories` cache without its children being hydrated into `state.fileTree`. Expanding that folder skipped the reload and rendered it as `(empty)` until a full refresh rebuilt the tree. Expanding a cached folder now hydrates the tree immediately, and directory updates replace stale child entries instead of only appending new ones.
+
+- **iPad and touch-device folder navigation detection is more reliable** — Folder navigation mode previously relied on `matchMedia('(pointer: coarse)')`, which could miss some iPads and hybrid touch devices and leave them on the desktop double-click path. Touch detection now also checks `navigator.maxTouchPoints`, `ontouchstart`, and `any-pointer: coarse`, so folder taps consistently open in navigation mode on touch hardware.
+
 ## [2.4.7] - 2026-04-23
 
 - **Folded or literal templated `entity_id` values no longer flagged as malformed** — The YAML validator previously scanned `entity_id: >` and `entity_id: |` as though the block scalar marker itself were the entity ID, producing a false "Malformed entity_id: '>'" or `'|'` error on valid multi-line Jinja templates. Block scalar indicators are now recognised and skipped so the templated value can pass cleanly.
