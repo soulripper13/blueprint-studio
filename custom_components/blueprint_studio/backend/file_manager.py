@@ -725,10 +725,13 @@ class FileManager:
         except Exception as e:
             return {"success": False, "message": str(e)}
 
-    async def read_file(self, path: str) -> web.Response:
+    async def read_file(self, path: str, optional: bool = False) -> web.Response:
         """Read file content."""
         safe_path = get_safe_path(self._get_root_dir(), path)
-        if not safe_path or not safe_path.is_file(): return json_message("File not found", status_code=404)
+        if not safe_path or not safe_path.is_file():
+            if optional:
+                return json_response({"content": None, "is_base64": False, "missing": True})
+            return json_message("File not found", status_code=404)
         try:
             if safe_path.suffix.lower() in BINARY_EXTENSIONS:
                 content = await self.hass.async_add_executor_job(safe_path.read_bytes)
