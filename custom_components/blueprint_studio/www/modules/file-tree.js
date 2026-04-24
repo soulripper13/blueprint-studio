@@ -354,6 +354,17 @@ export function renderFileTree() {
   const currentData = state.loadedDirectories.get(currentPath);
 
   if (!currentData) {
+    if (state.failedDirectories.has(currentPath)) {
+      const errorItem = document.createElement("div");
+      errorItem.className = "loading-item";
+      errorItem.innerHTML = `
+        <span class="material-icons" style="color: var(--error-color);">error_outline</span>
+        <span class="tree-name">${t("toast.load_folder_error", { error: "Unable to load folder" })}</span>
+      `;
+      elements.fileTree.appendChild(errorItem);
+      return;
+    }
+
     // No data loaded yet — trigger load (e.g. on settings restore) and show spinner
     if (!state.loadingDirectories.has(currentPath)) {
       loadDirectory(currentPath); // fire-and-forget; re-renders in its finally block
@@ -1188,8 +1199,17 @@ export async function toggleFolder(path) {
     saveSettings();
 
     // LAZY LOADING: Load directory contents if not already loaded
-    if (state.lazyLoadingEnabled && !state.loadedDirectories.has(path)) {
-      await loadDirectory(path);
+    if (state.lazyLoadingEnabled) {
+      const cachedDirectory = state.loadedDirectories.get(path);
+      if (cachedDirectory) {
+        updateFileTreeWithLoadedDirectory(
+          path,
+          cachedDirectory.folders || [],
+          cachedDirectory.files || []
+        );
+      } else {
+        await loadDirectory(path);
+      }
     }
 
     renderFileTree();
@@ -1207,6 +1227,7 @@ export async function loadDirectory(path) {
 
   try {
     state.loadingDirectories.add(path);
+    state.failedDirectories.delete(path);
 
     // Show loading indicator
     renderFileTree(); // Re-render to show spinner
@@ -1220,6 +1241,7 @@ export async function loadDirectory(path) {
     if (result.error) {
       console.error(`Failed to load directory ${path}:`, result.error);
       // Directory no longer exists — clean up stale state
+      state.failedDirectories.add(path);
       state.expandedFolders.delete(path);
       state.loadedDirectories.delete(path);
       return;
@@ -1230,6 +1252,7 @@ export async function loadDirectory(path) {
       folders: result.folders || [],
       files: result.files || []
     });
+    state.failedDirectories.delete(path);
 
 
     // Update file tree structure (add loaded items)
@@ -1237,6 +1260,7 @@ export async function loadDirectory(path) {
 
   } catch (error) {
     console.error(`Error loading directory ${path}:`, error);
+    state.failedDirectories.add(path);
     showToast(t("toast.load_folder_error", { error: error.message }), "error");
   } finally {
     state.loadingDirectories.delete(path);
@@ -1259,25 +1283,29 @@ function updateFileTreeWithLoadedDirectory(parentPath, folders, files) {
     current = current[part];
   }
 
+  const nextFolderNames = new Set(folders.map(folder => folder.name));
+
+  // Remove stale child folders that no longer exist in this directory.
+  Object.keys(current)
+    .filter(key => !key.startsWith("_"))
+    .forEach(key => {
+      if (!nextFolderNames.has(key)) {
+        delete current[key];
+      }
+    });
+
   // Add folders
   folders.forEach(folder => {
-    if (!current[folder.name]) {
-      current[folder.name] = {
-        _path: folder.path,
-        _childCount: folder.childCount || 0
-      };
-    }
+    const existingNode = current[folder.name] && typeof current[folder.name] === "object"
+      ? current[folder.name]
+      : {};
+    current[folder.name] = existingNode;
+    current[folder.name]._path = folder.path;
+    current[folder.name]._childCount = folder.childCount || 0;
   });
 
-  // Add files
-  if (!current._files) {
-    current._files = [];
-  }
-  files.forEach(file => {
-    if (!current._files.find(f => f.name === file.name)) {
-      current._files.push({ name: file.name, path: file.path, size: file.size });
-    }
-  });
+  current._files = files.map(file => ({ name: file.name, path: file.path, size: file.size }));
+  current._loaded = true;
 }
 
 /**
