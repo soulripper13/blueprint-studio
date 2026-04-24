@@ -5,6 +5,40 @@ import { eventBus } from './event-bus.js';
 import { API_BASE, STORAGE_KEY } from './constants.js';
 import { trackSettingsSave } from './settings-sync.js';
 
+const SETTINGS_CLIENT_ID_KEY = `${STORAGE_KEY}_client_id`;
+const LOCAL_SETTINGS_RECOVERY_WINDOW_MS = 2 * 60 * 1000;
+
+function getSettingsClientId() {
+  let clientId = localStorage.getItem(SETTINGS_CLIENT_ID_KEY);
+  if (!clientId) {
+    clientId = `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(SETTINGS_CLIENT_ID_KEY, clientId);
+  }
+  return clientId;
+}
+
+function hasSettingsPayload(settings) {
+  return !!settings && typeof settings === 'object' && Object.keys(settings).length > 0;
+}
+
+function shouldRecoverLocalSettings(serverSettings, localSettings, clientId) {
+  if (!hasSettingsPayload(localSettings)) {
+    return false;
+  }
+
+  const localTs = localSettings._savedAt || 0;
+  const serverTs = serverSettings._savedAt || 0;
+  if (!localTs || localTs <= serverTs) {
+    return false;
+  }
+
+  if (localSettings._clientId !== clientId) {
+    return false;
+  }
+
+  return (Date.now() - localTs) <= LOCAL_SETTINGS_RECOVERY_WINDOW_MS;
+}
+
 /**
  * Loads settings from server and local storage
  * Handles migration from local storage to server
@@ -22,15 +56,15 @@ export async function loadSettings() {
     // 2. Fetch local (legacy/fallback)
     const localStored = localStorage.getItem(STORAGE_KEY);
     const localSettings = localStored ? JSON.parse(localStored) : {};
+    const clientId = getSettingsClientId();
 
-    // 3. Prefer whichever copy is newer (localStorage wins if it has a more recent _savedAt).
-    // This handles the case where the user reloads the page before the server POST completes.
+    // 3. Use server settings by default.
+    // Only recover from localStorage for a short same-device window after an interrupted save.
     let settings = serverSettings;
-    const serverTs = serverSettings._savedAt || 0;
-    const localTs = localSettings._savedAt || 0;
-    if (Object.keys(serverSettings).length === 0 && (Object.keys(localSettings).length > 0 || localStorage.getItem("onboardingCompleted"))) {
+    if (!hasSettingsPayload(serverSettings) && (hasSettingsPayload(localSettings) || localStorage.getItem("onboardingCompleted"))) {
       // Migrating settings to server...
       settings = { ...localSettings };
+      settings._clientId = clientId;
       // Migrate root keys
       settings.onboardingCompleted = localStorage.getItem("onboardingCompleted") === "true";
       settings.gitIntegrationEnabled = localStorage.getItem("gitIntegrationEnabled") !== "false";
@@ -41,15 +75,18 @@ export async function loadSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "save_settings", settings: settings }),
       });
-    } else if (localTs > serverTs && Object.keys(localSettings).length > 0) {
-      // localStorage is newer than server — use it and push it back to server.
-      // This recovers from a page reload that interrupted the server POST.
+    } else if (shouldRecoverLocalSettings(serverSettings, localSettings, clientId)) {
+      // Same-device crash/reload recovery only.
       settings = localSettings;
       fetchWithAuth(API_BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "save_settings", settings: settings }),
       }).catch(e => console.warn("Settings re-sync to server failed:", e));
+    }
+
+    if (hasSettingsPayload(settings)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
 
     // 4. Apply to State
@@ -383,6 +420,7 @@ export async function saveSettings() {
 
     // Save to server
     settings._savedAt = Date.now();
+    settings._clientId = getSettingsClientId();
     const savePromise = fetchWithAuth(API_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
