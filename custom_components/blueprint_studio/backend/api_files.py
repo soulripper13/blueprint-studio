@@ -46,7 +46,8 @@ async def read_file(file_manager, params):
     path = params.get("path")
     if not path:
         return json_message("Missing path", status_code=400)
-    return await file_manager.read_file(path)
+    optional = params.get("optional", "false").lower() == "true"
+    return await file_manager.read_file(path, optional=optional)
 
 
 async def serve_file(file_manager, params):
