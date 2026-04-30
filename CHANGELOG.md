@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.8] - 2026-04-29
+
 - **Visual Diff Viewer can now jump between changes** — File diffs now include previous/next navigation buttons and a current-change counter, making it easier to move through large files such as `automations.yaml` and `scripts.yaml`. The active diff block is highlighted as you navigate.
 
 - **Cross-device settings no longer get overwritten by stale browser cache** — Settings loading no longer lets any browser’s `localStorage` override the server copy just because its `_savedAt` timestamp is newer. Local recovery is now limited to a short same-device window using a per-browser `_clientId`, and the resolved settings are written back to local storage after load so old caches stop reviving outdated state from another device.
@@ -931,6 +933,7 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 
 
 ## Version History
+- **2.4.8** - Improved Diff Navigation, Stable Settings Sync & UI Fixes
 - **2.4.7** - Custom AI & Stability Improvements
 - **2.4.6** - Bug Fix for yaml anchors and UUIDs no longer flagged as invalid entity IDs
 - **2.4.5** - Smart Indentation, .editorconfig Support, Modern YAML Syntax & Bug Fixes
@@ -961,7 +964,8 @@ Bring AI intelligence directly into your Home Assistant workflow with flexible p
 - **1.2.0** - GitHub Integration, Pin Favorites & Auto-Refresh
 - **1.0.0** - First stable release
 
-[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.7...HEAD
+[Unreleased]: https://github.com/soulripper13/blueprint-studio/compare/v2.4.8...HEAD
+[2.4.8]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.8
 [2.4.7]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.7
 [2.4.6]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.6
 [2.4.5]: https://github.com/soulripper13/blueprint-studio/releases/tag/v2.4.5
