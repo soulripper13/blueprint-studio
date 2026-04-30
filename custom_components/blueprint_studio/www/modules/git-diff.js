@@ -14,6 +14,146 @@ import {
 import { getEditorMode, ensureDiffLibrariesLoaded } from './utils.js';
 import { isGitEnabled } from './git-operations.js';
 
+const ACTIVE_DIFF_CHUNK_CLASS = "CodeMirror-merge-active-chunk";
+const MAX_ACTIVE_DIFF_HIGHLIGHT_LINES = 80;
+
+function getMergeViewChunks(mergeView) {
+  const chunks = mergeView.leftChunks?.() || mergeView.rightChunks?.() || [];
+  return chunks.filter(chunk => (
+    chunk.origFrom !== chunk.origTo ||
+    chunk.editFrom !== chunk.editTo
+  ));
+}
+
+function getChunkDisplayLine(cm, from, to) {
+  const firstLine = cm.firstLine();
+  const lastLine = cm.lastLine();
+  const targetLine = from === to ? Math.max(firstLine, from - 1) : from;
+  return Math.max(firstLine, Math.min(targetLine, lastLine));
+}
+
+function centerEditorOnLine(cm, line) {
+  if (!cm) return;
+
+  const safeLine = Math.max(cm.firstLine(), Math.min(line, cm.lastLine()));
+  const scrollInfo = cm.getScrollInfo();
+  const coords = cm.charCoords({ line: safeLine, ch: 0 }, "local");
+  const targetTop = Math.max(0, coords.top - Math.floor(scrollInfo.clientHeight * 0.35));
+
+  cm.scrollTo(null, targetTop);
+}
+
+function setupDiffNavigation(mergeView) {
+  const previousButton = document.getElementById("diff-nav-prev");
+  const nextButton = document.getElementById("diff-nav-next");
+  const countLabel = document.getElementById("diff-nav-count");
+  const editor = mergeView.editor();
+  const leftOriginal = mergeView.leftOriginal?.();
+  const rightOriginal = mergeView.rightOriginal?.();
+  const chunks = getMergeViewChunks(mergeView);
+  let activeIndex = chunks.length ? 0 : -1;
+  let activeLineHandles = [];
+  let isActive = true;
+  let pendingFrame = null;
+
+  function clearActiveChunk() {
+    activeLineHandles.forEach(({ cm, handle }) => {
+      cm.removeLineClass(handle, "background", ACTIVE_DIFF_CHUNK_CLASS);
+    });
+    activeLineHandles = [];
+  }
+
+  function markChunkInEditor(cm, from, to) {
+    if (!cm) return;
+
+    const firstLine = cm.firstLine();
+    const lastLine = cm.lastLine();
+    const start = getChunkDisplayLine(cm, from, to);
+    const end = from === to
+      ? start + 1
+      : Math.max(start + 1, Math.min(to, lastLine + 1));
+
+    const highlightedEnd = Math.min(end, start + MAX_ACTIVE_DIFF_HIGHLIGHT_LINES);
+
+    cm.operation(() => {
+      for (let line = start; line < highlightedEnd && line <= lastLine; line++) {
+        const handle = cm.getLineHandle(Math.max(firstLine, line));
+        if (handle) {
+          cm.addLineClass(handle, "background", ACTIVE_DIFF_CHUNK_CLASS);
+          activeLineHandles.push({ cm, handle });
+        }
+      }
+    });
+  }
+
+  function updateCountLabel() {
+    if (!countLabel) return;
+
+    if (!chunks.length) {
+      countLabel.textContent = "No differences";
+      return;
+    }
+
+    const plural = chunks.length === 1 ? "difference" : "differences";
+    countLabel.textContent = `${activeIndex + 1} / ${chunks.length} ${plural}`;
+  }
+
+  function updateButtonState() {
+    const disabled = chunks.length <= 1;
+    if (previousButton) previousButton.disabled = disabled;
+    if (nextButton) nextButton.disabled = disabled;
+  }
+
+  function jumpToChunk(index) {
+    if (!chunks.length) return;
+
+    activeIndex = (index + chunks.length) % chunks.length;
+    const chunk = chunks[activeIndex];
+    const editLine = getChunkDisplayLine(editor, chunk.editFrom, chunk.editTo);
+    const originalLine = getChunkDisplayLine(leftOriginal || rightOriginal || editor, chunk.origFrom, chunk.origTo);
+
+    clearActiveChunk();
+    markChunkInEditor(editor, chunk.editFrom, chunk.editTo);
+    markChunkInEditor(leftOriginal, chunk.origFrom, chunk.origTo);
+    markChunkInEditor(rightOriginal, chunk.origFrom, chunk.origTo);
+    updateCountLabel();
+
+    if (pendingFrame) {
+      cancelAnimationFrame(pendingFrame);
+    }
+
+    pendingFrame = requestAnimationFrame(() => {
+      pendingFrame = null;
+      if (!isActive) return;
+
+      centerEditorOnLine(editor, editLine);
+      centerEditorOnLine(leftOriginal, originalLine);
+      centerEditorOnLine(rightOriginal, originalLine);
+    });
+  }
+
+  previousButton?.addEventListener("click", () => jumpToChunk(activeIndex - 1));
+  nextButton?.addEventListener("click", () => jumpToChunk(activeIndex + 1));
+
+  updateCountLabel();
+  updateButtonState();
+
+  if (chunks.length) {
+    jumpToChunk(activeIndex);
+  }
+
+  return {
+    cleanup() {
+      isActive = false;
+      if (pendingFrame) {
+        cancelAnimationFrame(pendingFrame);
+        pendingFrame = null;
+      }
+      clearActiveChunk();
+    }
+  };
+}
+
 /**
  * Show diff modal for a file
  * Compares HEAD version with current version
@@ -67,7 +207,23 @@ export async function showDiffModal(path) {
     modalFooter.style.display = "none";
 
     // Use flex column for body to let MergeView fill it
-    modalBody.innerHTML = `<div id="diff-view" style="height: 100%; width: 100%;"></div>`;
+    modalBody.innerHTML = `
+      <div class="diff-viewer-toolbar">
+        <div class="diff-viewer-summary">
+          <span class="material-icons">difference</span>
+          <span id="diff-nav-count">No differences</span>
+        </div>
+        <div class="diff-viewer-actions" aria-label="Diff navigation">
+          <button id="diff-nav-prev" class="diff-nav-btn" type="button" title="Previous difference" aria-label="Previous difference">
+            <span class="material-icons">keyboard_arrow_up</span>
+          </button>
+          <button id="diff-nav-next" class="diff-nav-btn" type="button" title="Next difference" aria-label="Next difference">
+            <span class="material-icons">keyboard_arrow_down</span>
+          </button>
+        </div>
+      </div>
+      <div id="diff-view" class="diff-viewer-container"></div>
+    `;
     modalBody.style.padding = "0";
     modalBody.style.flex = "1";
     modalBody.style.display = "flex";
@@ -93,11 +249,18 @@ export async function showDiffModal(path) {
       readOnly: true,
       revertButtons: false
     });
+    const diffNavigation = setupDiffNavigation(mergeView);
 
     // Cleanup handler
+    let isClosed = false;
+    let unsubscribeHideModal = null;
     const closeHandler = () => {
+      if (isClosed) return;
+      isClosed = true;
+      diffNavigation.cleanup();
       modalOverlay.classList.remove("visible");
       modalOverlay.removeEventListener("click", overlayClickHandler);
+      if (unsubscribeHideModal) unsubscribeHideModal();
       // Clean up modal styles
       resetModalToDefault();
       modal.style.width = "";
@@ -107,6 +270,7 @@ export async function showDiffModal(path) {
       modalBody.style.padding = "";
       modalBody.style.flex = "";
       modalBody.style.display = "";
+      modalBody.style.flexDirection = "";
       modalBody.style.overflow = "";
     };
 
@@ -115,6 +279,7 @@ export async function showDiffModal(path) {
     };
     modalOverlay.addEventListener("click", overlayClickHandler);
     document.getElementById("modal-close").onclick = closeHandler;
+    unsubscribeHideModal = eventBus.on("ui:hide-modal", closeHandler);
 
   } catch (error) {
     hideGlobalLoading();
