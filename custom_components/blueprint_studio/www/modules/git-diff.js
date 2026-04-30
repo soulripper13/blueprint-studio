@@ -99,7 +99,7 @@ function setupDiffNavigation(mergeView) {
   }
 
   function updateButtonState() {
-    const disabled = chunks.length <= 1;
+    const disabled = chunks.length === 0;
     if (previousButton) previousButton.disabled = disabled;
     if (nextButton) nextButton.disabled = disabled;
   }
