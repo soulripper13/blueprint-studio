@@ -284,10 +284,9 @@ async function _subscribeToUpdates(conn, retries = 0) {
           eventBus.emit('git:status-check', { fetch: false, silent: true });
         }, 80);
 
-          if (event && ["create", "delete", "rename", "create_folder", "upload", "upload_folder", "external_change"].includes(event.action)) {
-            eventBus.emit('ui:reload-files', { force: event.action === "external_change" });
-          }
-        }, 500);
+        if (event && ["create", "delete", "rename", "create_folder", "upload", "upload_folder", "external_change"].includes(event.action)) {
+          eventBus.emit('ui:reload-files', { force: event.action === "external_change" });
+        }
       },
       { type: "blueprint_studio/subscribe_updates" }
     );
