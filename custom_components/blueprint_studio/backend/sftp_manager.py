@@ -14,13 +14,13 @@ from typing import Any, Callable
 
 _LOGGER = logging.getLogger(__name__)
 
-from ..const import LISTED_EXTENSIONS, BINARY_EXTENSIONS
+from ..const import BINARY_EXTENSIONS, TEXT_EXTENSIONS
 
 
 def _is_text_file(filename: str) -> bool:
     """Return True if the file extension is considered a text/edit-able file."""
     ext = os.path.splitext(filename)[1].lower()
-    return ext in LISTED_EXTENSIONS and ext not in BINARY_EXTENSIONS
+    return ext in TEXT_EXTENSIONS
 
 
 # ============================================================================

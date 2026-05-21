@@ -12,9 +12,9 @@ export const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB - Hard limit to prevent
 export const TEXT_FILE_WARNING_SIZE = 2 * 1024 * 1024; // 2MB - Warning for text files
 
 export const TEXT_FILE_EXTENSIONS = new Set([
-  "yaml", "yml", "json", "py", "js", "ts", "jsx", "tsx", "css",
+  "yaml", "yml", "json", "py", "js", "mjs", "cjs", "ts", "jsx", "tsx", "css", "scss", "less", "map",
   "html", "htm", "xml", "txt", "csv", "md", "rst", "log",
-  "conf", "cfg", "ini", "toml", "env",
+  "conf", "cfg", "ini", "toml", "env", "webmanifest", "manifest",
   "sh", "bash", "zsh", "svg",
   "jinja", "jinja2", "j2",
   "pem", "crt", "key", "cpp", "h",
@@ -25,7 +25,7 @@ export const TEXT_FILE_EXTENSIONS = new Set([
 ]);
 
 export const IMAGE_EXTENSIONS = new Set([
-  "png", "jpg", "jpeg", "gif", "bmp", "webp", "svg", "ico"
+  "png", "jpg", "jpeg", "gif", "bmp", "webp", "svg", "ico", "avif", "apng"
 ]);
 
 export const VIDEO_EXTENSIONS = new Set([

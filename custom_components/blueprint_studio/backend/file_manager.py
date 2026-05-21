@@ -21,8 +21,7 @@ from aiohttp import web
 from homeassistant.core import HomeAssistant
 
 from ..const import (
-    LISTED_EXTENSIONS, BINARY_EXTENSIONS, ALLOWED_FILENAMES,
-    EXCLUDED_PATTERNS, PROTECTED_PATHS
+    BINARY_EXTENSIONS, EXCLUDED_PATTERNS, PROTECTED_PATHS
 )
 from .util import json_response, json_message, get_safe_path
 
@@ -53,13 +52,8 @@ class FileManager:
         return self.config_dir
 
     def _is_listed_file(self, path: Path) -> bool:
-        """Check if file type/name should appear in directory listings."""
-        try:
-            if ".storage" in path.relative_to(self._get_root_dir()).parts:
-                return True
-        except ValueError:
-            pass
-        return (path.suffix.lower() in LISTED_EXTENSIONS or path.name in ALLOWED_FILENAMES)
+        """Check if a file should appear in directory listings."""
+        return True
 
     def _is_protected(self, path: str) -> bool:
         """Check if path is protected."""

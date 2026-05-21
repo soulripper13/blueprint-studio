@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Local file visibility now matches SFTP** — The local file tree no longer hides files based on extension, so uploaded Home Assistant assets such as fonts are visible immediately. Single-file uploads are no longer limited by the browser picker filter, and known binary assets including fonts, WASM, AVIF/APNG images, and SQLite sidecar files are handled as binary.
+
 ## [2.5.0] - 2026-05-21
 
 - **New HA Agent AI mode** — Route AI queries through Home Assistant conversation agents (e.g. Claw Assistant https://github.com/ha-china/ha_claw) with file edit and diff view support.

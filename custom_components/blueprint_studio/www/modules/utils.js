@@ -250,11 +250,15 @@ function _getFileIcon(filename) {
     case "py":
       return { icon: "code", class: "python" };
     case "js":
+    case "mjs":
+    case "cjs":
     case "ts":
     case "jsx":
     case "tsx":
       return { icon: "javascript", class: "js" };
     case "css":
+    case "scss":
+    case "less":
       return { icon: "style", class: "default" };
     case "html":
     case "htm":
@@ -278,6 +282,8 @@ function _getFileIcon(filename) {
     case "toml":
     case "env":
     case "properties":
+    case "webmanifest":
+    case "manifest":
       return { icon: "settings", class: "default" };
     case "jinja":
     case "jinja2":
@@ -285,6 +291,10 @@ function _getFileIcon(filename) {
       return { icon: "integration_instructions", class: "default" };
     case "db":
     case "sqlite":
+    case "sqlite3":
+    case "db-shm":
+    case "db-wal":
+    case "db-journal":
     case "sql":
       return { icon: "storage", class: "default" };
     case "pem":
@@ -294,6 +304,7 @@ function _getFileIcon(filename) {
     case "key":
       return { icon: "vpn_key", class: "default" };
     case "bin":
+    case "wasm":
       return { icon: "memory", class: "default" };
     case "zip":
     case "tar":
@@ -305,9 +316,17 @@ function _getFileIcon(filename) {
     case "gif":
     case "svg":
     case "webp":
+    case "avif":
+    case "apng":
     case "ico":
     case "bmp":
       return { icon: "image", class: "default" };
+    case "ttf":
+    case "otf":
+    case "woff":
+    case "woff2":
+    case "eot":
+      return { icon: "font_download", class: "default" };
     case "pdf":
       return { icon: "picture_as_pdf", class: "default" };
     case "mp4":
@@ -616,5 +635,4 @@ export function enableLongPressContextMenu(element) {
         }
     }, { passive: true });
 }
-
 
